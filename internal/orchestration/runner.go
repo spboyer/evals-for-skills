@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
 	"sync"
 	"time"
@@ -35,16 +36,18 @@ type EventType string
 
 // EventType constants
 const (
-	EventBenchmarkStart    EventType = "benchmark_start"
-	EventBenchmarkComplete EventType = "benchmark_complete"
-	EventBenchmarkStopped  EventType = "benchmark_stopped"
-	EventTestStart         EventType = "test_start"
-	EventTestComplete      EventType = "test_complete"
-	EventRunStart          EventType = "run_start"
-	EventRunComplete       EventType = "run_complete"
-	EventAgentPrompt       EventType = "agent_prompt"
-	EventAgentResponse     EventType = "agent_response"
-	EventGraderResult      EventType = "grader_result"
+	EventBenchmarkStart        EventType = "benchmark_start"
+	EventBenchmarkComplete     EventType = "benchmark_complete"
+	EventBenchmarkStopped      EventType = "benchmark_stopped"
+	EventTestStart             EventType = "test_start"
+	EventTestComplete          EventType = "test_complete"
+	EventRunStart              EventType = "run_start"
+	EventRunComplete           EventType = "run_complete"
+	EventAgentPrompt           EventType = "agent_prompt"
+	EventAgentResponse         EventType = "agent_response"
+	EventGraderResult          EventType = "grader_result"
+	EventTranscriptSaved       EventType = "transcript_saved"
+	EventTranscriptWriteFailed EventType = "transcript_write_failed"
 )
 
 // ProgressEvent represents a progress update
@@ -207,8 +210,9 @@ func (r *TestRunner) runSequential(ctx context.Context, testCases []*models.Test
 			TotalTests: len(testCases),
 		})
 
+		testStart := time.Now()
 		outcome := r.runTest(ctx, tc, i+1, len(testCases))
-		r.saveTranscript(tc, outcome)
+		r.saveTranscript(tc, outcome, testStart)
 		outcomes = append(outcomes, outcome)
 
 		r.notifyProgress(ProgressEvent{
@@ -256,8 +260,9 @@ func (r *TestRunner) runConcurrent(ctx context.Context, testCases []*models.Test
 				TotalTests: len(testCases),
 			})
 
+			testStart := time.Now()
 			outcome := r.runTest(ctx, test, idx+1, len(testCases))
-			r.saveTranscript(test, outcome)
+			r.saveTranscript(test, outcome, testStart)
 			resultChan <- result{index: idx, outcome: outcome}
 
 			r.notifyProgress(ProgressEvent{
@@ -387,7 +392,14 @@ func (r *TestRunner) executeRun(ctx context.Context, tc *models.TestCase, runNum
 
 	// Emit grader result events for verbose mode
 	if r.verbose {
-		for name, gr := range gradersResults {
+		graderNames := make([]string, 0, len(gradersResults))
+		for name := range gradersResults {
+			graderNames = append(graderNames, name)
+		}
+		sort.Strings(graderNames)
+
+		for _, name := range graderNames {
+			gr := gradersResults[name]
 			r.notifyProgress(ProgressEvent{
 				EventType:  EventGraderResult,
 				TestName:   tc.DisplayName,
@@ -724,20 +736,26 @@ func (r *TestRunner) computeAggregateScore(testOutcomes []models.TestOutcome) fl
 	return totalScore / float64(len(testOutcomes))
 }
 
-func (r *TestRunner) saveTranscript(tc *models.TestCase, outcome models.TestOutcome) {
+func (r *TestRunner) saveTranscript(tc *models.TestCase, outcome models.TestOutcome, startTime time.Time) {
 	dir := r.cfg.TranscriptDir()
 	if dir == "" {
 		return
 	}
 
-	t := transcript.BuildTaskTranscript(tc, outcome, time.Now())
+	t := transcript.BuildTaskTranscript(tc, outcome, startTime)
 	path, err := transcript.Write(dir, t)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Warning: failed to write transcript for %s: %v\n", tc.DisplayName, err)
+		r.notifyProgress(ProgressEvent{
+			EventType: EventTranscriptWriteFailed,
+			TestName:  tc.DisplayName,
+			Details:   map[string]any{"error": err.Error()},
+		})
 		return
 	}
 
-	if r.verbose {
-		fmt.Printf("  Transcript saved: %s\n", path)
-	}
+	r.notifyProgress(ProgressEvent{
+		EventType: EventTranscriptSaved,
+		TestName:  tc.DisplayName,
+		Details:   map[string]any{"path": path},
+	})
 }

@@ -195,6 +195,14 @@ func verboseProgressListener(event orchestration.ProgressEvent) {
 	case orchestration.EventBenchmarkComplete:
 		duration := time.Duration(event.DurationMs) * time.Millisecond
 		fmt.Printf("Benchmark completed in %v\n\n", duration)
+	case orchestration.EventTranscriptSaved:
+		if path, ok := event.Details["path"].(string); ok {
+			fmt.Printf("  Transcript saved: %s\n", path)
+		}
+	case orchestration.EventTranscriptWriteFailed:
+		if errMsg, ok := event.Details["error"].(string); ok {
+			fmt.Printf("  Warning: failed to write transcript for %s: %s\n", event.TestName, errMsg)
+		}
 	}
 }
 

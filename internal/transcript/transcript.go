@@ -27,7 +27,7 @@ func sanitizeName(name string) string {
 
 // Filename returns the transcript filename for a task.
 func Filename(taskName string, ts time.Time) string {
-	return fmt.Sprintf("%s-%s.json", sanitizeName(taskName), ts.Format("20060102-150405"))
+	return fmt.Sprintf("%s-%s.json", sanitizeName(taskName), ts.Format("20060102-150405.000000000"))
 }
 
 // Write serializes a TaskTranscript and writes it to dir.

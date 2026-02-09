@@ -12,20 +12,21 @@ import (
 
 func TestSanitizeName(t *testing.T) {
 	tests := []struct {
+		label string
 		input string
 		want  string
 	}{
-		{"simple", "simple"},
-		{"Hello World", "hello-world"},
-		{"task/with/slashes", "taskwithslashes"},
-		{"special@chars!", "specialchars"},
-		{"", "unnamed"},
-		{"  spaces  ", "spaces"},
-		{"Mixed-Case_Test", "mixed-case_test"},
+		{"simple name", "simple", "simple"},
+		{"spaces to hyphens", "Hello World", "hello-world"},
+		{"slashes removed", "task/with/slashes", "taskwithslashes"},
+		{"special chars removed", "special@chars!", "specialchars"},
+		{"empty string", "", "unnamed"},
+		{"leading trailing spaces", "  spaces  ", "spaces"},
+		{"mixed case with underscore", "Mixed-Case_Test", "mixed-case_test"},
 	}
 
 	for _, tt := range tests {
-		t.Run(tt.input, func(t *testing.T) {
+		t.Run(tt.label, func(t *testing.T) {
 			got := sanitizeName(tt.input)
 			if got != tt.want {
 				t.Errorf("sanitizeName(%q) = %q, want %q", tt.input, got, tt.want)
@@ -37,7 +38,7 @@ func TestSanitizeName(t *testing.T) {
 func TestFilename(t *testing.T) {
 	ts := time.Date(2025, 6, 15, 14, 30, 45, 0, time.UTC)
 	got := Filename("My Task", ts)
-	want := "my-task-20250615-143045.json"
+	want := "my-task-20250615-143045.000000000.json"
 	if got != want {
 		t.Errorf("Filename() = %q, want %q", got, want)
 	}
