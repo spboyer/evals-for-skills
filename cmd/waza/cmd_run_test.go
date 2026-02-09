@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/json"
+	"io"
 	"os"
 	"path/filepath"
 	"testing"
@@ -9,6 +10,13 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
+
+// resetRunGlobals zeroes the package-level flag vars so prior tests don't leak.
+func resetRunGlobals() {
+	contextDir = ""
+	outputPath = ""
+	verbose = false
+}
 
 // helper creates a valid minimal eval spec YAML in a temp dir,
 // including a matching task file, and returns the spec path.
@@ -71,28 +79,31 @@ func TestRunCommand_RequiresExactlyOneArg(t *testing.T) {
 // ---------------------------------------------------------------------------
 
 func TestRunCommand_FlagsParsed(t *testing.T) {
+	tmpCtx := filepath.Join(t.TempDir(), "ctx")
+	tmpOut := filepath.Join(t.TempDir(), "out.json")
+
 	cmd := newRunCommand()
 	cmd.SetArgs([]string{
-		"--context-dir", "/tmp/ctx",
-		"--output", "/tmp/out.json",
+		"--context-dir", tmpCtx,
+		"--output", tmpOut,
 		"--verbose",
 		"spec.yaml",
 	})
 
 	// Don't execute — just parse flags to verify they bind.
 	require.NoError(t, cmd.ParseFlags([]string{
-		"--context-dir", "/tmp/ctx",
-		"--output", "/tmp/out.json",
+		"--context-dir", tmpCtx,
+		"--output", tmpOut,
 		"--verbose",
 	}))
 
 	val, err := cmd.Flags().GetString("context-dir")
 	require.NoError(t, err)
-	assert.Equal(t, "/tmp/ctx", val)
+	assert.Equal(t, tmpCtx, val)
 
 	val, err = cmd.Flags().GetString("output")
 	require.NoError(t, err)
-	assert.Equal(t, "/tmp/out.json", val)
+	assert.Equal(t, tmpOut, val)
 
 	boolVal, err := cmd.Flags().GetBool("verbose")
 	require.NoError(t, err)
@@ -100,15 +111,17 @@ func TestRunCommand_FlagsParsed(t *testing.T) {
 }
 
 func TestRunCommand_ShortFlags(t *testing.T) {
+	tmpOut := filepath.Join(t.TempDir(), "out.json")
+
 	cmd := newRunCommand()
 	require.NoError(t, cmd.ParseFlags([]string{
-		"-o", "/tmp/out.json",
+		"-o", tmpOut,
 		"-v",
 	}))
 
 	val, err := cmd.Flags().GetString("output")
 	require.NoError(t, err)
-	assert.Equal(t, "/tmp/out.json", val)
+	assert.Equal(t, tmpOut, val)
 
 	boolVal, err := cmd.Flags().GetBool("verbose")
 	require.NoError(t, err)
@@ -120,10 +133,7 @@ func TestRunCommand_ShortFlags(t *testing.T) {
 // ---------------------------------------------------------------------------
 
 func TestRunCommand_MissingSpecFile(t *testing.T) {
-	// Reset package-level flag vars so prior tests don't leak.
-	contextDir = ""
-	outputPath = ""
-	verbose = false
+	resetRunGlobals()
 
 	cmd := newRunCommand()
 	cmd.SetArgs([]string{"nonexistent.yaml"})
@@ -133,13 +143,11 @@ func TestRunCommand_MissingSpecFile(t *testing.T) {
 }
 
 func TestRunCommand_InvalidSpecFile(t *testing.T) {
-	contextDir = ""
-	outputPath = ""
-	verbose = false
+	resetRunGlobals()
 
 	dir := t.TempDir()
 	badSpec := filepath.Join(dir, "bad.yaml")
-	require.NoError(t, os.WriteFile(badSpec, []byte("not: valid: yaml: ["), 0o644))
+	require.NoError(t, os.WriteFile(badSpec, []byte("foo: [bar"), 0o644))
 
 	cmd := newRunCommand()
 	cmd.SetArgs([]string{badSpec})
@@ -149,9 +157,7 @@ func TestRunCommand_InvalidSpecFile(t *testing.T) {
 }
 
 func TestRunCommand_InvalidEngineType(t *testing.T) {
-	contextDir = ""
-	outputPath = ""
-	verbose = false
+	resetRunGlobals()
 
 	dir := t.TempDir()
 	taskDir := filepath.Join(dir, "tasks")
@@ -187,26 +193,23 @@ tasks:
 // ---------------------------------------------------------------------------
 
 func TestRunCommand_MockEngineRun(t *testing.T) {
-	contextDir = ""
-	outputPath = ""
-	verbose = false
+	resetRunGlobals()
 
 	specPath := createTestSpec(t, "mock")
 
 	cmd := newRunCommand()
 	cmd.SetArgs([]string{specPath})
 
-	// Suppress stdout noise during test
-	cmd.SetOut(nil)
+	// Suppress stdout/stderr noise during test
+	cmd.SetOut(io.Discard)
+	cmd.SetErr(io.Discard)
 
 	err := cmd.Execute()
 	assert.NoError(t, err)
 }
 
 func TestRunCommand_MockEngineVerbose(t *testing.T) {
-	contextDir = ""
-	outputPath = ""
-	verbose = false
+	resetRunGlobals()
 
 	specPath := createTestSpec(t, "mock")
 
@@ -218,9 +221,7 @@ func TestRunCommand_MockEngineVerbose(t *testing.T) {
 }
 
 func TestRunCommand_OutputJSON(t *testing.T) {
-	contextDir = ""
-	outputPath = ""
-	verbose = false
+	resetRunGlobals()
 
 	specPath := createTestSpec(t, "mock")
 	outFile := filepath.Join(t.TempDir(), "results.json")
@@ -243,9 +244,7 @@ func TestRunCommand_OutputJSON(t *testing.T) {
 }
 
 func TestRunCommand_ContextDirFlag(t *testing.T) {
-	contextDir = ""
-	outputPath = ""
-	verbose = false
+	resetRunGlobals()
 
 	specPath := createTestSpec(t, "mock")
 
