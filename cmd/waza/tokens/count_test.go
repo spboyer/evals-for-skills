@@ -71,22 +71,18 @@ func TestCount_SortByTokens(t *testing.T) {
 	out := new(bytes.Buffer)
 	cmd := newCountCmd()
 	cmd.SetOut(out)
-	cmd.SetArgs([]string{"--format", "json", "--sort", "tokens", "testdata"})
+	cmd.SetArgs([]string{"--sort", "tokens", "testdata"})
 	require.NoError(t, cmd.Execute())
 
-	var result countJSONOutput
-	require.NoError(t, json.Unmarshal(out.Bytes(), &result))
-
-	maxTokens := 0
-	maxFile := ""
-	for file, entry := range result.Files {
-		if entry.Tokens > maxTokens {
-			maxTokens = entry.Tokens
-			maxFile = file
+	lines := strings.Split(out.String(), "\n")
+	var dataLines []string
+	for _, line := range lines {
+		if strings.Contains(line, ".md") {
+			dataLines = append(dataLines, line)
 		}
 	}
-
-	require.Equal(t, "testdata/SKILL.md", maxFile, "SKILL.md should have the most tokens")
+	require.GreaterOrEqual(t, len(dataLines), 2)
+	require.Contains(t, dataLines[0], "SKILL.md", "SKILL.md should be first when sorted by tokens")
 }
 
 func TestCount_SortByName(t *testing.T) {
@@ -230,6 +226,20 @@ func TestCount_AbsoluteFilePath(t *testing.T) {
 
 	require.Equal(t, 1, result.TotalFiles)
 	require.Contains(t, result.Files, "testdata/SKILL.md")
+}
+
+func TestCount_SortWithJSONErrors(t *testing.T) {
+	cmd := newCountCmd()
+	cmd.SetOut(new(bytes.Buffer))
+	cmd.SetArgs([]string{"--format", "json", "--sort", "tokens", "testdata"})
+	require.ErrorContains(t, cmd.Execute(), "--sort is only supported with table output")
+}
+
+func TestCount_NoTotalWithJSONErrors(t *testing.T) {
+	cmd := newCountCmd()
+	cmd.SetOut(new(bytes.Buffer))
+	cmd.SetArgs([]string{"--format", "json", "--no-total", "testdata"})
+	require.ErrorContains(t, cmd.Execute(), "--no-total is only supported with table output")
 }
 
 func TestCount_NonexistentPath(t *testing.T) {

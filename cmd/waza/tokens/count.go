@@ -2,6 +2,7 @@ package tokens
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -26,7 +27,7 @@ used as-is. When no path is given, the working directory is scanned.`,
 		RunE: runCount,
 	}
 	cmd.Flags().String("format", "table", "Output format: json | table")
-	cmd.Flags().String("sort", "path", "Sort by: tokens | name | path")
+	cmd.Flags().String("sort", "path", "Sort table rows by: tokens | name | path")
 	cmd.Flags().Int("min-tokens", 0, "Filter files with less than n tokens")
 	cmd.Flags().Bool("no-total", false, "Hide total row in table output")
 	return cmd
@@ -62,6 +63,14 @@ func runCount(cmd *cobra.Command, args []string) error {
 	noTotal, err := cmd.Flags().GetBool("no-total")
 	if err != nil {
 		return err
+	}
+	if format == "json" {
+		if cmd.Flags().Changed("sort") {
+			return errors.New("--sort is only supported with table output")
+		}
+		if cmd.Flags().Changed("no-total") {
+			return errors.New("--no-total is only supported with table output")
+		}
 	}
 
 	rootDir, err := os.Getwd()
