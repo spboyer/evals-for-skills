@@ -222,9 +222,31 @@ func printSummary(outcome *models.EvaluationOutcome) {
 	fmt.Printf("Errors:         %d\n", digest.Errors)
 	fmt.Printf("Success Rate:   %.1f%%\n", digest.SuccessRate*100)
 	fmt.Printf("Aggregate Score: %.2f\n", digest.AggregateScore)
+	fmt.Printf("Min Score:      %.2f\n", digest.MinScore)
+	fmt.Printf("Max Score:      %.2f\n", digest.MaxScore)
+	fmt.Printf("Std Dev:        %.4f\n", digest.StdDev)
 
 	duration := time.Duration(digest.DurationMs) * time.Millisecond
 	fmt.Printf("Duration:       %v\n", duration)
+	fmt.Println()
+
+	// Per-task breakdown
+	fmt.Println("-" + strings.Repeat("-", 50))
+	fmt.Println(" PER-TASK BREAKDOWN")
+	fmt.Println("-" + strings.Repeat("-", 50))
+	for _, to := range outcome.TestOutcomes {
+		icon := "✓"
+		if to.Status != "passed" {
+			icon = "✗"
+		}
+		fmt.Printf("  %s %s [%s]\n", icon, to.DisplayName, to.Status)
+		if to.Stats != nil {
+			fmt.Printf("      pass_rate=%.1f%%  avg=%.2f  min=%.2f  max=%.2f  stddev=%.4f  avg_dur=%dms\n",
+				to.Stats.PassRate*100, to.Stats.AvgScore,
+				to.Stats.MinScore, to.Stats.MaxScore,
+				to.Stats.StdDevScore, to.Stats.AvgDurationMs)
+		}
+	}
 	fmt.Println()
 
 	// Show failed tests
