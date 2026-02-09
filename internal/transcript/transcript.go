@@ -53,7 +53,6 @@ func Write(dir string, t *models.TaskTranscript) (string, error) {
 
 // BuildTaskTranscript constructs a TaskTranscript from run results.
 func BuildTaskTranscript(tc *models.TestCase, outcome models.TestOutcome, startTime time.Time) *models.TaskTranscript {
-	endTime := startTime
 	var totalDurationMs int64
 	var allEntries []models.TranscriptEntry
 	allValidations := make(map[string]models.GraderResults)
@@ -74,7 +73,7 @@ func BuildTaskTranscript(tc *models.TestCase, outcome models.TestOutcome, startT
 		}
 	}
 
-	endTime = startTime.Add(time.Duration(totalDurationMs) * time.Millisecond)
+	endTime := startTime.Add(time.Duration(totalDurationMs) * time.Millisecond)
 
 	return &models.TaskTranscript{
 		TaskID:      tc.TestID,

@@ -48,9 +48,9 @@ func TestWrite(t *testing.T) {
 	dir := t.TempDir()
 
 	tr := &models.TaskTranscript{
-		TaskID:   "test-1",
-		TaskName: "Explain Code",
-		Status:   "passed",
+		TaskID:      "test-1",
+		TaskName:    "Explain Code",
+		Status:      "passed",
 		StartedAt:   time.Date(2025, 6, 15, 14, 0, 0, 0, time.UTC),
 		CompletedAt: time.Date(2025, 6, 15, 14, 0, 1, 0, time.UTC),
 		DurationMs:  1000,

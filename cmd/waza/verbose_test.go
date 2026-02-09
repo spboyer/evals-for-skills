@@ -15,7 +15,10 @@ import (
 // captureOutput captures stdout during function execution.
 func captureOutput(fn func()) string {
 	old := os.Stdout
-	r, w, _ := os.Pipe()
+	r, w, err := os.Pipe()
+	if err != nil {
+		panic(err)
+	}
 	os.Stdout = w
 
 	fn()
@@ -24,7 +27,7 @@ func captureOutput(fn func()) string {
 	os.Stdout = old
 
 	var buf bytes.Buffer
-	io.Copy(&buf, r)
+	_, _ = io.Copy(&buf, r)
 	return buf.String()
 }
 
