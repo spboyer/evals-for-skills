@@ -2,6 +2,7 @@
 
 - **Owner:** Shayne Boyer (spboyer@live.com)
 - **Project:** Waza — Go CLI for evaluating AI agent skills (scaffolding, compliance scoring, cross-model testing)
+- **Project:** Waza — Go CLI for evaluating AI agent skills
 - **Stack:** Go, Cobra CLI, Copilot SDK, YAML specs
 - **Created:** 2026-02-09
 
@@ -20,3 +21,4 @@
 - **Mock engine (`execution.NewMockEngine`)** — Returns deterministic responses. Useful for testing the full pipeline without a real Copilot SDK connection. Spec YAML with `executor: mock` triggers it.
 - **Fixture isolation** — The runner resolves `--context-dir` relative to CWD and task glob patterns relative to the spec file directory. Tests use `t.TempDir()` for full isolation.
 - **Shared workspace hazard** — Multiple agents may work concurrently in this repo. Always verify `git branch --show-current` before committing; stash operations can carry changes across branches.
+<!-- Append new learnings below. -->

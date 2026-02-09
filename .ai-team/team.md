@@ -6,7 +6,7 @@
 
 | Name | Role | Notes |
 |------|------|-------|
-| Squad | Coordinator | Routes work, enforces handoffs and reviewer gates. Does not generate domain artifacts. |
+| Squad | Coordinator | Routes work, enforces handoffs and reviewer gates. |
 
 ## Members
 
@@ -24,7 +24,7 @@
 
 - **Owner:** Shayne Boyer (spboyer@live.com)
 - **Stack:** Go, Cobra CLI, Copilot SDK, YAML specs
-- **Description:** CLI tool for evaluating AI agent skills — scaffolding, compliance scoring, cross-model testing
+- **Description:** CLI tool for evaluating AI agent skills
 - **Created:** 2026-02-09
 - **Repository:** spboyer/waza
 - **Tracking Issue:** #66

@@ -1,7 +1,5 @@
 # Ceremonies
 
-> Team meetings that happen before or after work. Each squad configures their own.
-
 ## Design Review
 
 | Field | Value |
@@ -19,8 +17,6 @@
 2. Agree on interfaces and contracts between components
 3. Identify risks and edge cases
 4. Assign action items
-
----
 
 ## Retrospective
 
