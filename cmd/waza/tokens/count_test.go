@@ -3,7 +3,6 @@ package tokens
 import (
 	"bytes"
 	"encoding/json"
-	"os"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -174,9 +173,7 @@ func TestCount_DirectoryPath(t *testing.T) {
 }
 
 func TestCount_EmptyDirectory(t *testing.T) {
-	dir, err := os.MkdirTemp(".", "empty-*")
-	require.NoError(t, err)
-	defer os.RemoveAll(dir)
+	dir := t.TempDir()
 
 	out := new(bytes.Buffer)
 	cmd := newCountCmd()
@@ -242,8 +239,5 @@ func TestCount_NonexistentPath(t *testing.T) {
 	cmd.SetOut(out)
 	cmd.SetErr(errOut)
 	cmd.SetArgs([]string{"no-such-dir"})
-	require.NoError(t, cmd.Execute())
-
-	require.Contains(t, errOut.String(), "no-such-dir")
-	require.Contains(t, out.String(), "No markdown files found")
+	require.ErrorContains(t, cmd.Execute(), "no-such-dir")
 }

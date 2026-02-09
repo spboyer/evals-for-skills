@@ -12,17 +12,17 @@ import (
 func TestFindMarkdownFiles(t *testing.T) {
 	dir := t.TempDir()
 
-	os.WriteFile(filepath.Join(dir, "README.md"), []byte("# Hi"), 0644)
-	os.WriteFile(filepath.Join(dir, "doc.mdx"), []byte("# Doc"), 0644)
-	os.WriteFile(filepath.Join(dir, "script.ts"), []byte("//"), 0644)
+	require.NoError(t, os.WriteFile(filepath.Join(dir, "README.md"), []byte("# Hi"), 0644))
+	require.NoError(t, os.WriteFile(filepath.Join(dir, "doc.mdx"), []byte("# Doc"), 0644))
+	require.NoError(t, os.WriteFile(filepath.Join(dir, "script.ts"), []byte("//"), 0644))
 
 	sub := filepath.Join(dir, "sub")
-	os.MkdirAll(sub, 0755)
-	os.WriteFile(filepath.Join(sub, "nested.md"), []byte("# Nested"), 0644)
+	require.NoError(t, os.MkdirAll(sub, 0755))
+	require.NoError(t, os.WriteFile(filepath.Join(sub, "nested.md"), []byte("# Nested"), 0644))
 
 	nm := filepath.Join(dir, "node_modules")
-	os.MkdirAll(nm, 0755)
-	os.WriteFile(filepath.Join(nm, "excluded.md"), []byte("# No"), 0644)
+	require.NoError(t, os.MkdirAll(nm, 0755))
+	require.NoError(t, os.WriteFile(filepath.Join(nm, "excluded.md"), []byte("# No"), 0644))
 
 	files, err := findMarkdownFiles(nil, dir)
 	require.NoError(t, err)

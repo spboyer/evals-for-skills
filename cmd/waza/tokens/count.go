@@ -47,15 +47,30 @@ type countFileEntry struct {
 }
 
 func runCount(cmd *cobra.Command, args []string) error {
-	format, _ := cmd.Flags().GetString("format")
-	sortBy, _ := cmd.Flags().GetString("sort")
-	minTokens, _ := cmd.Flags().GetInt("min-tokens")
-	noTotal, _ := cmd.Flags().GetBool("no-total")
+	format, err := cmd.Flags().GetString("format")
+	if err != nil {
+		return err
+	}
+	sortBy, err := cmd.Flags().GetString("sort")
+	if err != nil {
+		return err
+	}
+	minTokens, err := cmd.Flags().GetInt("min-tokens")
+	if err != nil {
+		return err
+	}
+	noTotal, err := cmd.Flags().GetBool("no-total")
+	if err != nil {
+		return err
+	}
 
-	rootDir, _ := os.Getwd()
+	rootDir, err := os.Getwd()
+	if err != nil {
+		return fmt.Errorf("getting current directory: %w", err)
+	}
 	files, err := findMarkdownFiles(args, rootDir)
 	if err != nil {
-		fmt.Fprintln(cmd.ErrOrStderr(), err)
+		return err
 	}
 
 	counter := tokens.NewEstimatingCounter()
@@ -63,8 +78,7 @@ func runCount(cmd *cobra.Command, args []string) error {
 	for _, f := range files {
 		r, err := countFile(counter, f, rootDir)
 		if err != nil {
-			fmt.Fprintf(cmd.OutOrStderr(), "⚠️  Error reading %s: %s\n", f, err)
-			continue
+			return fmt.Errorf("⚠️  Error reading %s: %s\n", f, err)
 		}
 		if r.Tokens >= minTokens {
 			results = append(results, *r)
