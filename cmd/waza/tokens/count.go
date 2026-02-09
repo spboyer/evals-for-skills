@@ -16,14 +16,14 @@ import (
 
 func newCountCmd() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "count [path]",
+		Use:   "count [paths...]",
 		Short: "Count tokens in markdown files",
 		Long: `Count tokens in markdown files.
 
-Path may be a file or directory (scanned recursively for .md/.mdx files).
+Paths may be files or directories (scanned recursively for .md/.mdx files).
 A relative path is resolved from the working directory; an absolute path is
 used as-is. When no path is given, the working directory is scanned.`,
-		Args: cobra.MaximumNArgs(1),
+		Args: cobra.ArbitraryArgs,
 		RunE: runCount,
 	}
 	cmd.Flags().String("format", "table", "Output format: json | table")
