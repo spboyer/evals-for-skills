@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
 	"sync"
 	"time"
@@ -339,6 +340,15 @@ func (r *TestRunner) executeRun(ctx context.Context, tc *models.TestCase, runNum
 	// Prepare execution request
 	req := r.buildExecutionRequest(tc)
 
+	// Emit agent prompt event before execution
+	if r.verbose {
+		r.notifyProgress(ProgressEvent{
+			EventType: EventAgentPrompt,
+			TestName:  tc.DisplayName,
+			Details:   map[string]any{"message": req.Message},
+		})
+	}
+
 	// Execute
 	resp, err := r.engine.Execute(ctx, req)
 	if err != nil {
@@ -350,13 +360,8 @@ func (r *TestRunner) executeRun(ctx context.Context, tc *models.TestCase, runNum
 		}
 	}
 
-	// Emit agent prompt/response events for verbose mode
+	// Emit agent response event after execution
 	if r.verbose {
-		r.notifyProgress(ProgressEvent{
-			EventType: EventAgentPrompt,
-			TestName:  tc.DisplayName,
-			Details:   map[string]any{"message": req.Message},
-		})
 		r.notifyProgress(ProgressEvent{
 			EventType: EventAgentResponse,
 			TestName:  tc.DisplayName,
@@ -382,9 +387,15 @@ func (r *TestRunner) executeRun(ctx context.Context, tc *models.TestCase, runNum
 		}
 	}
 
-	// Emit grader result events for verbose mode
+	// Emit grader result events for verbose mode (sorted for stable output)
 	if r.verbose {
-		for name, gr := range gradersResults {
+		graderNames := make([]string, 0, len(gradersResults))
+		for name := range gradersResults {
+			graderNames = append(graderNames, name)
+		}
+		sort.Strings(graderNames)
+		for _, name := range graderNames {
+			gr := gradersResults[name]
 			r.notifyProgress(ProgressEvent{
 				EventType:  EventGraderResult,
 				TestName:   tc.DisplayName,

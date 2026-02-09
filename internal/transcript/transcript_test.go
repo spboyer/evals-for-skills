@@ -2,6 +2,7 @@ package transcript
 
 import (
 	"encoding/json"
+	"fmt"
 	"os"
 	"path/filepath"
 	"testing"
@@ -24,8 +25,8 @@ func TestSanitizeName(t *testing.T) {
 		{"Mixed-Case_Test", "mixed-case_test"},
 	}
 
-	for _, tt := range tests {
-		t.Run(tt.input, func(t *testing.T) {
+	for i, tt := range tests {
+		t.Run(fmt.Sprintf("case_%d", i), func(t *testing.T) {
 			got := sanitizeName(tt.input)
 			if got != tt.want {
 				t.Errorf("sanitizeName(%q) = %q, want %q", tt.input, got, tt.want)
@@ -82,8 +83,11 @@ func TestWrite(t *testing.T) {
 	}
 
 	// Verify file exists
-	if _, err := os.Stat(path); os.IsNotExist(err) {
-		t.Fatal("transcript file was not created")
+	if _, err := os.Stat(path); err != nil {
+		if os.IsNotExist(err) {
+			t.Fatal("transcript file was not created")
+		}
+		t.Fatalf("Stat() error: %v", err)
 	}
 
 	// Verify content is valid JSON that round-trips
@@ -132,8 +136,11 @@ func TestWrite_CreatesDir(t *testing.T) {
 		t.Fatalf("Write() error: %v", err)
 	}
 
-	if _, err := os.Stat(path); os.IsNotExist(err) {
-		t.Fatal("transcript file was not created in nested dir")
+	if _, err := os.Stat(path); err != nil {
+		if os.IsNotExist(err) {
+			t.Fatal("transcript file was not created in nested dir")
+		}
+		t.Fatalf("failed to stat transcript file: %v", err)
 	}
 }
 
