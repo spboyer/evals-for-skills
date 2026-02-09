@@ -13,6 +13,7 @@ import (
 	"github.com/spboyer/waza/internal/execution"
 	"github.com/spboyer/waza/internal/graders"
 	"github.com/spboyer/waza/internal/models"
+	"github.com/spboyer/waza/internal/transcript"
 )
 
 // TestRunner orchestrates the execution of tests
@@ -41,6 +42,9 @@ const (
 	EventTestComplete      EventType = "test_complete"
 	EventRunStart          EventType = "run_start"
 	EventRunComplete       EventType = "run_complete"
+	EventAgentPrompt       EventType = "agent_prompt"
+	EventAgentResponse     EventType = "agent_response"
+	EventGraderResult      EventType = "grader_result"
 )
 
 // ProgressEvent represents a progress update
@@ -204,6 +208,7 @@ func (r *TestRunner) runSequential(ctx context.Context, testCases []*models.Test
 		})
 
 		outcome := r.runTest(ctx, tc, i+1, len(testCases))
+		r.saveTranscript(tc, outcome)
 		outcomes = append(outcomes, outcome)
 
 		r.notifyProgress(ProgressEvent{
@@ -252,6 +257,7 @@ func (r *TestRunner) runConcurrent(ctx context.Context, testCases []*models.Test
 			})
 
 			outcome := r.runTest(ctx, test, idx+1, len(testCases))
+			r.saveTranscript(test, outcome)
 			resultChan <- result{index: idx, outcome: outcome}
 
 			r.notifyProgress(ProgressEvent{
@@ -347,6 +353,24 @@ func (r *TestRunner) executeRun(ctx context.Context, tc *models.TestCase, runNum
 		}
 	}
 
+	// Emit agent prompt/response events for verbose mode
+	if r.verbose {
+		r.notifyProgress(ProgressEvent{
+			EventType: EventAgentPrompt,
+			TestName:  tc.DisplayName,
+			Details:   map[string]any{"message": req.Message},
+		})
+		r.notifyProgress(ProgressEvent{
+			EventType: EventAgentResponse,
+			TestName:  tc.DisplayName,
+			Details: map[string]any{
+				"output":     resp.FinalOutput,
+				"transcript": r.buildTranscript(resp),
+				"tool_calls": len(resp.ToolCalls),
+			},
+		})
+	}
+
 	// Build validation context
 	vCtx := r.buildGraderContext(tc, resp)
 
@@ -358,6 +382,24 @@ func (r *TestRunner) executeRun(ctx context.Context, tc *models.TestCase, runNum
 			Status:     "error",
 			DurationMs: time.Since(startTime).Milliseconds(),
 			ErrorMsg:   err.Error(),
+		}
+	}
+
+	// Emit grader result events for verbose mode
+	if r.verbose {
+		for name, gr := range gradersResults {
+			r.notifyProgress(ProgressEvent{
+				EventType:  EventGraderResult,
+				TestName:   tc.DisplayName,
+				DurationMs: gr.DurationMs,
+				Details: map[string]any{
+					"grader":   name,
+					"type":     gr.Type,
+					"passed":   gr.Passed,
+					"score":    gr.Score,
+					"feedback": gr.Feedback,
+				},
+			})
 		}
 	}
 
@@ -680,4 +722,22 @@ func (r *TestRunner) computeAggregateScore(testOutcomes []models.TestOutcome) fl
 	}
 
 	return totalScore / float64(len(testOutcomes))
+}
+
+func (r *TestRunner) saveTranscript(tc *models.TestCase, outcome models.TestOutcome) {
+	dir := r.cfg.TranscriptDir()
+	if dir == "" {
+		return
+	}
+
+	t := transcript.BuildTaskTranscript(tc, outcome, time.Now())
+	path, err := transcript.Write(dir, t)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Warning: failed to write transcript for %s: %v\n", tc.DisplayName, err)
+		return
+	}
+
+	if r.verbose {
+		fmt.Printf("  Transcript saved: %s\n", path)
+	}
 }

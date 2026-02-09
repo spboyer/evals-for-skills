@@ -17,9 +17,10 @@ import (
 )
 
 var (
-	contextDir string
-	outputPath string
-	verbose    bool
+	contextDir    string
+	outputPath    string
+	verbose       bool
+	transcriptDir string
 )
 
 func newRunCommand() *cobra.Command {
@@ -37,6 +38,7 @@ Resources are loaded from the context directory (defaults to ./fixtures).`,
 	cmd.Flags().StringVar(&contextDir, "context-dir", "", "Context directory for fixtures (default: ./fixtures relative to spec)")
 	cmd.Flags().StringVarP(&outputPath, "output", "o", "", "Output JSON file for results")
 	cmd.Flags().BoolVarP(&verbose, "verbose", "v", false, "Verbose output with detailed progress")
+	cmd.Flags().StringVar(&transcriptDir, "transcript-dir", "", "Directory to save per-task transcript JSON files")
 
 	return cmd
 }
@@ -78,6 +80,7 @@ func runCommandE(cmd *cobra.Command, args []string) error {
 		config.WithFixtureDir(fixtureDir), // For loading resource files
 		config.WithVerbose(verbose),
 		config.WithOutputPath(outputPath),
+		config.WithTranscriptDir(transcriptDir),
 	)
 
 	// Create engine based on spec
@@ -142,10 +145,51 @@ func verboseProgressListener(event orchestration.ProgressEvent) {
 	case orchestration.EventTestStart:
 		fmt.Printf("[%d/%d] Running test: %s\n", event.TestNum, event.TotalTests, event.TestName)
 	case orchestration.EventRunStart:
-		fmt.Printf("  Run %d/%d...", event.RunNum, event.TotalRuns)
+		fmt.Printf("  Run %d/%d...\n", event.RunNum, event.TotalRuns)
+	case orchestration.EventAgentPrompt:
+		if msg, ok := event.Details["message"].(string); ok {
+			fmt.Printf("    ── Agent Prompt ──\n")
+			fmt.Printf("    %s\n", msg)
+		}
+	case orchestration.EventAgentResponse:
+		fmt.Printf("    ── Agent Response ──\n")
+		if output, ok := event.Details["output"].(string); ok && output != "" {
+			// Indent each line of output
+			for _, line := range strings.Split(output, "\n") {
+				fmt.Printf("    %s\n", line)
+			}
+		}
+		if toolCalls, ok := event.Details["tool_calls"].(int); ok && toolCalls > 0 {
+			fmt.Printf("    Tool calls: %d\n", toolCalls)
+		}
+	case orchestration.EventGraderResult:
+		passed := false
+		if p, ok := event.Details["passed"].(bool); ok {
+			passed = p
+		}
+		icon := "✓"
+		if !passed {
+			icon = "✗"
+		}
+		graderName := ""
+		if n, ok := event.Details["grader"].(string); ok {
+			graderName = n
+		}
+		score := 0.0
+		if s, ok := event.Details["score"].(float64); ok {
+			score = s
+		}
+		fmt.Printf("    %s Grader [%s]: score=%.2f", icon, graderName, score)
+		if event.DurationMs > 0 {
+			fmt.Printf(" (%dms)", event.DurationMs)
+		}
+		fmt.Println()
+		if feedback, ok := event.Details["feedback"].(string); ok && feedback != "" && !passed {
+			fmt.Printf("      Feedback: %s\n", feedback)
+		}
 	case orchestration.EventRunComplete:
 		duration := time.Duration(event.DurationMs) * time.Millisecond
-		fmt.Printf(" %s (%v)\n", event.Status, duration)
+		fmt.Printf("  Run result: %s (%v)\n", event.Status, duration)
 	case orchestration.EventTestComplete:
 		fmt.Printf("  Test %s: %s\n\n", event.TestName, event.Status)
 	case orchestration.EventBenchmarkComplete:
