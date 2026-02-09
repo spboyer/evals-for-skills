@@ -166,10 +166,16 @@ func verboseProgressListener(event orchestration.ProgressEvent) {
 			fmt.Printf("  [TOOLS] %d tool call(s)\n", tc)
 		}
 	case orchestration.EventGraderResult:
-		name, _ := event.Details["grader"].(string)
-		passed, _ := event.Details["passed"].(bool)
-		score, _ := event.Details["score"].(float64)
-		feedback, _ := event.Details["feedback"].(string)
+		name := fmt.Sprintf("%v", event.Details["grader"])
+		passed, ok := event.Details["passed"].(bool)
+		if !ok {
+			passed = false
+		}
+		score, ok := event.Details["score"].(float64)
+		if !ok {
+			score = 0
+		}
+		feedback := fmt.Sprintf("%v", event.Details["feedback"])
 		icon := "✗"
 		if passed {
 			icon = "✓"
