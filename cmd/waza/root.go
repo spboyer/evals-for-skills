@@ -24,6 +24,7 @@ performance against predefined test cases.`,
 	cmd.AddCommand(newInitCommand())
 	cmd.AddCommand(newGenerateCommand())
 	cmd.AddCommand(tokens.NewCommand())
+	cmd.AddCommand(newCompareCommand())
 
 	return cmd
 }

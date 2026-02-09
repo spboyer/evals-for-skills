@@ -21,6 +21,9 @@ var (
 	outputPath    string
 	verbose       bool
 	transcriptDir string
+	taskFilters   []string
+	parallel      bool
+	workers       int
 )
 
 func newRunCommand() *cobra.Command {
@@ -39,6 +42,9 @@ Resources are loaded from the context directory (defaults to ./fixtures).`,
 	cmd.Flags().StringVarP(&outputPath, "output", "o", "", "Output JSON file for results")
 	cmd.Flags().BoolVarP(&verbose, "verbose", "v", false, "Verbose output with detailed progress")
 	cmd.Flags().StringVar(&transcriptDir, "transcript-dir", "", "Directory to save per-task transcript JSON files")
+	cmd.Flags().StringArrayVar(&taskFilters, "task", nil, "Filter tasks by name/ID glob pattern (can be repeated)")
+	cmd.Flags().BoolVar(&parallel, "parallel", false, "Run tasks concurrently")
+	cmd.Flags().IntVar(&workers, "workers", 0, "Number of concurrent workers (default: 4, requires --parallel)")
 
 	return cmd
 }
@@ -50,6 +56,14 @@ func runCommandE(cmd *cobra.Command, args []string) error {
 	spec, err := models.LoadBenchmarkSpec(specPath)
 	if err != nil {
 		return fmt.Errorf("failed to load spec: %w", err)
+	}
+
+	// CLI flags override spec config
+	if parallel {
+		spec.Config.Concurrent = true
+	}
+	if workers > 0 {
+		spec.Config.Workers = workers
 	}
 
 	// Get spec directory for resolving relative paths
@@ -95,8 +109,8 @@ func runCommandE(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("unknown engine type: %s", spec.Config.EngineType)
 	}
 
-	// Create runner
-	runner := orchestration.NewTestRunner(cfg, engine)
+	// Create runner with optional task filters
+	runner := orchestration.NewTestRunner(cfg, engine, orchestration.WithTaskFilters(taskFilters...))
 
 	// Add progress listener
 	if verbose {
@@ -112,6 +126,13 @@ func runCommandE(cmd *cobra.Command, args []string) error {
 	fmt.Printf("Skill: %s\n", spec.SkillName)
 	fmt.Printf("Engine: %s\n", spec.Config.EngineType)
 	fmt.Printf("Model: %s\n", spec.Config.ModelID)
+	if spec.Config.Concurrent {
+		w := spec.Config.Workers
+		if w <= 0 {
+			w = 4
+		}
+		fmt.Printf("Parallel: %d workers\n", w)
+	}
 	fmt.Println()
 
 	outcome, err := runner.RunBenchmark(ctx)
@@ -222,9 +243,31 @@ func printSummary(outcome *models.EvaluationOutcome) {
 	fmt.Printf("Errors:         %d\n", digest.Errors)
 	fmt.Printf("Success Rate:   %.1f%%\n", digest.SuccessRate*100)
 	fmt.Printf("Aggregate Score: %.2f\n", digest.AggregateScore)
+	fmt.Printf("Min Score:      %.2f\n", digest.MinScore)
+	fmt.Printf("Max Score:      %.2f\n", digest.MaxScore)
+	fmt.Printf("Std Dev:        %.4f\n", digest.StdDev)
 
 	duration := time.Duration(digest.DurationMs) * time.Millisecond
 	fmt.Printf("Duration:       %v\n", duration)
+	fmt.Println()
+
+	// Per-task breakdown
+	fmt.Println("-" + strings.Repeat("-", 50))
+	fmt.Println(" PER-TASK BREAKDOWN")
+	fmt.Println("-" + strings.Repeat("-", 50))
+	for _, to := range outcome.TestOutcomes {
+		icon := "✓"
+		if to.Status != "passed" {
+			icon = "✗"
+		}
+		fmt.Printf("  %s %s [%s]\n", icon, to.DisplayName, to.Status)
+		if to.Stats != nil {
+			fmt.Printf("      pass_rate=%.1f%%  avg=%.2f  min=%.2f  max=%.2f  stddev=%.4f  avg_dur=%dms\n",
+				to.Stats.PassRate*100, to.Stats.AvgScore,
+				to.Stats.MinScore, to.Stats.MaxScore,
+				to.Stats.StdDevScore, to.Stats.AvgDurationMs)
+		}
+	}
 	fmt.Println()
 
 	// Show failed tests

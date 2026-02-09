@@ -36,11 +36,12 @@ type ResourceRef struct {
 
 // TestExpectation defines expected outcomes
 type TestExpectation struct {
-	OutcomeSpecs  []OutcomeSpec  `yaml:"outcomes,omitempty" json:"outcome_specs,omitempty"`
-	ToolPatterns  map[string]any `yaml:"tool_calls,omitempty" json:"tool_patterns,omitempty"`
-	BehaviorRules BehaviorRules  `yaml:"behavior,omitempty" json:"behavior_rules,omitempty"`
-	MustInclude   []string       `yaml:"output_contains,omitempty" json:"must_include,omitempty"`
-	MustExclude   []string       `yaml:"output_not_contains,omitempty" json:"must_exclude,omitempty"`
+	OutcomeSpecs    []OutcomeSpec  `yaml:"outcomes,omitempty" json:"outcome_specs,omitempty"`
+	ToolPatterns    map[string]any `yaml:"tool_calls,omitempty" json:"tool_patterns,omitempty"`
+	BehaviorRules   BehaviorRules  `yaml:"behavior,omitempty" json:"behavior_rules,omitempty"`
+	MustInclude     []string       `yaml:"output_contains,omitempty" json:"must_include,omitempty"`
+	MustExclude     []string       `yaml:"output_not_contains,omitempty" json:"must_exclude,omitempty"`
+	ExpectedTrigger *bool          `yaml:"should_trigger,omitempty" json:"expected_trigger,omitempty"`
 }
 
 type OutcomeSpec struct {
