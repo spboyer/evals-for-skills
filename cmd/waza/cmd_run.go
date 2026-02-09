@@ -17,9 +17,10 @@ import (
 )
 
 var (
-	contextDir string
-	outputPath string
-	verbose    bool
+	contextDir    string
+	outputPath    string
+	verbose       bool
+	transcriptDir string
 )
 
 func newRunCommand() *cobra.Command {
@@ -37,6 +38,7 @@ Resources are loaded from the context directory (defaults to ./fixtures).`,
 	cmd.Flags().StringVar(&contextDir, "context-dir", "", "Context directory for fixtures (default: ./fixtures relative to spec)")
 	cmd.Flags().StringVarP(&outputPath, "output", "o", "", "Output JSON file for results")
 	cmd.Flags().BoolVarP(&verbose, "verbose", "v", false, "Verbose output with detailed progress")
+	cmd.Flags().StringVar(&transcriptDir, "transcript-dir", "", "Directory to save per-task transcript JSON files")
 
 	return cmd
 }
@@ -78,6 +80,7 @@ func runCommandE(cmd *cobra.Command, args []string) error {
 		config.WithFixtureDir(fixtureDir), // For loading resource files
 		config.WithVerbose(verbose),
 		config.WithOutputPath(outputPath),
+		config.WithTranscriptDir(transcriptDir),
 	)
 
 	// Create engine based on spec
@@ -137,26 +140,66 @@ func runCommandE(cmd *cobra.Command, args []string) error {
 
 func verboseProgressListener(event orchestration.ProgressEvent) {
 	switch event.EventType {
-	case "benchmark_start":
+	case orchestration.EventBenchmarkStart:
 		fmt.Printf("Starting benchmark with %d test(s)...\n\n", event.TotalTests)
-	case "test_start":
+	case orchestration.EventTestStart:
 		fmt.Printf("[%d/%d] Running test: %s\n", event.TestNum, event.TotalTests, event.TestName)
-	case "run_start":
+	case orchestration.EventRunStart:
 		fmt.Printf("  Run %d/%d...", event.RunNum, event.TotalRuns)
-	case "run_complete":
+	case orchestration.EventRunComplete:
 		duration := time.Duration(event.DurationMs) * time.Millisecond
 		fmt.Printf(" %s (%v)\n", event.Status, duration)
-	case "test_complete":
+	case orchestration.EventTestComplete:
 		fmt.Printf("  Test %s: %s\n\n", event.TestName, event.Status)
-	case "benchmark_complete":
+	case orchestration.EventBenchmarkComplete:
 		duration := time.Duration(event.DurationMs) * time.Millisecond
 		fmt.Printf("Benchmark completed in %v\n\n", duration)
+	case orchestration.EventAgentPrompt:
+		if msg, ok := event.Details["message"].(string); ok {
+			fmt.Printf("  [PROMPT] %s\n", msg)
+		}
+	case orchestration.EventAgentResponse:
+		if output, ok := event.Details["output"].(string); ok {
+			fmt.Printf("  [RESPONSE] %s\n", truncate(output, 200))
+		}
+		if tc, ok := event.Details["tool_calls"].(int); ok && tc > 0 {
+			fmt.Printf("  [TOOLS] %d tool call(s)\n", tc)
+		}
+	case orchestration.EventGraderResult:
+		name := fmt.Sprintf("%v", event.Details["grader"])
+		passed, ok := event.Details["passed"].(bool)
+		if !ok {
+			passed = false
+		}
+		score, ok := event.Details["score"].(float64)
+		if !ok {
+			score = 0
+		}
+		feedback := fmt.Sprintf("%v", event.Details["feedback"])
+		icon := "✗"
+		if passed {
+			icon = "✓"
+		}
+		duration := time.Duration(event.DurationMs) * time.Millisecond
+		fmt.Printf("  [GRADER] %s %s score=%.2f (%v)", icon, name, score, duration)
+		if feedback != "" {
+			fmt.Printf(" — %s", feedback)
+		}
+		fmt.Println()
 	}
+}
+
+// truncate shortens s to maxLen characters, appending "..." if truncated.
+func truncate(s string, maxLen int) string {
+	if len(s) <= maxLen {
+		return s
+	}
+	return s[:maxLen] + "..."
 }
 
 func simpleProgressListener(event orchestration.ProgressEvent) {
 	switch event.EventType {
-	case "test_complete":
+	case orchestration.EventTestComplete:
 		status := "✓"
 		if event.Status != "passed" {
 			status = "✗"
@@ -196,7 +239,7 @@ func printSummary(outcome *models.EvaluationOutcome) {
 					for _, run := range to.Runs {
 						for _, val := range run.Validations {
 							if !val.Passed {
-								fmt.Printf("    • %s: %s\n", val.Identifier, val.Feedback)
+								fmt.Printf("    • %s: %s\n", val.Name, val.Feedback)
 							}
 						}
 					}
