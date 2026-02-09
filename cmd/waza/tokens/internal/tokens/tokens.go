@@ -4,23 +4,20 @@ import (
 	"math"
 )
 
+const charsPerToken = 4
+
 // Counter counts tokens in text.
 type Counter interface {
 	Count(text string) int
 }
 
 // EstimatingCounter approximates token count as ~4 characters per token.
-type EstimatingCounter struct {
-	CharsPerToken int
-}
+type EstimatingCounter struct{}
 
 func NewEstimatingCounter() *EstimatingCounter {
-	return &EstimatingCounter{CharsPerToken: 4}
+	return &EstimatingCounter{}
 }
 
 func (c *EstimatingCounter) Count(text string) int {
-	if len(text) == 0 {
-		return 0
-	}
-	return int(math.Ceil(float64(len(text)) / float64(c.CharsPerToken)))
+	return int(math.Ceil(float64(len(text)) / float64(charsPerToken)))
 }
