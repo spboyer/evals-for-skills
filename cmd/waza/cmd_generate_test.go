@@ -1,0 +1,86 @@
+package main
+
+import (
+	"os"
+	"path/filepath"
+	"testing"
+
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+)
+
+func TestGenerateCommand_RequiresArg(t *testing.T) {
+	cmd := newGenerateCommand()
+	cmd.SetArgs([]string{})
+	err := cmd.Execute()
+	assert.Error(t, err)
+}
+
+func TestGenerateCommand_MissingFile(t *testing.T) {
+	cmd := newGenerateCommand()
+	cmd.SetArgs([]string{"/nonexistent/SKILL.md"})
+	err := cmd.Execute()
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "failed to parse SKILL.md")
+}
+
+func TestGenerateCommand_ValidSkill(t *testing.T) {
+	dir := t.TempDir()
+	skillPath := filepath.Join(dir, "SKILL.md")
+	content := "---\nname: test-gen\ndescription: Test generate\n---\n\n# Skill\n"
+	require.NoError(t, os.WriteFile(skillPath, []byte(content), 0644))
+
+	outDir := filepath.Join(dir, "output")
+
+	cmd := newGenerateCommand()
+	cmd.SetArgs([]string{skillPath, "--output-dir", outDir})
+	err := cmd.Execute()
+	require.NoError(t, err)
+
+	assert.FileExists(t, filepath.Join(outDir, "eval.yaml"))
+	assert.FileExists(t, filepath.Join(outDir, "tasks", "test-gen-basic.yaml"))
+	assert.FileExists(t, filepath.Join(outDir, "fixtures", "sample.txt"))
+}
+
+func TestGenerateCommand_DefaultOutputDir(t *testing.T) {
+	dir := t.TempDir()
+	skillPath := filepath.Join(dir, "SKILL.md")
+	content := "---\nname: my-skill\ndescription: Test\n---\n\n# Skill\n"
+	require.NoError(t, os.WriteFile(skillPath, []byte(content), 0644))
+
+	// Change to temp dir so default output goes there
+	origDir, err := os.Getwd()
+	require.NoError(t, err)
+	require.NoError(t, os.Chdir(dir))
+	defer func() {
+		if chErr := os.Chdir(origDir); chErr != nil {
+			t.Logf("warning: failed to restore working directory: %v", chErr)
+		}
+	}()
+
+	// Reset package-level var to trigger default
+	generateOutputDir = ""
+
+	cmd := newGenerateCommand()
+	cmd.SetArgs([]string{skillPath})
+	err = cmd.Execute()
+	require.NoError(t, err)
+
+	assert.DirExists(t, filepath.Join(dir, "eval-my-skill"))
+	assert.FileExists(t, filepath.Join(dir, "eval-my-skill", "eval.yaml"))
+
+	// Reset for other tests
+	generateOutputDir = ""
+}
+
+func TestGenerateCommand_RegisteredInRoot(t *testing.T) {
+	root := newRootCommand()
+	found := false
+	for _, c := range root.Commands() {
+		if c.Name() == "generate" {
+			found = true
+			break
+		}
+	}
+	assert.True(t, found, "generate command should be registered in root")
+}

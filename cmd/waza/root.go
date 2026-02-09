@@ -20,6 +20,7 @@ performance against predefined test cases.`,
 
 	// Add subcommands
 	cmd.AddCommand(newRunCommand())
+	cmd.AddCommand(newGenerateCommand())
 
 	return cmd
 }
