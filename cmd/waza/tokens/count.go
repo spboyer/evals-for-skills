@@ -1,0 +1,177 @@
+package tokens
+
+import (
+	"encoding/json"
+	"fmt"
+	"io"
+	"os"
+	"path/filepath"
+	"sort"
+	"strings"
+
+	"github.com/spboyer/waza/cmd/waza/tokens/internal/tokens"
+	"github.com/spf13/cobra"
+)
+
+func newCountCmd() *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "count [path]",
+		Short: "Count tokens in markdown files",
+		Long: `Count tokens in markdown files.
+
+Path may be a file or directory (scanned recursively for .md/.mdx files).
+A relative path is resolved from the working directory; an absolute path is
+used as-is. When no path is given, the working directory is scanned.`,
+		Args: cobra.MaximumNArgs(1),
+		RunE: runCount,
+	}
+	cmd.Flags().String("format", "table", "Output format: json | table")
+	cmd.Flags().String("sort", "path", "Sort by: tokens | name | path")
+	cmd.Flags().Int("min-tokens", 0, "Filter files with less than n tokens")
+	cmd.Flags().Bool("no-total", false, "Hide total row in table output")
+	return cmd
+}
+
+type countJSONOutput struct {
+	GeneratedAt string                    `json:"generatedAt"`
+	TotalTokens int                       `json:"totalTokens"`
+	TotalFiles  int                       `json:"totalFiles"`
+	Files       map[string]countFileEntry `json:"files"`
+}
+
+type countFileEntry struct {
+	Tokens      int    `json:"tokens"`
+	Characters  int    `json:"characters"`
+	Lines       int    `json:"lines"`
+	LastUpdated string `json:"lastUpdated"`
+}
+
+func runCount(cmd *cobra.Command, args []string) error {
+	format, _ := cmd.Flags().GetString("format")
+	sortBy, _ := cmd.Flags().GetString("sort")
+	minTokens, _ := cmd.Flags().GetInt("min-tokens")
+	noTotal, _ := cmd.Flags().GetBool("no-total")
+
+	rootDir, _ := os.Getwd()
+	files, err := findMarkdownFiles(args, rootDir)
+	if err != nil {
+		fmt.Fprintln(cmd.ErrOrStderr(), err)
+	}
+
+	counter := tokens.NewEstimatingCounter()
+	var results []FileResult
+	for _, f := range files {
+		r, err := countFile(counter, f, rootDir)
+		if err != nil {
+			fmt.Fprintf(cmd.OutOrStderr(), "⚠️  Error reading %s: %s\n", f, err)
+			continue
+		}
+		if r.Tokens >= minTokens {
+			results = append(results, *r)
+		}
+	}
+
+	sortResults(results, sortBy)
+
+	out := cmd.OutOrStdout()
+	if format == "json" {
+		return outputCountJSON(out, results)
+	}
+	outputCountTable(out, results, !noTotal)
+	return nil
+}
+
+func countFile(counter tokens.Counter, filePath, rootDir string) (*FileResult, error) {
+	content, err := os.ReadFile(filePath)
+	if err != nil {
+		return nil, fmt.Errorf("reading %s: %w", filePath, err)
+	}
+
+	rel, err := filepath.Rel(rootDir, filePath)
+	if err != nil {
+		rel = filePath
+	}
+
+	text := string(content)
+	return &FileResult{
+		Path:       filepath.Clean(rel),
+		Tokens:     counter.Count(text),
+		Characters: len(text),
+		Lines:      len(strings.Split(text, "\n")),
+	}, nil
+}
+
+func sortResults(results []FileResult, by string) {
+	sort.Slice(results, func(i, j int) bool {
+		switch by {
+		case "tokens":
+			return results[i].Tokens > results[j].Tokens
+		case "name":
+			a := filepath.Base(results[i].Path)
+			b := filepath.Base(results[j].Path)
+			return strings.ToLower(a) < strings.ToLower(b)
+		default:
+			return results[i].Path < results[j].Path
+		}
+	})
+}
+
+func outputCountTable(w io.Writer, results []FileResult, showTotal bool) {
+	if len(results) == 0 {
+		fmt.Fprintln(w, "No markdown files found.")
+		return
+	}
+
+	maxPath := 4
+	for _, r := range results {
+		if len(r.Path) > maxPath {
+			maxPath = len(r.Path)
+		}
+	}
+
+	header := fmt.Sprintf("%-*s  %8s  %8s  %6s", maxPath, "File", "Tokens", "Chars", "Lines")
+	fmt.Fprintln(w, header)
+	fmt.Fprintln(w, strings.Repeat("-", len(header)))
+
+	for _, r := range results {
+		fmt.Fprintf(w, "%-*s  %8d  %8d  %6d\n", maxPath, r.Path, r.Tokens, r.Characters, r.Lines)
+	}
+
+	if showTotal {
+		fmt.Fprintln(w, strings.Repeat("-", len(header)))
+		var totalTokens, totalChars, totalLines int
+		for _, r := range results {
+			totalTokens += r.Tokens
+			totalChars += r.Characters
+			totalLines += r.Lines
+		}
+		fmt.Fprintf(w, "%-*s  %8d  %8d  %6d\n", maxPath, "Total", totalTokens, totalChars, totalLines)
+		fmt.Fprintf(w, "\n%d file(s) scanned\n", len(results))
+	}
+}
+
+func outputCountJSON(w io.Writer, results []FileResult) error {
+	now := nowISO()
+	files := make(map[string]countFileEntry, len(results))
+	totalTokens := 0
+	for _, r := range results {
+		totalTokens += r.Tokens
+		files[r.Path] = countFileEntry{
+			Tokens:      r.Tokens,
+			Characters:  r.Characters,
+			Lines:       r.Lines,
+			LastUpdated: now,
+		}
+	}
+
+	out := countJSONOutput{
+		GeneratedAt: now,
+		TotalTokens: totalTokens,
+		TotalFiles:  len(results),
+		Files:       files,
+	}
+
+	enc := json.NewEncoder(w)
+	enc.SetIndent("", "  ")
+	return enc.Encode(out)
+}
