@@ -41,10 +41,9 @@ type countJSONOutput struct {
 }
 
 type countFileEntry struct {
-	Tokens      int    `json:"tokens"`
-	Characters  int    `json:"characters"`
-	Lines       int    `json:"lines"`
-	LastUpdated string `json:"lastUpdated"`
+	Tokens     int `json:"tokens"`
+	Characters int `json:"characters"`
+	Lines      int `json:"lines"`
 }
 
 func runCount(cmd *cobra.Command, args []string) error {
@@ -174,21 +173,19 @@ func outputCountTable(w io.Writer, results []FileResult, showTotal bool) {
 }
 
 func outputCountJSON(w io.Writer, results []FileResult) error {
-	now := nowISO()
 	files := make(map[string]countFileEntry, len(results))
 	totalTokens := 0
 	for _, r := range results {
 		totalTokens += r.Tokens
 		files[r.Path] = countFileEntry{
-			Tokens:      r.Tokens,
-			Characters:  r.Characters,
-			Lines:       r.Lines,
-			LastUpdated: now,
+			Tokens:     r.Tokens,
+			Characters: r.Characters,
+			Lines:      r.Lines,
 		}
 	}
 
 	out := countJSONOutput{
-		GeneratedAt: now,
+		GeneratedAt: nowISO(),
 		TotalTokens: totalTokens,
 		TotalFiles:  len(results),
 		Files:       files,
