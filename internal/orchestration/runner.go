@@ -3,6 +3,7 @@ package orchestration
 import (
 	"context"
 	"fmt"
+	"math"
 	"os"
 	"path/filepath"
 	"sort"
@@ -661,13 +662,15 @@ func (r *TestRunner) computeTestStats(runs []models.RunResult) *models.TestStats
 
 	passed := 0
 	totalScore := 0.0
-	minScore := 1.0
-	maxScore := 0.0
+	minScore := math.Inf(1)
+	maxScore := math.Inf(-1)
 	totalDuration := int64(0)
+	scores := make([]float64, 0, len(runs))
 
 	for _, run := range runs {
 		score := run.ComputeRunScore()
 		totalScore += score
+		scores = append(scores, score)
 
 		if score < minScore {
 			minScore = score
@@ -688,6 +691,7 @@ func (r *TestRunner) computeTestStats(runs []models.RunResult) *models.TestStats
 		AvgScore:      totalScore / float64(len(runs)),
 		MinScore:      minScore,
 		MaxScore:      maxScore,
+		StdDevScore:   models.ComputeStdDev(scores),
 		AvgDurationMs: totalDuration / int64(len(runs)),
 	}
 }

@@ -259,9 +259,9 @@ func printSummary(outcome *models.EvaluationOutcome) {
 		}
 	}
 	if len(flakyTasks) > 0 {
-		fmt.Println("⚠ Flaky Tasks (inconsistent pass/fail across trials):")
+		fmt.Println("\u26a0 Flaky Tasks (inconsistent pass/fail across trials):")
 		for _, to := range flakyTasks {
-			fmt.Printf("  - %s  pass_rate=%.0f%%  score=%.2f±%.2f  CI95=[%.2f, %.2f]\n",
+			fmt.Printf("  - %s  pass_rate=%.0f%%  score=%.2f\u00b1%.2f  CI95=[%.2f, %.2f]\n",
 				to.DisplayName,
 				to.Stats.PassRate*100,
 				to.Stats.AvgScore,
