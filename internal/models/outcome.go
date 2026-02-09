@@ -102,6 +102,10 @@ type TestStats struct {
 	MinScore      float64 `json:"min_score"`
 	MaxScore      float64 `json:"max_score"`
 	StdDevScore   float64 `json:"std_dev_score"`
+	ScoreVariance float64 `json:"score_variance"`
+	CI95Lo        float64 `json:"ci95_lo"`
+	CI95Hi        float64 `json:"ci95_hi"`
+	Flaky         bool    `json:"flaky"`
 	AvgDurationMs int64   `json:"avg_duration_ms"`
 }
 

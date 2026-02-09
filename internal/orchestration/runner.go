@@ -23,6 +23,9 @@ type TestRunner struct {
 	engine  execution.AgentEngine
 	verbose bool
 
+	// Task filtering
+	taskFilters []string
+
 	// Progress tracking
 	progressMu sync.Mutex
 	listeners  []ProgressListener
@@ -61,14 +64,28 @@ type ProgressEvent struct {
 	Details    map[string]any
 }
 
+// RunnerOption configures a TestRunner.
+type RunnerOption func(*TestRunner)
+
+// WithTaskFilters sets glob patterns used to filter test cases by DisplayName or TestID.
+func WithTaskFilters(patterns ...string) RunnerOption {
+	return func(r *TestRunner) {
+		r.taskFilters = patterns
+	}
+}
+
 // NewTestRunner creates a new test runner
-func NewTestRunner(cfg *config.BenchmarkConfig, engine execution.AgentEngine) *TestRunner {
-	return &TestRunner{
+func NewTestRunner(cfg *config.BenchmarkConfig, engine execution.AgentEngine, opts ...RunnerOption) *TestRunner {
+	r := &TestRunner{
 		cfg:       cfg,
 		engine:    engine,
 		verbose:   cfg.Verbose(),
 		listeners: []ProgressListener{},
 	}
+	for _, o := range opts {
+		o(r)
+	}
+	return r
 }
 
 // OnProgress registers a progress listener
@@ -107,6 +124,19 @@ func (r *TestRunner) RunBenchmark(ctx context.Context) (*models.EvaluationOutcom
 	testCases, err := r.loadTestCases()
 	if err != nil {
 		return nil, fmt.Errorf("failed to load test cases: %w", err)
+	}
+
+	// Apply task filters
+	if len(r.taskFilters) > 0 {
+		testCases, err = FilterTestCases(testCases, r.taskFilters)
+		if err != nil {
+			return nil, fmt.Errorf("task filter error: %w", err)
+		}
+		fmt.Printf("Task filter matched %d test(s):\n", len(testCases))
+		for _, tc := range testCases {
+			fmt.Printf("  • %s (%s)\n", tc.DisplayName, tc.TestID)
+		}
+		fmt.Println()
 	}
 
 	if len(testCases) == 0 {

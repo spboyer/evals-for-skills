@@ -16,6 +16,7 @@ func resetRunGlobals() {
 	contextDir = ""
 	outputPath = ""
 	verbose = false
+	taskFilters = nil
 }
 
 // helper creates a valid minimal eval spec YAML in a temp dir,
@@ -272,4 +273,49 @@ func TestRootCommand_HasRunSubcommand(t *testing.T) {
 		}
 	}
 	assert.True(t, found, "root command should have 'run' subcommand")
+}
+
+// ---------------------------------------------------------------------------
+// Task filtering via --task flag
+// ---------------------------------------------------------------------------
+
+func TestRunCommand_TaskFlagParsed(t *testing.T) {
+	cmd := newRunCommand()
+	require.NoError(t, cmd.ParseFlags([]string{
+		"--task", "Create*",
+		"--task", "tc-002",
+	}))
+
+	vals, err := cmd.Flags().GetStringArray("task")
+	require.NoError(t, err)
+	assert.Equal(t, []string{"Create*", "tc-002"}, vals)
+}
+
+func TestRunCommand_TaskFilterRunsMock(t *testing.T) {
+	resetRunGlobals()
+
+	specPath := createTestSpec(t, "mock")
+
+	cmd := newRunCommand()
+	cmd.SetArgs([]string{specPath, "--task", "Test Task"})
+	cmd.SetOut(io.Discard)
+	cmd.SetErr(io.Discard)
+
+	err := cmd.Execute()
+	assert.NoError(t, err)
+}
+
+func TestRunCommand_TaskFilterNoMatch(t *testing.T) {
+	resetRunGlobals()
+
+	specPath := createTestSpec(t, "mock")
+
+	cmd := newRunCommand()
+	cmd.SetArgs([]string{specPath, "--task", "nonexistent-task"})
+	cmd.SetOut(io.Discard)
+	cmd.SetErr(io.Discard)
+
+	err := cmd.Execute()
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "no test cases found")
 }
