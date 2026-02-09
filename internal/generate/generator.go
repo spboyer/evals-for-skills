@@ -25,6 +25,7 @@ func ParseSkillMD(path string) (*SkillFrontmatter, error) {
 	defer f.Close()
 
 	scanner := bufio.NewScanner(f)
+	scanner.Buffer(make([]byte, 1024*1024), 1024*1024)
 
 	// First line must be "---"
 	if !scanner.Scan() {
@@ -62,7 +63,22 @@ func ParseSkillMD(path string) (*SkillFrontmatter, error) {
 		return nil, fmt.Errorf("skill frontmatter missing required 'name' field")
 	}
 
+	if err := sanitizeSkillName(fm.Name); err != nil {
+		return nil, err
+	}
+
 	return &fm, nil
+}
+
+// sanitizeSkillName rejects names that could cause path traversal or are empty.
+func sanitizeSkillName(name string) error {
+	if name == "" {
+		return fmt.Errorf("skill name must not be empty")
+	}
+	if strings.Contains(name, "/") || strings.Contains(name, "\\") || strings.Contains(name, "..") {
+		return fmt.Errorf("skill name %q contains invalid path characters", name)
+	}
+	return nil
 }
 
 // GenerateEvalSuite creates an eval.yaml, task files, and a fixtures directory
@@ -78,7 +94,9 @@ func GenerateEvalSuite(skill *SkillFrontmatter, outputDir string) error {
 		return fmt.Errorf("creating fixtures directory: %w", err)
 	}
 
-	// Generate a starter task file
+	// Generate a starter task file.
+	// NOTE: This produces base scaffolding with placeholder tasks. Trigger
+	// parsing from the SKILL.md body will be enhanced in a future iteration.
 	taskFile := filepath.Join(tasksDir, fmt.Sprintf("%s-basic.yaml", skill.Name))
 	if err := writeTaskFile(taskFile, skill); err != nil {
 		return fmt.Errorf("writing task file: %w", err)

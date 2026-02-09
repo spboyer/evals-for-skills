@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"path/filepath"
 
 	"github.com/spboyer/waza/internal/generate"
 	"github.com/spf13/cobra"
@@ -36,7 +37,7 @@ func generateCommandE(_ *cobra.Command, args []string) error {
 
 	outDir := generateOutputDir
 	if outDir == "" {
-		outDir = fmt.Sprintf("eval-%s", skill.Name)
+		outDir = filepath.Join(".", fmt.Sprintf("eval-%s", skill.Name))
 	}
 
 	fmt.Printf("Generating eval suite for skill: %s\n", skill.Name)

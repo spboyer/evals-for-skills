@@ -9,7 +9,13 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+// resetGenerateGlobals zeroes the package-level flag vars so prior tests don't leak.
+func resetGenerateGlobals() {
+	generateOutputDir = ""
+}
+
 func TestGenerateCommand_RequiresArg(t *testing.T) {
+	resetGenerateGlobals()
 	cmd := newGenerateCommand()
 	cmd.SetArgs([]string{})
 	err := cmd.Execute()
@@ -17,6 +23,7 @@ func TestGenerateCommand_RequiresArg(t *testing.T) {
 }
 
 func TestGenerateCommand_MissingFile(t *testing.T) {
+	resetGenerateGlobals()
 	cmd := newGenerateCommand()
 	cmd.SetArgs([]string{"/nonexistent/SKILL.md"})
 	err := cmd.Execute()
@@ -25,6 +32,7 @@ func TestGenerateCommand_MissingFile(t *testing.T) {
 }
 
 func TestGenerateCommand_ValidSkill(t *testing.T) {
+	resetGenerateGlobals()
 	dir := t.TempDir()
 	skillPath := filepath.Join(dir, "SKILL.md")
 	content := "---\nname: test-gen\ndescription: Test generate\n---\n\n# Skill\n"
@@ -43,6 +51,7 @@ func TestGenerateCommand_ValidSkill(t *testing.T) {
 }
 
 func TestGenerateCommand_DefaultOutputDir(t *testing.T) {
+	resetGenerateGlobals()
 	dir := t.TempDir()
 	skillPath := filepath.Join(dir, "SKILL.md")
 	content := "---\nname: my-skill\ndescription: Test\n---\n\n# Skill\n"
@@ -58,9 +67,6 @@ func TestGenerateCommand_DefaultOutputDir(t *testing.T) {
 		}
 	}()
 
-	// Reset package-level var to trigger default
-	generateOutputDir = ""
-
 	cmd := newGenerateCommand()
 	cmd.SetArgs([]string{skillPath})
 	err = cmd.Execute()
@@ -68,12 +74,10 @@ func TestGenerateCommand_DefaultOutputDir(t *testing.T) {
 
 	assert.DirExists(t, filepath.Join(dir, "eval-my-skill"))
 	assert.FileExists(t, filepath.Join(dir, "eval-my-skill", "eval.yaml"))
-
-	// Reset for other tests
-	generateOutputDir = ""
 }
 
 func TestGenerateCommand_RegisteredInRoot(t *testing.T) {
+	resetGenerateGlobals()
 	root := newRootCommand()
 	found := false
 	for _, c := range root.Commands() {
