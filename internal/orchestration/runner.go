@@ -41,6 +41,9 @@ const (
 	EventTestComplete      EventType = "test_complete"
 	EventRunStart          EventType = "run_start"
 	EventRunComplete       EventType = "run_complete"
+	EventAgentPrompt       EventType = "agent_prompt"
+	EventAgentResponse     EventType = "agent_response"
+	EventGraderResult      EventType = "grader_result"
 )
 
 // ProgressEvent represents a progress update
@@ -347,6 +350,24 @@ func (r *TestRunner) executeRun(ctx context.Context, tc *models.TestCase, runNum
 		}
 	}
 
+	// Emit agent prompt/response events for verbose mode
+	if r.verbose {
+		r.notifyProgress(ProgressEvent{
+			EventType: EventAgentPrompt,
+			TestName:  tc.DisplayName,
+			Details:   map[string]any{"message": req.Message},
+		})
+		r.notifyProgress(ProgressEvent{
+			EventType: EventAgentResponse,
+			TestName:  tc.DisplayName,
+			Details: map[string]any{
+				"output":     resp.FinalOutput,
+				"transcript": r.buildTranscript(resp),
+				"tool_calls": len(resp.ToolCalls),
+			},
+		})
+	}
+
 	// Build validation context
 	vCtx := r.buildGraderContext(tc, resp)
 
@@ -358,6 +379,24 @@ func (r *TestRunner) executeRun(ctx context.Context, tc *models.TestCase, runNum
 			Status:     "error",
 			DurationMs: time.Since(startTime).Milliseconds(),
 			ErrorMsg:   err.Error(),
+		}
+	}
+
+	// Emit grader result events for verbose mode
+	if r.verbose {
+		for name, gr := range gradersResults {
+			r.notifyProgress(ProgressEvent{
+				EventType:  EventGraderResult,
+				TestName:   tc.DisplayName,
+				DurationMs: gr.DurationMs,
+				Details: map[string]any{
+					"grader":   name,
+					"type":     gr.Type,
+					"passed":   gr.Passed,
+					"score":    gr.Score,
+					"feedback": gr.Feedback,
+				},
+			})
 		}
 	}
 

@@ -17,9 +17,10 @@ import (
 )
 
 var (
-	contextDir string
-	outputPath string
-	verbose    bool
+	contextDir    string
+	outputPath    string
+	verbose       bool
+	transcriptDir string
 )
 
 func newRunCommand() *cobra.Command {
@@ -37,6 +38,7 @@ Resources are loaded from the context directory (defaults to ./fixtures).`,
 	cmd.Flags().StringVar(&contextDir, "context-dir", "", "Context directory for fixtures (default: ./fixtures relative to spec)")
 	cmd.Flags().StringVarP(&outputPath, "output", "o", "", "Output JSON file for results")
 	cmd.Flags().BoolVarP(&verbose, "verbose", "v", false, "Verbose output with detailed progress")
+	cmd.Flags().StringVar(&transcriptDir, "transcript-dir", "", "Directory to save per-task transcript JSON files")
 
 	return cmd
 }
@@ -78,6 +80,7 @@ func runCommandE(cmd *cobra.Command, args []string) error {
 		config.WithFixtureDir(fixtureDir), // For loading resource files
 		config.WithVerbose(verbose),
 		config.WithOutputPath(outputPath),
+		config.WithTranscriptDir(transcriptDir),
 	)
 
 	// Create engine based on spec
