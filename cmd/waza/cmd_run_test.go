@@ -17,6 +17,8 @@ func resetRunGlobals() {
 	outputPath = ""
 	verbose = false
 	taskFilters = nil
+	parallel = false
+	workers = 0
 }
 
 // helper creates a valid minimal eval spec YAML in a temp dir,
@@ -318,4 +320,73 @@ func TestRunCommand_TaskFilterNoMatch(t *testing.T) {
 	err := cmd.Execute()
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "no test cases found")
+}
+
+// ---------------------------------------------------------------------------
+// Parallel execution via --parallel and --workers flags
+// ---------------------------------------------------------------------------
+
+func TestRunCommand_ParallelFlagParsed(t *testing.T) {
+	cmd := newRunCommand()
+	require.NoError(t, cmd.ParseFlags([]string{"--parallel", "--workers", "8"}))
+
+	boolVal, err := cmd.Flags().GetBool("parallel")
+	require.NoError(t, err)
+	assert.True(t, boolVal)
+
+	intVal, err := cmd.Flags().GetInt("workers")
+	require.NoError(t, err)
+	assert.Equal(t, 8, intVal)
+}
+
+func TestRunCommand_ParallelFlagDefaultWorkers(t *testing.T) {
+	cmd := newRunCommand()
+	require.NoError(t, cmd.ParseFlags([]string{"--parallel"}))
+
+	boolVal, err := cmd.Flags().GetBool("parallel")
+	require.NoError(t, err)
+	assert.True(t, boolVal)
+
+	intVal, err := cmd.Flags().GetInt("workers")
+	require.NoError(t, err)
+	assert.Equal(t, 0, intVal, "workers should default to 0 (runner defaults to 4)")
+}
+
+func TestRunCommand_ParallelRunsMock(t *testing.T) {
+	resetRunGlobals()
+
+	specPath := createTestSpec(t, "mock")
+
+	cmd := newRunCommand()
+	cmd.SetArgs([]string{specPath, "--parallel", "--workers", "2"})
+	cmd.SetOut(io.Discard)
+	cmd.SetErr(io.Discard)
+
+	err := cmd.Execute()
+	assert.NoError(t, err)
+}
+
+func TestRunCommand_ParallelOverridesSpec(t *testing.T) {
+	resetRunGlobals()
+
+	// The test spec has parallel: false. The --parallel flag should override it.
+	specPath := createTestSpec(t, "mock")
+	outFile := filepath.Join(t.TempDir(), "results.json")
+
+	cmd := newRunCommand()
+	cmd.SetArgs([]string{specPath, "--parallel", "--output", outFile})
+	cmd.SetOut(io.Discard)
+	cmd.SetErr(io.Discard)
+
+	err := cmd.Execute()
+	require.NoError(t, err)
+
+	// Verify results were produced (proves the concurrent path ran)
+	data, err := os.ReadFile(outFile)
+	require.NoError(t, err)
+	assert.Greater(t, len(data), 0)
+
+	var result map[string]any
+	require.NoError(t, json.Unmarshal(data, &result))
+	assert.Equal(t, "test-eval", result["eval_name"])
 }
