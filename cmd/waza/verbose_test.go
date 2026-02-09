@@ -27,7 +27,9 @@ func captureOutput(fn func()) string {
 	os.Stdout = old
 
 	var buf bytes.Buffer
-	_, _ = io.Copy(&buf, r)
+	if _, err := io.Copy(&buf, r); err != nil {
+		panic(err)
+	}
 	return buf.String()
 }
 
