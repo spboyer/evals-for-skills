@@ -129,7 +129,7 @@ type LimitResult struct {
 }
 
 // GetLimitForFile determines the token limit for a file.
-func GetLimitForFile(filePath string, cfg TokenLimitsConfig, rootDir string) LimitResult {
+func GetLimitForFile(filePath string, cfg TokenLimitsConfig) LimitResult {
 	normalized := NormalizePath(filePath)
 
 	// Check overrides first (exact matches)

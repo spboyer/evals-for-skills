@@ -97,7 +97,7 @@ func runCheck(cmd *cobra.Command, args []string) error {
 			return fmt.Errorf("⚠️  Error reading %s: %w", f, err)
 		}
 
-		lr := internal.GetLimitForFile(r.Path, cfg, rootDir)
+		lr := internal.GetLimitForFile(r.Path, cfg)
 		results = append(results, checkResult{
 			File:     r.Path,
 			Tokens:   r.Tokens,
