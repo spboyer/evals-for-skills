@@ -13,6 +13,7 @@ import (
 	"github.com/spboyer/waza/internal/execution"
 	"github.com/spboyer/waza/internal/models"
 	"github.com/spboyer/waza/internal/orchestration"
+	"github.com/spboyer/waza/internal/reporting"
 	"github.com/spf13/cobra"
 )
 
@@ -24,6 +25,7 @@ var (
 	taskFilters   []string
 	parallel      bool
 	workers       int
+	interpret     bool
 )
 
 func newRunCommand() *cobra.Command {
@@ -45,6 +47,7 @@ Resources are loaded from the context directory (defaults to ./fixtures).`,
 	cmd.Flags().StringArrayVar(&taskFilters, "task", nil, "Filter tasks by name/ID glob pattern (can be repeated)")
 	cmd.Flags().BoolVar(&parallel, "parallel", false, "Run tasks concurrently")
 	cmd.Flags().IntVar(&workers, "workers", 0, "Number of concurrent workers (default: 4, requires --parallel)")
+	cmd.Flags().BoolVar(&interpret, "interpret", false, "Print a plain-language interpretation of the results")
 
 	return cmd
 }
@@ -142,6 +145,12 @@ func runCommandE(cmd *cobra.Command, args []string) error {
 
 	// Print summary
 	printSummary(outcome)
+
+	// Print plain-language interpretation if requested
+	if interpret {
+		fmt.Println()
+		fmt.Print(reporting.FormatSummaryReport(outcome))
+	}
 
 	// Save output if requested
 	if outputPath != "" {

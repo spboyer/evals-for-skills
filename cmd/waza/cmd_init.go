@@ -9,9 +9,12 @@ import (
 	"gopkg.in/yaml.v3"
 
 	"github.com/spboyer/waza/internal/models"
+	"github.com/spboyer/waza/internal/wizard"
 )
 
 func newInitCommand() *cobra.Command {
+	var interactive bool
+
 	cmd := &cobra.Command{
 		Use:   "init [directory]",
 		Short: "Initialize a new eval suite",
@@ -20,15 +23,22 @@ func newInitCommand() *cobra.Command {
 Creates an eval.yaml spec file, a tasks/ directory with an example task,
 and a fixtures/ directory with an example fixture file.
 
+Use --interactive to run a guided wizard that collects skill metadata
+and generates a SKILL.md scaffold.
+
 If no directory is specified, the current directory is used.`,
 		Args: cobra.MaximumNArgs(1),
-		RunE: initCommandE,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			return initCommandE(cmd, args, interactive)
+		},
 	}
+
+	cmd.Flags().BoolVarP(&interactive, "interactive", "i", false, "Run guided skill creation wizard")
 
 	return cmd
 }
 
-func initCommandE(cmd *cobra.Command, args []string) error {
+func initCommandE(cmd *cobra.Command, args []string, interactive bool) error {
 	dir := "."
 	if len(args) > 0 {
 		dir = args[0]
@@ -37,6 +47,25 @@ func initCommandE(cmd *cobra.Command, args []string) error {
 	// Create the root directory if it doesn't exist
 	if err := os.MkdirAll(dir, 0o755); err != nil {
 		return fmt.Errorf("failed to create directory %s: %w", dir, err)
+	}
+
+	// Run interactive wizard if requested
+	if interactive {
+		spec, err := wizard.RunSkillWizard(cmd.InOrStdin(), cmd.OutOrStdout())
+		if err != nil {
+			return fmt.Errorf("wizard failed: %w", err)
+		}
+
+		content, err := wizard.GenerateSkillMD(spec)
+		if err != nil {
+			return fmt.Errorf("failed to generate SKILL.md: %w", err)
+		}
+
+		skillPath := filepath.Join(dir, "SKILL.md")
+		if err := os.WriteFile(skillPath, []byte(content), 0o644); err != nil {
+			return fmt.Errorf("failed to write SKILL.md: %w", err)
+		}
+		fmt.Fprintf(cmd.OutOrStdout(), "  %s\n", skillPath)
 	}
 
 	// Create tasks/ and fixtures/ subdirectories
