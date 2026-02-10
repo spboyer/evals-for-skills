@@ -1,0 +1,142 @@
+# Token Limits Configuration
+
+The `.token-limits.json` file defines token budgets for markdown files in your project. The token CLI uses this configuration to validate files and report violations.
+
+## File Structure
+
+```json
+{
+  "description": "Optional human-readable description",
+  "defaults": {
+    "<pattern>": <limit>,
+    ...
+  },
+  "overrides": {
+    "<exact-path>": <limit>,
+    ...
+  }
+}
+```
+
+### Fields
+
+| Field | Required | Type | Description |
+|-------|----------|------|-------------|
+| `description` | No | string | Documentation for humans; ignored by the CLI |
+| `defaults` | Yes | object | Glob patterns mapped to token limits |
+| `overrides` | No | object | Exact file paths mapped to token limits |
+
+## Pattern Matching
+
+### Overrides (Exact Matches)
+
+Entries in `overrides` match files by exact path. The path is matched against the end of the normalized file path:
+
+```json
+"overrides": {
+  "README.md": 4000,
+  "docs/API.md": 3000
+}
+```
+
+- `README.md` matches `./README.md` and `subdir/README.md`
+- `docs/API.md` matches only `./docs/API.md`
+
+Overrides are checked before defaults and take precedence.
+
+### Defaults (Glob Patterns)
+
+Entries in `defaults` use glob patterns:
+
+| Pattern | Matches |
+|---------|---------|
+| `*.md` | Any `.md` file (e.g., `README.md`, `foo/bar.md`) |
+| `SKILL.md` | Files named exactly `SKILL.md` in any directory |
+| `references/*.md` | `.md` files directly in `references/` |
+| `references/**/*.md` | `.md` files anywhere under `references/` |
+| `docs/**/*.md` | `.md` files anywhere under `docs/` |
+
+### Glob Syntax
+
+| Syntax | Meaning |
+|--------|---------|
+| `*` | Matches any characters except `/` |
+| `**` | Matches any characters including `/` (recursive) |
+| `/` | Directory separator |
+| `.` | Literal dot (automatically escaped) |
+
+### Pattern Specificity
+
+When multiple patterns match a file, the most specific pattern wins. Specificity is calculated as:
+
+1. **Exact match** (no wildcards): +10000 points
+2. **Path depth**: +100 points per `/` in the pattern
+3. **Single wildcards** (`*`): +10 points each
+4. **Globstars** (`**`): -50 points each
+5. **Pattern length**: +1 point per character
+
+Example resolution for `references/test-templates/jest.md`:
+
+| Pattern | Specificity | Result |
+|---------|-------------|--------|
+| `*.md` | Low | Fallback |
+| `references/*.md` | Medium | Doesn't match (file is nested) |
+| `references/**/*.md` | Medium-High | Matches |
+| `references/test-templates/*.md` | Higher | Matches, **wins** |
+
+## Complete Example
+
+```json
+{
+  "description": "Token limits for skill repository",
+  "defaults": {
+    "SKILL.md": 5000,
+    "references/*.md": 2000,
+    "references/**/*.md": 2000,
+    "references/test-templates/*.md": 1500,
+    "*.md": 4000
+  },
+  "overrides": {
+    "README.md": 4000
+  }
+}
+```
+
+### Resolution Examples
+
+| File | Matching Pattern | Limit |
+|------|------------------|-------|
+| `SKILL.md` | `SKILL.md` (defaults) | 5000 |
+| `README.md` | `README.md` (overrides) | 4000 |
+| `references/scoring.md` | `references/*.md` | 2000 |
+| `references/test-templates/jest.md` | `references/test-templates/*.md` | 1500 |
+| `assets/guide.md` | `*.md` | 4000 |
+
+## Default Configuration
+
+When `.token-limits.json` is missing or invalid, these defaults apply:
+
+```json
+{
+  "defaults": {
+    "SKILL.md": 500,
+    "references/**/*.md": 1000,
+    "docs/**/*.md": 1500,
+    "*.md": 2000
+  },
+  "overrides": {
+    "README.md": 3000,
+    "CONTRIBUTING.md": 2500
+  }
+}
+```
+
+## Validation Behavior
+
+The `waza tokens check` command:
+
+1. Discovers all markdown files (`.md`, `.mdx`)
+2. Excludes `node_modules`, `.git`, `dist`, `coverage` directories
+3. For each file, finds the applicable limit using override → defaults
+4. Reports files exceeding their limits
+5. With `--strict`, exits with code 1 if any file exceeds its limit
