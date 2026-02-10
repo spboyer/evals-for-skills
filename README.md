@@ -1,97 +1,112 @@
 # Waza
 
-An **original** Go implementation of the waza evaluation framework for testing AI agent skills.
+A Go CLI for evaluating AI agent skills — scaffold eval suites, run benchmarks, and compare results across models.
 
-## Overview
-
-Waza is a from-scratch Go port that provides a fresh, Go-idiomatic approach to evaluating AI agent skills. While it maintains compatibility with the waza YAML specifications, it uses completely different internal architecture:
-
-- **Functional Options Pattern** - Configuration uses Go's functional options for flexibility
-- **Builder Patterns** - Engine construction uses builders for clean initialization
-- **Interface-based Design** - Pluggable engines, validators, and orchestration
-- **Original Naming** - Uses creative Go-specific names (BenchmarkSpec, AgentEngine, Validator, etc.)
-
-## Architecture
-
-```
-waza/
-├── cmd/waza/           - CLI entrypoint
-├── internal/
-│   ├── models/         - Data structures (BenchmarkSpec, TestCase, EvaluationOutcome)
-│   ├── config/         - Configuration with functional options
-│   ├── execution/      - AgentEngine interface and implementations
-│   │   ├── engine.go   - Core engine interface
-│   │   ├── mock.go     - Mock engine for testing
-│   │   └── copilot.go  - Copilot SDK integration
-│   ├── scoring/        - Validator interface and implementations
-│   │   ├── validator.go          - Validator registry pattern
-│   │   └── code_validators.go   - Code and regex validators
-│   └── orchestration/  - TestRunner for coordinating execution
-│       └── runner.go   - Benchmark orchestration
-```
-
-## Key Design Differences from Python
-
-### 1. Naming Conventions
-- `BenchmarkSpec` instead of `EvalSpec`
-- `AgentEngine` instead of `BaseExecutor`
-- `Validator` instead of `Grader`
-- `TestCase` instead of `Task`
-- `EvaluationOutcome` instead of `EvalResult`
-
-### 2. Patterns
-- Functional options for configuration
-- Builder pattern for engine construction
-- Registry pattern for validator extensibility
-- Progress listeners instead of callbacks
-
-### 3. Structure
-- Separate `SpecDir` and `FixtureDir` for test resolution vs. resource loading
-- Interface-based `AgentEngine` with pluggable implementations
-- `ValidationContext` with clear separation of concerns
-
-## Installation
+## Quick Start
 
 ```bash
-# From the root of this repository
-go build -o waza ./cmd/waza
+# Build
+make build
 
-# Or install to GOPATH
-go install ./cmd/waza
+# Scaffold a new eval suite
+./waza init my-eval --interactive
+
+# Generate evals from a SKILL.md
+./waza generate skills/my-skill/SKILL.md
+
+# Run evaluations
+./waza run examples/code-explainer/eval.yaml --context-dir examples/code-explainer/fixtures -v
+
+# Compare results across models
+./waza compare results-gpt4.json results-sonnet.json
+
+# Count tokens in skill files
+./waza tokens count skills/
 ```
 
-## Usage
+## Commands
 
-### Run Evaluations
+### `waza run <eval.yaml>`
+
+Run an evaluation benchmark from a spec file.
+
+| Flag | Short | Description |
+|------|-------|-------------|
+| `--context-dir <dir>` | | Fixture directory (default: `./fixtures` relative to spec) |
+| `--output <file>` | `-o` | Save results to JSON |
+| `--verbose` | `-v` | Detailed progress output |
+| `--transcript-dir <dir>` | | Save per-task transcript JSON files |
+| `--task <glob>` | | Filter tasks by name/ID pattern (repeatable) |
+| `--parallel` | | Run tasks concurrently |
+| `--workers <n>` | | Concurrent workers (default: 4, requires `--parallel`) |
+| `--interpret` | | Print plain-language result interpretation |
+
+### `waza init [directory]`
+
+Scaffold a new eval suite with `eval.yaml`, `tasks/`, and `fixtures/` directories.
+
+| Flag | Description |
+|------|-------------|
+| `--interactive` | Guided wizard that collects skill metadata and generates a SKILL.md scaffold |
+
+### `waza generate <SKILL.md>`
+
+Parse a SKILL.md file and generate an eval suite from its frontmatter.
+
+| Flag | Short | Description |
+|------|-------|-------------|
+| `--output-dir <dir>` | `-d` | Output directory (default: `./eval-{skill-name}/`) |
+
+### `waza compare <file1> <file2> [files...]`
+
+Compare results from multiple evaluation runs side by side — per-task score deltas, pass rate differences, and aggregate statistics.
+
+| Flag | Short | Description |
+|------|-------|-------------|
+| `--format <fmt>` | `-f` | Output format: `table` or `json` (default: `table`) |
+
+### `waza tokens count [paths...]`
+
+Count tokens in markdown files. Paths may be files or directories (scanned recursively for `.md`/`.mdx`).
+
+| Flag | Description |
+|------|-------------|
+| `--format <fmt>` | Output format: `table` or `json` (default: `table`) |
+| `--sort <field>` | Sort by: `tokens`, `name`, or `path` (default: `path`) |
+| `--min-tokens <n>` | Filter files below n tokens |
+| `--no-total` | Hide total row in table output |
+
+## Building
 
 ```bash
-# Run with mock engine (default)
-./waza run path/to/eval.yaml --context-dir path/to/fixtures
-
-# Run with verbose output
-./waza run path/to/eval.yaml --context-dir path/to/fixtures -v
-
-# Save results to JSON
-./waza run path/to/eval.yaml --context-dir path/to/fixtures --output results.json
-
-# Run with Copilot SDK (requires Copilot CLI installed)
-# (Update eval.yaml to use executor: copilot-sdk)
-./waza run path/to/eval.yaml --context-dir path/to/fixtures
+make build          # Compile binary to ./waza
+make test           # Run tests with coverage
+make lint           # Run golangci-lint
+make fmt            # Format code and tidy modules
+make install        # Install to GOPATH
 ```
 
-### Example with code-explainer
+## Project Structure
 
-```bash
-# from the root of the repository
-./waza run ./examples/code-explainer/eval.yaml \
-  --context-dir ./examples/code-explainer/fixtures \
-  -v \
-  --output results.json
+```
+cmd/waza/              CLI entrypoint and command definitions
+  tokens/              Token counting subcommand
+internal/
+  config/              Configuration with functional options
+  execution/           AgentEngine interface (mock, copilot)
+  generate/            SKILL.md → eval suite generation
+  graders/             Validator registry and built-in graders
+  metrics/             Scoring metrics
+  models/              Data structures (BenchmarkSpec, TestCase, EvaluationOutcome)
+  orchestration/       TestRunner for coordinating execution
+  reporting/           Result formatting and output
+  transcript/          Per-task transcript capture
+  wizard/              Interactive init wizard
+examples/              Example eval suites
+skills/                Example skills
 ```
 
-## Evaluation Specification
-
-This is a sample eval.yaml file:
+## Eval Spec Format
 
 ```yaml
 name: my-eval
@@ -102,231 +117,32 @@ config:
   trials_per_task: 3
   timeout_seconds: 300
   parallel: false
-  executor: mock  # or copilot-sdk
+  executor: mock          # or copilot-sdk
   model: claude-sonnet-4-20250514
 
 graders:
-  - type: code
-    name: basic_check
+  - type: regex
+    name: pattern_check
     config:
-      assertions:
-        - "len(output) > 10"
-
-metrics:
-  - name: task_completion
-    weight: 0.5
-    threshold: 0.8
+      must_match: ["\\d+ tests passed"]
 
 tasks:
   - "tasks/*.yaml"
 ```
 
-## Test Case Format
+## Contributing
 
-```yaml
-id: test-001
-name: My Test
-description: Test description
+See [AGENTS.md](AGENTS.md) for coding guidelines.
 
-inputs:
-  prompt: "Explain this code"
-  files:
-    - path: example.py
+- Use [conventional commits](https://www.conventionalcommits.org/) (`feat:`, `fix:`, `docs:`, etc.)
+- Go CI is required: `Build and Test Go Implementation` and `Lint Go Code` must pass
+- Add tests for new features
+- Update docs when changing CLI surface
 
-expected:
-  output_contains:
-    - "function"
-    - "returns"
+## Legacy Python Implementation
 
-graders:
-  - name: custom_check
-    type: code
-    config:
-      assertions:
-        - "'function' in output.lower()"
-```
-
-## Validators (Graders)
-
-### Built-in Validators
-
-#### Code Validator
-Evaluates assertions against output:
-
-```yaml
-- type: code
-  name: check_output
-  config:
-    assertions:
-      - "len(output) > 10"
-      - "'keyword' in output.lower()"
-```
-
-#### Regex Validator
-Pattern matching:
-
-```yaml
-- type: regex
-  name: pattern_check
-  config:
-    must_match:
-      - "\\d+ tests passed"
-    must_not_match:
-      - "(?i)error|failed"
-```
-
-## Engines
-
-### Mock Engine
-Fast, deterministic engine for testing specs:
-
-```go
-engine := execution.NewMockEngine("claude-sonnet-4-20250514")
-```
-
-### Copilot Engine
-Integrates with GitHub Copilot SDK:
-
-```go
-engine := execution.NewCopilotEngineBuilder("claude-sonnet-4-20250514").
-    WithSkillPaths([]string{"./skills"}).
-    WithTimeout(300).
-    Build()
-```
-
-## Configuration Options
-
-### Functional Options Pattern
-
-```go
-import "github.com/spboyer/waza/internal/config"
-
-cfg := config.NewBenchmarkConfig(spec,
-    config.WithSpecDir("/path/to/spec/dir"),
-    config.WithFixtureDir("/path/to/fixtures"),
-    config.WithVerbose(true),
-    config.WithOutputPath("results.json"),
-)
-```
-
-### Builder Pattern for Engines
-
-```go
-engine := execution.NewCopilotEngineBuilder(modelID).
-    WithSkillPaths(skillDirs).
-    WithTimeout(seconds).
-    WithStreaming(true).
-    Build()
-```
-
-## Output Format
-
-Results are saved as JSON with this structure:
-
-```json
-{
-  "run_id": "run-1234567890",
-  "skill_tested": "my-skill",
-  "bench_name": "my-eval",
-  "timestamp": "2024-02-05T19:21:56Z",
-  "setup": {
-    "runs_per_test": 3,
-    "model_id": "claude-sonnet-4-20250514",
-    "engine_type": "mock",
-    "timeout_sec": 300
-  },
-  "digest": {
-    "total_tests": 4,
-    "succeeded": 4,
-    "failed": 0,
-    "errors": 0,
-    "success_rate": 1.0,
-    "aggregate_score": 1.0,
-    "duration_ms": 1234
-  },
-  "test_outcomes": [...]
-}
-```
-
-## Extending Waza
-
-### Custom Validators
-
-Register custom validators:
-
-```go
-import "github.com/spboyer/waza/internal/scoring"
-
-func init() {
-    scoring.RegisterValidator("custom", func(id string, params map[string]any) scoring.Validator {
-        return &MyCustomValidator{identifier: id, params: params}
-    })
-}
-```
-
-### Custom Engines
-
-Implement the `AgentEngine` interface:
-
-```go
-type AgentEngine interface {
-    Initialize(ctx context.Context) error
-    Execute(ctx context.Context, req *ExecutionRequest) (*ExecutionResponse, error)
-    Shutdown(ctx context.Context) error
-}
-```
-
-## CLI Commands
-
-```bash
-# Run evaluation
-waza run <spec.yaml> [options]
-
-Options:
-  --context-dir <dir>   Context/fixture directory
-  --output, -o <file>   Save results to JSON file
-  --verbose, -v         Verbose output
-
-# Show version
-waza version
-```
-
-## Development
-
-### Building
-
-```bash
-go build -o waza ./cmd/waza
-```
-
-### Testing
-
-```bash
-# Run with example
-./waza run ../examples/code-explainer/eval.yaml \
-  --context-dir ../examples/code-explainer/fixtures \
-  -v
-```
-
-### Dependencies
-
-- `gopkg.in/yaml.v3` - YAML parsing
-- `github.com/github/copilot-sdk/go` - Copilot SDK integration
+The Python implementation has been superseded by the Go CLI. The last Python release is available at [v0.3.2](https://github.com/spboyer/waza/releases/tag/v0.3.2).
 
 ## License
 
-See root LICENSE file.
-
-## Contributing
-
-This is an original implementation created for educational purposes. When contributing:
-
-1. Maintain the Go-idiomatic design patterns
-2. Keep names and architecture distinct from Python implementation
-3. Follow Go best practices and conventions
-4. Add tests for new features
-5. Update documentation
-
-## Credits
-
-Created as an original Go port of the waza evaluation framework, with completely new architecture and design patterns while maintaining compatibility with the YAML specification format.
+See [LICENSE](LICENSE).
