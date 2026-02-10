@@ -29,6 +29,7 @@ const (
 	GraderKindKeyword      GraderKind = "keyword"
 	GraderKindJSONSchema   GraderKind = "json_schema"
 	GraderKindProgram      GraderKind = "program"
+	GraderKindBehavior     GraderKind = "behavior"
 )
 
 // EvaluationOutcome represents the complete result of an evaluation run
