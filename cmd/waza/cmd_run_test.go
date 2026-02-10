@@ -19,6 +19,7 @@ func resetRunGlobals() {
 	taskFilters = nil
 	parallel = false
 	workers = 0
+	interpret = false
 }
 
 // helper creates a valid minimal eval spec YAML in a temp dir,
@@ -389,4 +390,29 @@ func TestRunCommand_ParallelOverridesSpec(t *testing.T) {
 	var result map[string]any
 	require.NoError(t, json.Unmarshal(data, &result))
 	assert.Equal(t, "test-eval", result["eval_name"])
+}
+
+// ---------------------------------------------------------------------------
+// --interpret flag
+// ---------------------------------------------------------------------------
+
+func TestRunCommand_InterpretFlagParsed(t *testing.T) {
+	cmd := newRunCommand()
+	require.NoError(t, cmd.ParseFlags([]string{"--interpret"}))
+
+	boolVal, err := cmd.Flags().GetBool("interpret")
+	require.NoError(t, err)
+	assert.True(t, boolVal)
+}
+
+func TestRunCommand_InterpretRunsMock(t *testing.T) {
+	resetRunGlobals()
+
+	specPath := createTestSpec(t, "mock")
+
+	cmd := newRunCommand()
+	cmd.SetArgs([]string{specPath, "--interpret"})
+
+	err := cmd.Execute()
+	assert.NoError(t, err)
 }
