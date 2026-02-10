@@ -30,7 +30,7 @@ The `.token-limits.json` file defines token budgets for markdown files in your p
 
 ### Overrides (Exact Matches)
 
-Entries in `overrides` match files by exact path. The path is matched against the end of the normalized file path:
+Entries in `overrides` match files by suffix. The path is matched against the end of the normalized file path:
 
 ```json
 "overrides": {
@@ -40,7 +40,7 @@ Entries in `overrides` match files by exact path. The path is matched against th
 ```
 
 - `README.md` matches `./README.md` and `subdir/README.md`
-- `docs/API.md` matches only `./docs/API.md`
+- `docs/API.md` matches `./docs/API.md` and `subdir/docs/API.md`
 
 Overrides are checked before defaults and take precedence.
 
@@ -50,19 +50,19 @@ Entries in `defaults` use glob patterns:
 
 | Pattern | Matches |
 |---------|---------|
-| `*.md` | Any `.md` file (e.g., `README.md`, `foo/bar.md`) |
+| `*.md` | Any `.md` file at any depth (e.g., `README.md`, `foo/bar.md`) |
 | `SKILL.md` | Files named exactly `SKILL.md` in any directory |
 | `references/*.md` | `.md` files directly in `references/` |
-| `references/**/*.md` | `.md` files anywhere under `references/` |
-| `docs/**/*.md` | `.md` files anywhere under `docs/` |
+| `references/**/*.md` | `.md` files in subdirectories of `references/` (not directly in it) |
+| `docs/**/*.md` | `.md` files in subdirectories of `docs/` (not directly in it) |
 
 ### Glob Syntax
 
 | Syntax | Meaning |
 |--------|---------|
 | `*` | Matches any characters except `/` |
-| `**` | Matches any characters including `/` (recursive) |
-| `/` | Directory separator |
+| `**` | Matches any characters including `/` (recursive); in `**/*` the `/*` requires at least one subdirectory level |
+| `/` | Directory separator; patterns containing `/` are anchored to the project root |
 | `.` | Literal dot (automatically escaped) |
 
 ### Pattern Specificity
@@ -114,7 +114,7 @@ Example resolution for `references/test-templates/jest.md`:
 
 ## Default Configuration
 
-When `.token-limits.json` is missing or invalid, these defaults apply:
+When `.token-limits.json` is missing, these defaults apply:
 
 ```json
 {
