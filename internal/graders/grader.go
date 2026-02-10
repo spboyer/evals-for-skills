@@ -34,6 +34,10 @@ type Context struct {
 	// or other changes we've made. This can be useful for things like the [FileGrader],
 	// where you want to verify artifacts or outputs.
 	WorkspaceDir string
+
+	// Session holds the session digest with tool call counts, token usage, and tools used.
+	// Used by the behavior grader to validate agent behavior constraints.
+	Session *models.SessionDigest
 }
 
 // Create creates a validator from the global registry
@@ -90,6 +94,14 @@ func Create(graderType models.GraderKind, identifier string, params map[string]a
 			MustNotExist:    v.MustNotExist,
 			ContentPatterns: contentPatterns,
 		})
+	case models.GraderKindBehavior:
+		var v BehaviorGraderParams
+
+		if err := mapstructure.Decode(params, &v); err != nil {
+			return nil, err
+		}
+
+		return NewBehaviorGrader(identifier, v)
 	case models.GraderKindPrompt, models.GraderKindKeyword, models.GraderKindJSONSchema, models.GraderKindProgram:
 		return nil, fmt.Errorf("'%s' is not yet implemented", graderType)
 	default:
