@@ -12,19 +12,19 @@ import (
 
 func TestCount_TableFormat(t *testing.T) {
 	cmd := newCountCmd()
-	cmd.SetArgs([]string{"testdata"})
+	cmd.SetArgs([]string{"testdata/count"})
 	out := new(bytes.Buffer)
 	cmd.SetOut(out)
 	require.NoError(t, cmd.Execute())
 
-	expected := `File                          Tokens     Chars   Lines
-------------------------------------------------------
-testdata/README.md                 7        27       2
-testdata/SKILL.md                402      1608      84
-testdata/references/one.md         9        35       2
-testdata/references/two.md        10        40       2
-------------------------------------------------------
-Total                            428      1710      90
+	expected := `File                                Tokens     Chars   Lines
+------------------------------------------------------------
+testdata/count/README.md                 7        27       2
+testdata/count/SKILL.md                402      1608      84
+testdata/count/references/one.md         9        35       2
+testdata/count/references/two.md        10        40       2
+------------------------------------------------------------
+Total                                  428      1710      90
 
 4 file(s) scanned
 `
@@ -35,7 +35,7 @@ func TestCount_JSONFormat(t *testing.T) {
 	out := new(bytes.Buffer)
 	cmd := newCountCmd()
 	cmd.SetOut(out)
-	cmd.SetArgs([]string{"--format", "json", "testdata"})
+	cmd.SetArgs([]string{"--format", "json", "testdata/count"})
 	require.NoError(t, cmd.Execute())
 
 	output := out.String()
@@ -43,7 +43,7 @@ func TestCount_JSONFormat(t *testing.T) {
 	var result countJSONOutput
 	require.NoError(t, json.Unmarshal([]byte(output), &result), "invalid JSON output: %s", output)
 
-	expectedFiles := []string{"testdata/README.md", "testdata/SKILL.md", "testdata/references/one.md", "testdata/references/two.md"}
+	expectedFiles := []string{"testdata/count/README.md", "testdata/count/SKILL.md", "testdata/count/references/one.md", "testdata/count/references/two.md"}
 	require.Equal(t, len(expectedFiles), result.TotalFiles)
 	require.Equal(t, 428, result.TotalTokens) // 7 + 402 + 9 + 10
 
@@ -52,10 +52,10 @@ func TestCount_JSONFormat(t *testing.T) {
 	}
 
 	expected := map[string]countFileEntry{
-		"testdata/README.md":         {Tokens: 7, Characters: 27, Lines: 2},
-		"testdata/SKILL.md":          {Tokens: 402, Characters: 1608, Lines: 84},
-		"testdata/references/one.md": {Tokens: 9, Characters: 35, Lines: 2},
-		"testdata/references/two.md": {Tokens: 10, Characters: 40, Lines: 2},
+		"testdata/count/README.md":         {Tokens: 7, Characters: 27, Lines: 2},
+		"testdata/count/SKILL.md":          {Tokens: 402, Characters: 1608, Lines: 84},
+		"testdata/count/references/one.md": {Tokens: 9, Characters: 35, Lines: 2},
+		"testdata/count/references/two.md": {Tokens: 10, Characters: 40, Lines: 2},
 	}
 	for file, want := range expected {
 		got := result.Files[file]
@@ -64,14 +64,14 @@ func TestCount_JSONFormat(t *testing.T) {
 		require.Equal(t, want.Lines, got.Lines, "%s lines", file)
 	}
 
-	require.NotContains(t, result.Files, "testdata/scripts/sample.py")
+	require.NotContains(t, result.Files, "testdata/count/scripts/sample.py")
 }
 
 func TestCount_SortByTokens(t *testing.T) {
 	out := new(bytes.Buffer)
 	cmd := newCountCmd()
 	cmd.SetOut(out)
-	cmd.SetArgs([]string{"--sort", "tokens", "testdata"})
+	cmd.SetArgs([]string{"--sort", "tokens", "testdata/count"})
 	require.NoError(t, cmd.Execute())
 
 	lines := strings.Split(out.String(), "\n")
@@ -89,7 +89,7 @@ func TestCount_SortByName(t *testing.T) {
 	out := new(bytes.Buffer)
 	cmd := newCountCmd()
 	cmd.SetOut(out)
-	cmd.SetArgs([]string{"--sort", "name", "testdata"})
+	cmd.SetArgs([]string{"--sort", "name", "testdata/count"})
 	require.NoError(t, cmd.Execute())
 
 	output := out.String()
@@ -110,7 +110,7 @@ func TestCount_MinTokens(t *testing.T) {
 	out := new(bytes.Buffer)
 	cmd := newCountCmd()
 	cmd.SetOut(out)
-	cmd.SetArgs([]string{"--format", "json", "--min-tokens", "100", "testdata"})
+	cmd.SetArgs([]string{"--format", "json", "--min-tokens", "100", "testdata/count"})
 	require.NoError(t, cmd.Execute())
 
 	var result countJSONOutput
@@ -125,7 +125,7 @@ func TestCount_NoTotal(t *testing.T) {
 	out := new(bytes.Buffer)
 	cmd := newCountCmd()
 	cmd.SetOut(out)
-	cmd.SetArgs([]string{"--no-total", "testdata"})
+	cmd.SetArgs([]string{"--no-total", "testdata/count"})
 	require.NoError(t, cmd.Execute())
 
 	output := out.String()
@@ -138,7 +138,7 @@ func TestCount_SpecificPath(t *testing.T) {
 	out := new(bytes.Buffer)
 	cmd := newCountCmd()
 	cmd.SetOut(out)
-	cmd.SetArgs([]string{"--format", "json", filepath.Join("testdata", "SKILL.md")})
+	cmd.SetArgs([]string{"--format", "json", filepath.Join("testdata", "count", "SKILL.md")})
 	require.NoError(t, cmd.Execute())
 
 	var result countJSONOutput
@@ -147,8 +147,8 @@ func TestCount_SpecificPath(t *testing.T) {
 	require.Equal(t, 1, result.TotalFiles)
 	require.Equal(t, 402, result.TotalTokens)
 
-	require.Contains(t, result.Files, "testdata/SKILL.md")
-	entry := result.Files["testdata/SKILL.md"]
+	require.Contains(t, result.Files, "testdata/count/SKILL.md")
+	entry := result.Files["testdata/count/SKILL.md"]
 	require.Equal(t, 402, entry.Tokens)
 	require.Equal(t, 1608, entry.Characters)
 	require.Equal(t, 84, entry.Lines)
@@ -158,7 +158,7 @@ func TestCount_DirectoryPath(t *testing.T) {
 	out := new(bytes.Buffer)
 	cmd := newCountCmd()
 	cmd.SetOut(out)
-	cmd.SetArgs([]string{"--format", "json", filepath.Join("testdata", "references")})
+	cmd.SetArgs([]string{"--format", "json", filepath.Join("testdata", "count", "references")})
 	require.NoError(t, cmd.Execute())
 
 	var result countJSONOutput
@@ -186,7 +186,7 @@ func TestCount_NonMarkdownFilesExcluded(t *testing.T) {
 	out := new(bytes.Buffer)
 	cmd := newCountCmd()
 	cmd.SetOut(out)
-	cmd.SetArgs([]string{filepath.Join("testdata", "scripts")})
+	cmd.SetArgs([]string{filepath.Join("testdata", "count", "scripts")})
 	require.NoError(t, cmd.Execute())
 
 	output := out.String()
@@ -195,7 +195,7 @@ func TestCount_NonMarkdownFilesExcluded(t *testing.T) {
 }
 
 func TestCount_AbsoluteDirectoryPath(t *testing.T) {
-	absDir, err := filepath.Abs(filepath.Join("testdata", "references"))
+	absDir, err := filepath.Abs(filepath.Join("testdata", "count", "references"))
 	require.NoError(t, err)
 
 	out := new(bytes.Buffer)
@@ -212,7 +212,7 @@ func TestCount_AbsoluteDirectoryPath(t *testing.T) {
 }
 
 func TestCount_AbsoluteFilePath(t *testing.T) {
-	absFile, err := filepath.Abs(filepath.Join("testdata", "SKILL.md"))
+	absFile, err := filepath.Abs(filepath.Join("testdata", "count", "SKILL.md"))
 	require.NoError(t, err)
 
 	out := new(bytes.Buffer)
@@ -225,12 +225,12 @@ func TestCount_AbsoluteFilePath(t *testing.T) {
 	require.NoError(t, json.Unmarshal(out.Bytes(), &result))
 
 	require.Equal(t, 1, result.TotalFiles)
-	require.Contains(t, result.Files, "testdata/SKILL.md")
+	require.Contains(t, result.Files, "testdata/count/SKILL.md")
 
 	t.Run("multiple files", func(t *testing.T) {
-		a, err := filepath.Abs(filepath.Join("testdata", "SKILL.md"))
+		a, err := filepath.Abs(filepath.Join("testdata", "count", "SKILL.md"))
 		require.NoError(t, err)
-		b, err := filepath.Abs(filepath.Join("testdata", "references", "one.md"))
+		b, err := filepath.Abs(filepath.Join("testdata", "count", "references", "one.md"))
 		require.NoError(t, err)
 		out := new(bytes.Buffer)
 		cmd := newCountCmd()
@@ -242,22 +242,22 @@ func TestCount_AbsoluteFilePath(t *testing.T) {
 		require.NoError(t, json.Unmarshal(out.Bytes(), &result))
 
 		require.Equal(t, 2, result.TotalFiles)
-		require.Contains(t, result.Files, "testdata/SKILL.md")
-		require.Contains(t, result.Files, "testdata/references/one.md")
+		require.Contains(t, result.Files, "testdata/count/SKILL.md")
+		require.Contains(t, result.Files, "testdata/count/references/one.md")
 	})
 }
 
 func TestCount_SortWithJSONErrors(t *testing.T) {
 	cmd := newCountCmd()
 	cmd.SetOut(new(bytes.Buffer))
-	cmd.SetArgs([]string{"--format", "json", "--sort", "tokens", "testdata"})
+	cmd.SetArgs([]string{"--format", "json", "--sort", "tokens", "testdata/count"})
 	require.ErrorContains(t, cmd.Execute(), "--sort is only supported with table output")
 }
 
 func TestCount_NoTotalWithJSONErrors(t *testing.T) {
 	cmd := newCountCmd()
 	cmd.SetOut(new(bytes.Buffer))
-	cmd.SetArgs([]string{"--format", "json", "--no-total", "testdata"})
+	cmd.SetArgs([]string{"--format", "json", "--no-total", "testdata/count"})
 	require.ErrorContains(t, cmd.Execute(), "--no-total is only supported with table output")
 }
 
