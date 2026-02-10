@@ -62,7 +62,7 @@ func LoadConfig(dir string) (TokenLimitsConfig, error) {
 	return cfg, nil
 }
 
-// TODO: NormalizePath converts backslashes to forward slashes.
+// NormalizePath converts backslashes to forward slashes.
 func NormalizePath(filePath string) string {
 	return strings.ReplaceAll(filePath, `\`, "/")
 }
