@@ -14,7 +14,7 @@ func TestBehaviorGrader_Basic(t *testing.T) {
 	})
 	require.NoError(t, err)
 
-	require.Equal(t, TypeBehavior, g.Type())
+	require.Equal(t, models.GraderKindBehavior, g.Kind())
 	require.Equal(t, "test", g.Name())
 }
 
@@ -79,7 +79,7 @@ func TestBehaviorGrader_MaxToolCalls(t *testing.T) {
 		})
 		require.NoError(t, err)
 		require.False(t, results.Passed)
-		require.Contains(t, results.Feedback, "tool")
+		require.Contains(t, results.Feedback, "Tool")
 	})
 
 	t.Run("skip when zero (not configured)", func(t *testing.T) {
@@ -146,7 +146,7 @@ func TestBehaviorGrader_MaxTokens(t *testing.T) {
 		})
 		require.NoError(t, err)
 		require.False(t, results.Passed)
-		require.Contains(t, results.Feedback, "token")
+		require.Contains(t, results.Feedback, "Token")
 	})
 }
 
@@ -250,10 +250,10 @@ func TestBehaviorGrader_ForbiddenTools(t *testing.T) {
 	})
 }
 
-func TestBehaviorGrader_MaxDurationMs(t *testing.T) {
+func TestBehaviorGrader_MaxDurationMS(t *testing.T) {
 	t.Run("pass when under limit", func(t *testing.T) {
 		g, err := NewBehaviorGrader("test", BehaviorGraderParams{
-			MaxDurationMs: 5000,
+			MaxDurationMS: 5000,
 		})
 		require.NoError(t, err)
 
@@ -268,7 +268,7 @@ func TestBehaviorGrader_MaxDurationMs(t *testing.T) {
 
 	t.Run("pass when exactly at limit", func(t *testing.T) {
 		g, err := NewBehaviorGrader("test", BehaviorGraderParams{
-			MaxDurationMs: 5000,
+			MaxDurationMS: 5000,
 		})
 		require.NoError(t, err)
 
@@ -283,7 +283,7 @@ func TestBehaviorGrader_MaxDurationMs(t *testing.T) {
 
 	t.Run("fail when over limit", func(t *testing.T) {
 		g, err := NewBehaviorGrader("test", BehaviorGraderParams{
-			MaxDurationMs: 5000,
+			MaxDurationMS: 5000,
 		})
 		require.NoError(t, err)
 
@@ -293,7 +293,7 @@ func TestBehaviorGrader_MaxDurationMs(t *testing.T) {
 		})
 		require.NoError(t, err)
 		require.False(t, results.Passed)
-		require.Contains(t, results.Feedback, "duration")
+		require.Contains(t, results.Feedback, "Duration")
 	})
 }
 
@@ -304,7 +304,7 @@ func TestBehaviorGrader_CombinedRules(t *testing.T) {
 			MaxTokens:      2000,
 			RequiredTools:  []string{"read_file"},
 			ForbiddenTools: []string{"exec"},
-			MaxDurationMs:  10000,
+			MaxDurationMS:  10000,
 		})
 		require.NoError(t, err)
 
@@ -327,7 +327,7 @@ func TestBehaviorGrader_CombinedRules(t *testing.T) {
 			MaxTokens:      2000,
 			RequiredTools:  []string{"read_file"},
 			ForbiddenTools: []string{"exec"},
-			MaxDurationMs:  10000,
+			MaxDurationMS:  10000,
 		})
 		require.NoError(t, err)
 
@@ -486,7 +486,7 @@ func TestBehaviorGrader_EdgeCases(t *testing.T) {
 		})
 		require.NoError(t, err)
 		require.Equal(t, "detail-test", results.Name)
-		require.Equal(t, "behavior", results.Type)
+		require.Equal(t, models.GraderKindBehavior, results.Type)
 		require.True(t, results.Passed)
 	})
 
@@ -507,7 +507,7 @@ func TestBehaviorGrader_EdgeCases(t *testing.T) {
 
 	t.Run("zero duration with max_duration_ms passes", func(t *testing.T) {
 		g, err := NewBehaviorGrader("test", BehaviorGraderParams{
-			MaxDurationMs: 5000,
+			MaxDurationMS: 5000,
 		})
 		require.NoError(t, err)
 
@@ -554,4 +554,4 @@ func TestBehaviorGrader_EdgeCases(t *testing.T) {
 }
 
 // Ensure BehaviorGrader satisfies the Grader interface at compile time.
-var _ Grader = (*BehaviorGrader)(nil)
+var _ Grader = (*behaviorGrader)(nil)
