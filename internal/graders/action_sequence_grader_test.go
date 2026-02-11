@@ -477,7 +477,7 @@ func TestActionSequenceGrader_ScoreCalculations(t *testing.T) {
 // ---------------------------------------------------------------------------
 
 func TestActionSequenceGrader_EdgeCases(t *testing.T) {
-	t.Run("nil session returns graceful failure", func(t *testing.T) {
+	t.Run("nil session returns graceful zero-score", func(t *testing.T) {
 		g, err := NewActionSequenceGrader("test", ActionSequenceGraderParams{
 			MatchingMode:    "exact_match",
 			ExpectedActions: []string{"read_file"},
@@ -487,13 +487,11 @@ func TestActionSequenceGrader_EdgeCases(t *testing.T) {
 		results, err := g.Grade(context.Background(), &Context{
 			Session: nil,
 		})
-		// Accept either an error or a graceful zero-score result
-		if err != nil {
-			require.Contains(t, err.Error(), "session")
-		} else {
-			require.False(t, results.Passed)
-			require.Equal(t, 0.0, results.Score)
-		}
+		require.NoError(t, err)
+		require.NotNil(t, results)
+		require.False(t, results.Passed)
+		require.Equal(t, 0.0, results.Score)
+		require.Contains(t, results.Feedback, "no session digest")
 	})
 
 	t.Run("nil tools_used treated as empty", func(t *testing.T) {

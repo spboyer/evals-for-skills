@@ -60,7 +60,13 @@ func (g *actionSequenceGrader) Grade(ctx context.Context, gradingContext *Contex
 	return measureTime(func() (*models.GraderResults, error) {
 		session := gradingContext.Session
 		if session == nil {
-			return nil, fmt.Errorf("action_sequence grader '%s': no session digest available", g.name)
+			return &models.GraderResults{
+				Name:     g.name,
+				Type:     models.GraderKindActionSequence,
+				Score:    0.0,
+				Passed:   false,
+				Feedback: fmt.Sprintf("action_sequence grader '%s': no session digest available", g.name),
+			}, nil
 		}
 
 		actual := session.ToolsUsed
