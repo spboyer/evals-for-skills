@@ -120,7 +120,9 @@ func runSuggest(cmd *cobra.Command, args []string) error {
 	if copilot {
 		engine := newChatEngine(modelID)
 		defer func() {
-			err = engine.Shutdown(cmd.Context())
+			if shutdownErr := engine.Shutdown(cmd.Context()); shutdownErr != nil {
+				fmt.Fprintf(errOut, "⚠️  error shutting down Copilot engine: %v\n", shutdownErr)
+			}
 		}()
 
 		ctx, cancel := context.WithTimeout(cmd.Context(), 4*time.Minute)
