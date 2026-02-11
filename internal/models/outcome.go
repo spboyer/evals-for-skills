@@ -22,13 +22,13 @@ const (
 type GraderKind string
 
 const (
-	GraderKindInlineScript GraderKind = "code"
-	GraderKindPrompt       GraderKind = "prompt"
-	GraderKindRegex        GraderKind = "regex"
-	GraderKindFile         GraderKind = "file"
-	GraderKindKeyword      GraderKind = "keyword"
-	GraderKindJSONSchema   GraderKind = "json_schema"
-	GraderKindProgram      GraderKind = "program"
+	GraderKindInlineScript   GraderKind = "code"
+	GraderKindPrompt         GraderKind = "prompt"
+	GraderKindRegex          GraderKind = "regex"
+	GraderKindFile           GraderKind = "file"
+	GraderKindKeyword        GraderKind = "keyword"
+	GraderKindJSONSchema     GraderKind = "json_schema"
+	GraderKindProgram        GraderKind = "program"
 	GraderKindBehavior       GraderKind = "behavior"
 	GraderKindActionSequence GraderKind = "action_sequence"
 )
