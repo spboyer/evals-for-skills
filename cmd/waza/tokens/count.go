@@ -86,7 +86,7 @@ func runCount(cmd *cobra.Command, args []string) error {
 	for _, f := range files {
 		content, err := os.ReadFile(f)
 		if err != nil {
-			return fmt.Errorf("⚠️  Error reading %s: %s\n", f, err)
+			return fmt.Errorf("⚠️  Error reading %s: %w", f, err)
 		}
 		rel, err := filepath.Rel(rootDir, f)
 		if err != nil {
@@ -113,7 +113,7 @@ func countTokens(counter tokens.Counter, text, relPath string) *FileResult {
 		Path:       filepath.Clean(relPath),
 		Tokens:     counter.Count(text),
 		Characters: len(text),
-		Lines:      len(strings.Split(text, "\n")),
+		Lines:      countLines(text),
 	}
 }
 
