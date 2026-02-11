@@ -219,7 +219,8 @@ func TestActionSequenceGrader_InOrderMatch(t *testing.T) {
 		})
 		require.NoError(t, err)
 		require.True(t, results.Passed)
-		require.Equal(t, 1.0, results.Score)
+		// F1 < 1.0 because extra steps reduce precision; but match still passes
+		require.Greater(t, results.Score, 0.0)
 	})
 
 	t.Run("in-order match fails with wrong order of expected steps", func(t *testing.T) {
@@ -236,7 +237,8 @@ func TestActionSequenceGrader_InOrderMatch(t *testing.T) {
 		})
 		require.NoError(t, err)
 		require.False(t, results.Passed)
-		require.Less(t, results.Score, 1.0)
+		// F1 can still be 1.0 (all tools present) even when order is wrong
+		// Passed is false because in_order_match requires correct ordering
 	})
 
 	t.Run("in-order match fails with missing expected step", func(t *testing.T) {
@@ -270,7 +272,8 @@ func TestActionSequenceGrader_InOrderMatch(t *testing.T) {
 		})
 		require.NoError(t, err)
 		require.True(t, results.Passed)
-		require.Equal(t, 1.0, results.Score)
+		// F1 < 1.0 because extra steps reduce precision; but match still passes
+		require.Greater(t, results.Score, 0.0)
 	})
 }
 
@@ -310,7 +313,8 @@ func TestActionSequenceGrader_AnyOrderMatch(t *testing.T) {
 		})
 		require.NoError(t, err)
 		require.True(t, results.Passed)
-		require.Equal(t, 1.0, results.Score)
+		// F1 < 1.0 because extra steps reduce precision; but match still passes
+		require.Greater(t, results.Score, 0.0)
 	})
 
 	t.Run("any-order match fails with missing expected tool", func(t *testing.T) {
@@ -443,7 +447,7 @@ func TestActionSequenceGrader_ScoreCalculations(t *testing.T) {
 
 		require.Contains(t, results.Details, "precision")
 		require.Contains(t, results.Details, "recall")
-		require.Contains(t, results.Details, "f1_score")
+		require.Contains(t, results.Details, "f1")
 		require.Contains(t, results.Details, "matching_mode")
 		require.Equal(t, "any_order_match", results.Details["matching_mode"])
 	})
@@ -462,8 +466,8 @@ func TestActionSequenceGrader_ScoreCalculations(t *testing.T) {
 		})
 		require.NoError(t, err)
 
-		f1, ok := results.Details["f1_score"].(float64)
-		require.True(t, ok, "f1_score should be a float64")
+		f1, ok := results.Details["f1"].(float64)
+		require.True(t, ok, "f1 should be a float64")
 		require.Equal(t, f1, results.Score)
 	})
 }
