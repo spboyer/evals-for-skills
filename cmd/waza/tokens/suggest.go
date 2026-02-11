@@ -119,7 +119,9 @@ func runSuggest(cmd *cobra.Command, args []string) error {
 	var analyses []fileAnalysis
 	if copilot {
 		engine := newChatEngine(modelID)
-		defer engine.Shutdown(cmd.Context())
+		defer func() {
+			err = engine.Shutdown(cmd.Context())
+		}()
 
 		ctx, cancel := context.WithTimeout(cmd.Context(), 4*time.Minute)
 		defer cancel()
@@ -140,7 +142,11 @@ func runSuggest(cmd *cobra.Command, args []string) error {
 				sem <- struct{}{}
 				defer func() { <-sem }()
 
-				relPath, _ := filepath.Rel(rootDir, f)
+				relPath, err := filepath.Rel(rootDir, f)
+				if err != nil {
+					ch <- result{err: fmt.Errorf("getting relative path for %s: %w", f, err)}
+					return
+				}
 				if relPath == "" {
 					relPath = f
 				}
