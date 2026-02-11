@@ -194,6 +194,77 @@ func TestSuggest_MinSavingsFilter(t *testing.T) {
 	require.Equal(t, "✅ No optimization suggestions found.\n", out.String())
 }
 
+func TestSuggest_MinSavingsPartialFilter(t *testing.T) {
+	analyses := []fileAnalysis{
+		{
+			File:   "test.md",
+			Tokens: 500,
+			Suggestions: []suggestion{
+				{Line: 1, Issue: "small issue", Suggestion: "fix it", EstimatedSavings: 5},
+				{Line: 10, Issue: "big issue", Suggestion: "fix it", EstimatedSavings: 50},
+			},
+			PotentialSavings: 55,
+		},
+	}
+
+	filtered := filterSuggestions(analyses, 10)
+	got := suggestionText(filtered)
+	require.Contains(t, got, "~50 potential token savings")
+	require.NotContains(t, got, "~55")
+	require.NotContains(t, got, "small issue")
+	require.Contains(t, got, "big issue")
+}
+
+func TestSuggest_MinSavingsJSON(t *testing.T) {
+	td := suggestFixture(t, "with-emojis")
+	t.Chdir(td)
+
+	out := new(bytes.Buffer)
+	cmd := newSuggestCmd()
+	cmd.SetOut(out)
+	cmd.SetArgs([]string{"--format", "json", "--min-savings", "100"})
+	require.NoError(t, cmd.Execute())
+
+	var result struct {
+		Analyses              []fileAnalysis `json:"analyses"`
+		TotalPotentialSavings int            `json:"totalPotentialSavings"`
+	}
+	require.NoError(t, json.Unmarshal(out.Bytes(), &result))
+
+	require.Empty(t, result.Analyses)
+	require.Equal(t, 0, result.TotalPotentialSavings)
+}
+
+func TestSuggest_MinSavingsJSONPartialFilter(t *testing.T) {
+	analyses := []fileAnalysis{
+		{
+			File:   "test.md",
+			Tokens: 500,
+			Suggestions: []suggestion{
+				{Line: 1, Issue: "small issue", Suggestion: "fix it", EstimatedSavings: 5},
+				{Line: 10, Issue: "big issue", Suggestion: "fix it", EstimatedSavings: 50},
+			},
+			PotentialSavings: 55,
+		},
+	}
+
+	filtered := filterSuggestions(analyses, 10)
+	got, err := suggestionJSON(filtered)
+	require.NoError(t, err)
+
+	var result struct {
+		Analyses              []fileAnalysis `json:"analyses"`
+		TotalPotentialSavings int            `json:"totalPotentialSavings"`
+	}
+	require.NoError(t, json.Unmarshal([]byte(got), &result))
+
+	require.Len(t, result.Analyses, 1)
+	require.Len(t, result.Analyses[0].Suggestions, 1)
+	require.Equal(t, "big issue", result.Analyses[0].Suggestions[0].Issue)
+	require.Equal(t, 50, result.Analyses[0].PotentialSavings)
+	require.Equal(t, 50, result.TotalPotentialSavings)
+}
+
 func TestSuggest_MultipleIssues(t *testing.T) {
 	td := suggestFixture(t, "multiple-issues")
 	t.Chdir(td)

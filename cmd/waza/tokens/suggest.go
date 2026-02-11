@@ -139,7 +139,7 @@ func runSuggest(cmd *cobra.Command, args []string) error {
 		var wg sync.WaitGroup
 		for _, f := range files {
 			wg.Add(1)
-			go func() {
+			go func(f string) {
 				defer wg.Done()
 				sem <- struct{}{}
 				defer func() { <-sem }()
@@ -171,7 +171,7 @@ func runSuggest(cmd *cobra.Command, args []string) error {
 					Lines:              r.Lines,
 					CopilotSuggestions: res,
 				}}
-			}()
+			}(f)
 		}
 
 		go func() {
@@ -205,6 +205,8 @@ func runSuggest(cmd *cobra.Command, args []string) error {
 		return analyses[i].File < analyses[j].File
 	})
 
+	analyses = filterSuggestions(analyses, minSavings)
+
 	if format == "json" {
 		s, err := suggestionJSON(analyses)
 		if err != nil {
@@ -213,7 +215,7 @@ func runSuggest(cmd *cobra.Command, args []string) error {
 		fmt.Fprint(out, s)
 		return nil
 	}
-	fmt.Fprint(out, suggestionText(analyses, minSavings))
+	fmt.Fprint(out, suggestionText(analyses))
 	return nil
 }
 
@@ -403,36 +405,46 @@ func analyzeFile(counter tokens.Counter, filePath, rootDir string, cfg internal.
 	}, nil
 }
 
-func suggestionText(analyses []fileAnalysis, minSavings int) string {
-	var withSuggestions []fileAnalysis
+// filterSuggestions removes suggestions below minSavings and recalculates
+// per-file totals. Files left with no suggestions (and no Copilot output)
+// are dropped entirely.
+func filterSuggestions(analyses []fileAnalysis, minSavings int) []fileAnalysis {
+	var out []fileAnalysis
 	for _, a := range analyses {
-		if len(a.Suggestions) > 0 || a.CopilotSuggestions != "" {
-			withSuggestions = append(withSuggestions, a)
+		filtered := a
+		var kept []suggestion
+		for _, s := range a.Suggestions {
+			if s.EstimatedSavings >= minSavings || s.EstimatedSavings == 0 {
+				kept = append(kept, s)
+			}
+		}
+		filtered.Suggestions = kept
+		fileSavings := 0
+		for _, s := range kept {
+			fileSavings += s.EstimatedSavings
+		}
+		filtered.PotentialSavings = fileSavings
+		if len(kept) > 0 || filtered.CopilotSuggestions != "" {
+			out = append(out, filtered)
 		}
 	}
+	return out
+}
 
-	if len(withSuggestions) == 0 {
+func suggestionText(analyses []fileAnalysis) string {
+	if len(analyses) == 0 {
 		return "✅ No optimization suggestions found.\n"
 	}
 
 	var buf strings.Builder
-	filesWithRelevantSuggestions := 0
-	for _, analysis := range withSuggestions {
-		var relevant []suggestion
-		for _, s := range analysis.Suggestions {
-			if s.EstimatedSavings >= minSavings || s.EstimatedSavings == 0 {
-				relevant = append(relevant, s)
-			}
-		}
-		if len(relevant) == 0 && analysis.CopilotSuggestions == "" {
-			continue
-		}
-		filesWithRelevantSuggestions++
+	totalSavings := 0
+	for _, analysis := range analyses {
+		totalSavings += analysis.PotentialSavings
 
 		fmt.Fprintf(&buf, "\n📄 %s (%d tokens)\n", analysis.File, analysis.Tokens)
 		fmt.Fprintln(&buf, strings.Repeat("-", 60))
 
-		for _, s := range relevant {
+		for _, s := range analysis.Suggestions {
 			savings := ""
 			if s.EstimatedSavings > 0 {
 				savings = fmt.Sprintf(" (~%d tokens)", s.EstimatedSavings)
@@ -444,20 +456,11 @@ func suggestionText(analyses []fileAnalysis, minSavings int) string {
 		if analysis.CopilotSuggestions != "" {
 			fmt.Fprintln(&buf, "\n"+wrapText(analysis.CopilotSuggestions, 120))
 		} else if analysis.PotentialSavings > 0 {
-			// Copilot doesn't provide a savings estimate, so only show this if we have other suggestions that do
 			fmt.Fprintf(&buf, "\n  Total potential savings: ~%d tokens\n", analysis.PotentialSavings)
 		}
 	}
 
-	if filesWithRelevantSuggestions == 0 {
-		return "✅ No optimization suggestions found.\n"
-	}
-
-	totalSavings := 0
-	for _, a := range withSuggestions {
-		totalSavings += a.PotentialSavings
-	}
-	summary := fmt.Sprintf("\n📊 Summary: %d file(s) with suggestions", filesWithRelevantSuggestions)
+	summary := fmt.Sprintf("\n📊 Summary: %d file(s) with suggestions", len(analyses))
 	if totalSavings > 0 {
 		summary += fmt.Sprintf(", ~%d potential token savings", totalSavings)
 	}
@@ -466,15 +469,8 @@ func suggestionText(analyses []fileAnalysis, minSavings int) string {
 }
 
 func suggestionJSON(analyses []fileAnalysis) (string, error) {
-	var withSuggestions []fileAnalysis
-	for _, a := range analyses {
-		if len(a.Suggestions) > 0 || a.CopilotSuggestions != "" {
-			withSuggestions = append(withSuggestions, a)
-		}
-	}
-
 	totalSavings := 0
-	for _, a := range withSuggestions {
+	for _, a := range analyses {
 		totalSavings += a.PotentialSavings
 	}
 
@@ -484,7 +480,7 @@ func suggestionJSON(analyses []fileAnalysis) (string, error) {
 		TotalPotentialSavings int            `json:"totalPotentialSavings,omitempty"`
 	}{
 		Timestamp:             nowISO(),
-		Analyses:              withSuggestions,
+		Analyses:              analyses,
 		TotalPotentialSavings: totalSavings,
 	}
 
