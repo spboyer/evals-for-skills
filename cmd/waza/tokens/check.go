@@ -12,7 +12,7 @@ import (
 	"strings"
 
 	"github.com/spboyer/waza/cmd/waza/tokens/internal"
-	"github.com/spboyer/waza/cmd/waza/tokens/internal/tokens"
+	"github.com/spboyer/waza/internal/tokens"
 	"github.com/spf13/cobra"
 )
 

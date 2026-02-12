@@ -17,8 +17,8 @@ import (
 	"unicode/utf8"
 
 	"github.com/spboyer/waza/cmd/waza/tokens/internal"
-	"github.com/spboyer/waza/cmd/waza/tokens/internal/tokens"
 	"github.com/spboyer/waza/internal/execution"
+	"github.com/spboyer/waza/internal/tokens"
 	"github.com/spf13/cobra"
 )
 
