@@ -68,6 +68,16 @@ Compare results from multiple evaluation runs side by side — per-task score de
 |------|-------|-------------|
 | `--format <fmt>` | `-f` | Output format: `table` or `json` (default: `table`) |
 
+### `waza dev [skill-path]`
+
+Iteratively score and improve skill frontmatter in a SKILL.md file.
+
+| Flag | Description |
+|------|-------------|
+| `--target <level>` | Target adherence level: `low`, `medium`, `medium-high`, `high` (default: `medium-high`) |
+| `--max-iterations <n>` | Maximum improvement iterations (default: 5) |
+| `--auto` | Apply improvements without prompting |
+
 ### `waza tokens count [paths...]`
 
 Count tokens in markdown files. Paths may be files or directories (scanned recursively for `.md`/`.mdx`).
