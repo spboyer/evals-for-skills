@@ -112,6 +112,50 @@ func TestVerbose_GraderResult_Failed(t *testing.T) {
 	assert.Contains(t, out, "pattern not found")
 }
 
+func TestVerbose_AgentResponse_ErrorMsg(t *testing.T) {
+	out := captureStdout(t, func() {
+		verboseProgressListener(orchestration.ProgressEvent{
+			EventType: orchestration.EventAgentResponse,
+			Details: map[string]any{
+				"error":      "copilot session crashed",
+				"output":     "",
+				"tool_calls": 0,
+			},
+		})
+	})
+	assert.Contains(t, out, "[ERROR]")
+	assert.Contains(t, out, "copilot session crashed")
+	assert.NotContains(t, out, "[RESPONSE]")
+}
+
+func TestVerbose_AgentResponse_EmptyErrorMsg(t *testing.T) {
+	out := captureStdout(t, func() {
+		verboseProgressListener(orchestration.ProgressEvent{
+			EventType: orchestration.EventAgentResponse,
+			Details: map[string]any{
+				"error":      "",
+				"output":     "ok",
+				"tool_calls": 0,
+			},
+		})
+	})
+	assert.NotContains(t, out, "[ERROR]")
+}
+
+func TestVerbose_AgentResponse_NoErrorMsgKey(t *testing.T) {
+	out := captureStdout(t, func() {
+		verboseProgressListener(orchestration.ProgressEvent{
+			EventType: orchestration.EventAgentResponse,
+			Details: map[string]any{
+				"output":     "ok",
+				"tool_calls": 0,
+			},
+		})
+	})
+	assert.NotContains(t, out, "[ERROR]")
+	assert.Contains(t, out, "[RESPONSE]")
+}
+
 func TestTruncate(t *testing.T) {
 	tests := []struct {
 		input  string

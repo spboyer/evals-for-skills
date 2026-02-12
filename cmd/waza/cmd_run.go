@@ -189,11 +189,14 @@ func verboseProgressListener(event orchestration.ProgressEvent) {
 			fmt.Printf("  [PROMPT] %s\n", msg)
 		}
 	case orchestration.EventAgentResponse:
-		if output, ok := event.Details["output"].(string); ok {
+		if output, ok := event.Details["output"].(string); ok && output != "" {
 			fmt.Printf("  [RESPONSE] %s\n", truncate(output, 200))
 		}
 		if tc, ok := event.Details["tool_calls"].(int); ok && tc > 0 {
 			fmt.Printf("  [TOOLS] %d tool call(s)\n", tc)
+		}
+		if e, ok := event.Details["error"].(string); ok && e != "" {
+			fmt.Printf("  [ERROR] %s\n", e)
 		}
 	case orchestration.EventGraderResult:
 		name := fmt.Sprintf("%v", event.Details["grader"])

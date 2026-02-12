@@ -330,6 +330,11 @@ func (r *TestRunner) runTest(ctx context.Context, tc *models.TestCase, testNum, 
 		})
 
 		run := r.executeRun(ctx, tc, runNum)
+		// surface errors even in non-verbose mode because they're critical for understanding test failures
+		if run.ErrorMsg != "" && !r.verbose {
+			fmt.Printf("[ERROR] %s\n\n", run.ErrorMsg)
+		}
+
 		runs = append(runs, run)
 
 		r.notifyProgress(ProgressEvent{
@@ -397,6 +402,7 @@ func (r *TestRunner) executeRun(ctx context.Context, tc *models.TestCase, runNum
 			EventType: EventAgentResponse,
 			TestName:  tc.DisplayName,
 			Details: map[string]any{
+				"error":      resp.ErrorMsg,
 				"output":     resp.FinalOutput,
 				"transcript": r.buildTranscript(resp),
 				"tool_calls": len(resp.ToolCalls),
@@ -414,7 +420,7 @@ func (r *TestRunner) executeRun(ctx context.Context, tc *models.TestCase, runNum
 			RunNumber:  runNum,
 			Status:     models.StatusError,
 			DurationMs: time.Since(startTime).Milliseconds(),
-			ErrorMsg:   err.Error(),
+			ErrorMsg:   "running graders: " + err.Error(),
 		}
 	}
 
