@@ -9,7 +9,9 @@ import (
 
 // PromptConfirm asks a yes/no question. Returns true for yes.
 func PromptConfirm(s *bufio.Scanner, w io.Writer, question string) bool {
-	fmt.Fprint(w, question+" [y/N]")
+	if _, err := fmt.Fprint(w, question+" [y/N]"); err != nil {
+		panic("error writing prompt: " + err.Error())
+	}
 
 	if !s.Scan() {
 		return false

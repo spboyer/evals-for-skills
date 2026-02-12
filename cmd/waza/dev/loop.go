@@ -128,7 +128,9 @@ func runDevLoop(cfg *devConfig) error {
 			return fmt.Errorf("improving skill: %w", err)
 		}
 		if !improved {
-			fmt.Fprintln(cfg.Out, "\nNo improvements applied.")
+			if _, err = fmt.Fprintln(cfg.Out, "\nNo improvements applied."); err != nil {
+				return fmt.Errorf("writing output: %w", err)
+			}
 			break
 		}
 		anyChanges = true
@@ -138,7 +140,9 @@ func runDevLoop(cfg *devConfig) error {
 			return fmt.Errorf("re-loading skill after improvement: %w", err)
 		}
 		currentScore = scorer.Score(skill)
-		fmt.Fprintf(cfg.Out, "\n  Verified: score is now %s\n", currentScore.Level)
+		if _, err := fmt.Fprintf(cfg.Out, "\n  Verified: score is now %s\n", currentScore.Level); err != nil {
+			return fmt.Errorf("writing output: %w", err)
+		}
 
 		// Check again after improvement
 		if currentScore.Level.AtLeast(cfg.Target) {

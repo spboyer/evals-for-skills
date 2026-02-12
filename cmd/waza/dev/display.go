@@ -10,36 +10,48 @@ import (
 
 const boxWidth = 66
 
+func fprintf(w io.Writer, format string, a ...any) {
+	if _, err := fmt.Fprintf(w, format, a...); err != nil {
+		panic("error writing output: " + err.Error())
+	}
+}
+
+func fprintln(w io.Writer, a ...any) {
+	if _, err := fmt.Fprintln(w, a...); err != nil {
+		panic("error writing output: " + err.Error())
+	}
+}
+
 // DisplayIterationHeader shows iteration progress.
 func DisplayIterationHeader(w io.Writer, iteration, maxIterations int) {
-	fmt.Fprintf(w, "\n── Iteration %d/%d ──────────────────────────────────────────\n\n", iteration, maxIterations)
+	fprintf(w, "\n── Iteration %d/%d ──────────────────────────────────────────\n\n", iteration, maxIterations)
 }
 
 // DisplayScore shows the current score with issues.
 func DisplayScore(w io.Writer, sk *skill.Skill, score *ScoreResult) {
 	name := sk.Frontmatter.Name
-	fmt.Fprintf(w, "Skill: %s\n", name)
-	fmt.Fprintf(w, "Score: %s\n", score.Level)
-	fmt.Fprintf(w, "Tokens: %d\n", sk.Tokens)
-	fmt.Fprintf(w, "Description: %d chars\n", score.DescriptionLen)
-	fmt.Fprintf(w, "Triggers: %d\n", score.TriggerCount)
-	fmt.Fprintf(w, "Anti-triggers: %d\n", score.AntiTriggerCount)
+	fprintf(w, "Skill: %s\n", name)
+	fprintf(w, "Score: %s\n", score.Level)
+	fprintf(w, "Tokens: %d\n", sk.Tokens)
+	fprintf(w, "Description: %d chars\n", score.DescriptionLen)
+	fprintf(w, "Triggers: %d\n", score.TriggerCount)
+	fprintf(w, "Anti-triggers: %d\n", score.AntiTriggerCount)
 
 	if len(score.Issues) > 0 {
-		fmt.Fprintln(w)
+		fprintf(w, "\n")
 		DisplayIssues(w, score.Issues)
 	}
 }
 
 // DisplayIssues lists all issues found.
 func DisplayIssues(w io.Writer, issues []Issue) {
-	fmt.Fprintln(w, "Issues:")
+	fprintf(w, "Issues:\n")
 	for _, iss := range issues {
 		icon := "⚠️"
 		if iss.Severity == "error" {
 			icon = "❌"
 		}
-		fmt.Fprintf(w, "  %s %s\n", icon, iss.Message)
+		fprintf(w, "  %s %s\n", icon, iss.Message)
 	}
 }
 
@@ -49,16 +61,16 @@ func DisplaySummary(w io.Writer, skillName string, before, after *ScoreResult, b
 	mid := "╠" + strings.Repeat("═", boxWidth) + "╣"
 	bot := "╚" + strings.Repeat("═", boxWidth) + "╝"
 
-	fmt.Fprintln(w, top)
-	fmt.Fprintln(w, boxLine(fmt.Sprintf("SENSEI SUMMARY: %s", skillName)))
-	fmt.Fprintln(w, mid)
-	fmt.Fprintln(w, boxLine("BEFORE                          AFTER"))
-	fmt.Fprintln(w, boxLine("──────                          ─────"))
-	fmt.Fprintln(w, boxLine(fmt.Sprintf("Score: %-24s Score: %s", before.Level, after.Level)))
-	fmt.Fprintln(w, boxLine(fmt.Sprintf("Tokens: %-23d Tokens: %d", beforeTokens, afterTokens)))
-	fmt.Fprintln(w, boxLine(fmt.Sprintf("Triggers: %-21d Triggers: %d", before.TriggerCount, after.TriggerCount)))
-	fmt.Fprintln(w, boxLine(fmt.Sprintf("Anti-triggers: %-16d Anti-triggers: %d", before.AntiTriggerCount, after.AntiTriggerCount)))
-	fmt.Fprintln(w, boxLine(""))
+	fprintln(w, top)
+	fprintln(w, boxLine(fmt.Sprintf("SENSEI SUMMARY: %s", skillName)))
+	fprintln(w, mid)
+	fprintln(w, boxLine("BEFORE                          AFTER"))
+	fprintln(w, boxLine("──────                          ─────"))
+	fprintln(w, boxLine(fmt.Sprintf("Score: %-24s Score: %s", before.Level, after.Level)))
+	fprintln(w, boxLine(fmt.Sprintf("Tokens: %-23d Tokens: %d", beforeTokens, afterTokens)))
+	fprintln(w, boxLine(fmt.Sprintf("Triggers: %-21d Triggers: %d", before.TriggerCount, after.TriggerCount)))
+	fprintln(w, boxLine(fmt.Sprintf("Anti-triggers: %-16d Anti-triggers: %d", before.AntiTriggerCount, after.AntiTriggerCount)))
+	fprintln(w, boxLine(""))
 
 	tokenStatus := fmt.Sprintf("TOKEN STATUS: ✅ Under budget (%d < %d)", afterTokens, tokenSoftLimit)
 	if afterTokens > tokenSoftLimit {
@@ -67,8 +79,8 @@ func DisplaySummary(w io.Writer, skillName string, before, after *ScoreResult, b
 	if afterTokens > tokenHardLimit {
 		tokenStatus = fmt.Sprintf("TOKEN STATUS: ❌ Over hard limit (%d > %d)", afterTokens, tokenHardLimit)
 	}
-	fmt.Fprintln(w, boxLine(tokenStatus))
-	fmt.Fprintln(w, bot)
+	fprintln(w, boxLine(tokenStatus))
+	fprintln(w, bot)
 }
 
 // boxLine pads text inside box borders (║ ... ║).
@@ -98,18 +110,18 @@ func truncateText(text string, max int) string {
 
 // DisplayImprovement shows a suggested improvement.
 func DisplayImprovement(w io.Writer, section, suggestion string) {
-	fmt.Fprintf(w, "\n📝 Suggested improvement (%s):\n", section)
-	fmt.Fprintln(w, "────────────────────────────────────────")
-	fmt.Fprintln(w, suggestion)
-	fmt.Fprintln(w, "────────────────────────────────────────")
+	fprintf(w, "\n📝 Suggested improvement (%s):\n", section)
+	fprintln(w, "────────────────────────────────────────")
+	fprintln(w, suggestion)
+	fprintln(w, "────────────────────────────────────────")
 }
 
 // DisplayTargetReached shows success message.
 func DisplayTargetReached(w io.Writer, level AdherenceLevel) {
-	fmt.Fprintf(w, "\n✅ Target adherence level %s reached!\n", level)
+	fprintf(w, "\n✅ Target adherence level %s reached!\n", level)
 }
 
 // DisplayMaxIterations shows timeout message.
 func DisplayMaxIterations(w io.Writer, currentLevel AdherenceLevel) {
-	fmt.Fprintf(w, "\n⏱️  Max iterations reached. Current level: %s\n", currentLevel)
+	fprintf(w, "\n⏱️  Max iterations reached. Current level: %s\n", currentLevel)
 }
