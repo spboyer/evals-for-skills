@@ -10,7 +10,7 @@ import (
 
 // the "want" strings in these tests are formatted with newlines and spacing to match the exact output of the
 // display functions, including box-drawing characters and alignment. This ensures that the tests verify not
-// just the content but also the formatting of the output. They literals may appear misaligned because they
+// just the content but also the formatting of the output. The literals may appear misaligned because they
 // contain emojis whose apparent width depends on the font. A terminal monospaced font will probably render
 // bounding boxes correctly.
 
