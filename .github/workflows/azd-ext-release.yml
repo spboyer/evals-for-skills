@@ -113,8 +113,13 @@ jobs:
           # Delete existing remote branch if it exists (handle retries)
           git push origin --delete "$BRANCH" 2>/dev/null || true
 
-          # Create branch and commit
-          git checkout -b "$BRANCH"
+          # Save the updated registry.json, then create a branch from origin/main
+          # so the branch only diverges by this one commit. This avoids pushing
+          # workflow file changes that exist in the local checkout, which would
+          # require the 'workflows' token permission.
+          cp registry.json /tmp/registry.json
+          git checkout -b "$BRANCH" origin/main
+          cp /tmp/registry.json registry.json
           git add registry.json
           git commit -m "chore: Update registry.json for extension v${VERSION}"
 
