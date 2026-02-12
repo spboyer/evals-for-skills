@@ -156,9 +156,8 @@ func (HeuristicScorer) Score(sk *skill.Skill) *ScoreResult {
 	return result
 }
 
-// computeLevel applies the scoring algorithm.
-// Level is determined by presence of triggers/anti-triggers/routing only.
-// Description length adds issues but does not gate the level.
+// computeLevel applies the scoring algorithm. Description length and
+// triggers/anti-triggers/routing determine the AdherenceLevel.
 func computeLevel(r *ScoreResult) AdherenceLevel {
 	if r.DescriptionLen < 150 || !r.HasTriggers {
 		return AdherenceLow
