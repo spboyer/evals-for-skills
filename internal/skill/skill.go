@@ -93,7 +93,7 @@ func (s *Skill) MarshalText() ([]byte, error) {
 		fmBytes, err = yaml.Marshal(&fmMap)
 	}
 	if err != nil {
-		return nil, fmt.Errorf("marshalling frontmatter: %w", err)
+		return nil, fmt.Errorf("marshaling frontmatter: %w", err)
 	}
 
 	var buf strings.Builder
