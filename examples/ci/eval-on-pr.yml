@@ -13,6 +13,9 @@ on:
       - 'examples/code-explainer/**'
       - 'skills/code-explainer/**'
 
+permissions:
+  contents: read
+
 jobs:
   # Single evaluation job example
   basic-eval:
@@ -56,6 +59,7 @@ jobs:
       - name: Prepare Eval Config for Model
         run: |
           # Create a temporary eval file with the specific model
+          # Note: This uses GNU sed syntax (works on ubuntu-latest)
           EVAL_FILE="examples/code-explainer/eval.yaml"
           TEMP_EVAL="eval-${{ matrix.model }}.yaml"
           
@@ -98,7 +102,6 @@ jobs:
       
       - name: Display Results Summary
         run: |
-          # shellcheck disable=SC2129,SC2086
           {
             echo "## Evaluation Results by Model"
             echo ""

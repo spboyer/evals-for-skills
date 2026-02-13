@@ -24,6 +24,11 @@ on:
         required: false
         type: string
         default: 'results.json'
+      artifact-name:
+        description: 'Name for the results artifact'
+        required: false
+        type: string
+        default: 'waza-evaluation-results'
   
   # Allow use as a reusable workflow
   workflow_call:
@@ -47,6 +52,11 @@ on:
         required: false
         type: string
         default: 'results.json'
+      artifact-name:
+        description: 'Name for the results artifact'
+        required: false
+        type: string
+        default: 'waza-evaluation-results'
   
   # Trigger on PR to main branches
   pull_request:
@@ -105,8 +115,7 @@ jobs:
           else
             EVAL_FILE="examples/code-explainer/eval.yaml"
           fi
-          # shellcheck disable=SC2086
-          echo "eval-file=$EVAL_FILE" >> $GITHUB_OUTPUT
+          echo "eval-file=$EVAL_FILE" >> "$GITHUB_OUTPUT"
           echo "Using eval file: $EVAL_FILE"
       
       - name: Determine Context Directory
@@ -124,8 +133,7 @@ jobs:
             CONTEXT_DIR="$EVAL_DIR/fixtures"
           fi
           
-          # shellcheck disable=SC2086
-          echo "context-dir=$CONTEXT_DIR" >> $GITHUB_OUTPUT
+          echo "context-dir=$CONTEXT_DIR" >> "$GITHUB_OUTPUT"
           echo "Using context directory: $CONTEXT_DIR"
       
       - name: Run Evaluation
@@ -136,33 +144,32 @@ jobs:
           VERBOSE="${{ inputs.verbose }}"
           OUTPUT_FILE="${{ inputs.output-file }}"
           
-          # Build command with optional flags
-          CMD="./waza run \"$EVAL_FILE\""
+          # Build command with optional flags using an argument array
+          CMD=(./waza run "$EVAL_FILE")
           
           # Add context-dir if it exists
           if [ -d "$CONTEXT_DIR" ]; then
-            CMD="$CMD --context-dir \"$CONTEXT_DIR\""
+            CMD+=("--context-dir" "$CONTEXT_DIR")
           fi
           
           # Add verbose flag if enabled
           if [ "$VERBOSE" = "true" ]; then
-            CMD="$CMD --verbose"
+            CMD+=("--verbose")
           fi
           
           # Add output file
           if [ -n "$OUTPUT_FILE" ]; then
-            CMD="$CMD --output \"$OUTPUT_FILE\""
+            CMD+=("--output" "$OUTPUT_FILE")
           fi
           
-          echo "Running: $CMD"
-          eval "$CMD"
-        continue-on-error: true
+          echo "Running: ${CMD[*]}"
+          "${CMD[@]}"
       
       - name: Upload Results Artifact
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: waza-evaluation-results
+          name: ${{ inputs.artifact-name || 'waza-evaluation-results' }}
           path: |
             ${{ inputs.output-file || 'results.json' }}
             transcripts/
