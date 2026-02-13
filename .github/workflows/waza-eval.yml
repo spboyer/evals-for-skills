@@ -71,6 +71,9 @@ jobs:
     name: Run Waza Evaluation
     runs-on: ubuntu-latest
     
+    permissions:
+      contents: read
+    
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
