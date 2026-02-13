@@ -98,23 +98,26 @@ jobs:
       
       - name: Display Results Summary
         run: |
-          echo "## Evaluation Results by Model" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          
-          for model_dir in results/results-*; do
-            if [ -d "$model_dir" ]; then
-              model_name=$(basename "$model_dir" | sed 's/results-//')
-              echo "### $model_name" >> $GITHUB_STEP_SUMMARY
-              
-              json_file="$model_dir/results-$model_name.json"
-              if [ -f "$json_file" ]; then
-                # Extract summary info from results JSON
-                echo '```json' >> $GITHUB_STEP_SUMMARY
-                cat "$json_file" | head -20 >> $GITHUB_STEP_SUMMARY
-                echo '```' >> $GITHUB_STEP_SUMMARY
-              else
-                echo "No results file found" >> $GITHUB_STEP_SUMMARY
+          # shellcheck disable=SC2129,SC2086
+          {
+            echo "## Evaluation Results by Model"
+            echo ""
+            
+            for model_dir in results/results-*; do
+              if [ -d "$model_dir" ]; then
+                model_name="$(basename "$model_dir" | sed 's/results-//')"
+                echo "### $model_name"
+                
+                json_file="$model_dir/results-$model_name.json"
+                if [ -f "$json_file" ]; then
+                  # Extract summary info from results JSON
+                  echo '```json'
+                  head -20 "$json_file"
+                  echo '```'
+                else
+                  echo "No results file found"
+                fi
+                echo ""
               fi
-              echo "" >> $GITHUB_STEP_SUMMARY
-            fi
-          done
+            done
+          } >> "$GITHUB_STEP_SUMMARY"

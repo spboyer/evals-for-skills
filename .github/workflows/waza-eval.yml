@@ -102,6 +102,7 @@ jobs:
           else
             EVAL_FILE="examples/code-explainer/eval.yaml"
           fi
+          # shellcheck disable=SC2086
           echo "eval-file=$EVAL_FILE" >> $GITHUB_OUTPUT
           echo "Using eval file: $EVAL_FILE"
       
@@ -116,10 +117,11 @@ jobs:
             CONTEXT_DIR="$CONTEXT_INPUT"
           else
             # Default to fixtures directory relative to eval file
-            EVAL_DIR=$(dirname "$EVAL_FILE")
+            EVAL_DIR="$(dirname "$EVAL_FILE")"
             CONTEXT_DIR="$EVAL_DIR/fixtures"
           fi
           
+          # shellcheck disable=SC2086
           echo "context-dir=$CONTEXT_DIR" >> $GITHUB_OUTPUT
           echo "Using context directory: $CONTEXT_DIR"
       
@@ -132,11 +134,11 @@ jobs:
           OUTPUT_FILE="${{ inputs.output-file }}"
           
           # Build command with optional flags
-          CMD="./waza run $EVAL_FILE"
+          CMD="./waza run \"$EVAL_FILE\""
           
           # Add context-dir if it exists
           if [ -d "$CONTEXT_DIR" ]; then
-            CMD="$CMD --context-dir $CONTEXT_DIR"
+            CMD="$CMD --context-dir \"$CONTEXT_DIR\""
           fi
           
           # Add verbose flag if enabled
@@ -146,11 +148,11 @@ jobs:
           
           # Add output file
           if [ -n "$OUTPUT_FILE" ]; then
-            CMD="$CMD --output $OUTPUT_FILE"
+            CMD="$CMD --output \"$OUTPUT_FILE\""
           fi
           
           echo "Running: $CMD"
-          $CMD
+          eval "$CMD"
         continue-on-error: true
       
       - name: Upload Results Artifact
