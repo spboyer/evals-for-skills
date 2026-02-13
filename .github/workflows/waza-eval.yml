@@ -1,0 +1,171 @@
+name: Waza Evaluation
+
+on:
+  # Allow manual trigger
+  workflow_dispatch:
+    inputs:
+      eval-yaml:
+        description: 'Path to evaluation YAML file'
+        required: true
+        type: string
+        default: 'examples/code-explainer/eval.yaml'
+      context-dir:
+        description: 'Context directory for fixtures (relative to eval.yaml if not absolute)'
+        required: false
+        type: string
+        default: ''
+      verbose:
+        description: 'Enable verbose output'
+        required: false
+        type: boolean
+        default: true
+      output-file:
+        description: 'Output JSON file path for results'
+        required: false
+        type: string
+        default: 'results.json'
+  
+  # Allow use as a reusable workflow
+  workflow_call:
+    inputs:
+      eval-yaml:
+        description: 'Path to evaluation YAML file'
+        required: true
+        type: string
+      context-dir:
+        description: 'Context directory for fixtures (relative to eval.yaml if not absolute)'
+        required: false
+        type: string
+        default: ''
+      verbose:
+        description: 'Enable verbose output'
+        required: false
+        type: boolean
+        default: true
+      output-file:
+        description: 'Output JSON file path for results'
+        required: false
+        type: string
+        default: 'results.json'
+  
+  # Trigger on PR to main branches
+  pull_request:
+    branches: [ main, develop ]
+    paths:
+      - 'examples/**/*.yaml'
+      - 'examples/**/*.yml'
+      - 'skills/**'
+      - '.github/workflows/waza-eval.yml'
+  
+  # Trigger on push to main branches
+  push:
+    branches: [ main, develop ]
+    paths:
+      - 'examples/**/*.yaml'
+      - 'examples/**/*.yml'
+      - 'skills/**'
+      - '.github/workflows/waza-eval.yml'
+
+jobs:
+  run-evaluation:
+    name: Run Waza Evaluation
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+      
+      - name: Setup Go Environment
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.25'
+          cache-dependency-path: go.sum
+      
+      - name: Download Dependencies
+        run: go mod download
+      
+      - name: Build Waza Binary
+        run: |
+          go build -v -o waza ./cmd/waza
+          chmod +x ./waza
+      
+      - name: Verify Binary
+        run: ./waza --version
+      
+      - name: Determine Eval File
+        id: eval-file
+        run: |
+          # Use input if provided (from workflow_call or workflow_dispatch)
+          # Otherwise use a default for PR/push triggers
+          if [ -n "${{ inputs.eval-yaml }}" ]; then
+            EVAL_FILE="${{ inputs.eval-yaml }}"
+          else
+            EVAL_FILE="examples/code-explainer/eval.yaml"
+          fi
+          echo "eval-file=$EVAL_FILE" >> $GITHUB_OUTPUT
+          echo "Using eval file: $EVAL_FILE"
+      
+      - name: Determine Context Directory
+        id: context-dir
+        run: |
+          EVAL_FILE="${{ steps.eval-file.outputs.eval-file }}"
+          CONTEXT_INPUT="${{ inputs.context-dir }}"
+          
+          # If context-dir input is provided and not empty, use it
+          if [ -n "$CONTEXT_INPUT" ]; then
+            CONTEXT_DIR="$CONTEXT_INPUT"
+          else
+            # Default to fixtures directory relative to eval file
+            EVAL_DIR=$(dirname "$EVAL_FILE")
+            CONTEXT_DIR="$EVAL_DIR/fixtures"
+          fi
+          
+          echo "context-dir=$CONTEXT_DIR" >> $GITHUB_OUTPUT
+          echo "Using context directory: $CONTEXT_DIR"
+      
+      - name: Run Evaluation
+        id: run-eval
+        run: |
+          EVAL_FILE="${{ steps.eval-file.outputs.eval-file }}"
+          CONTEXT_DIR="${{ steps.context-dir.outputs.context-dir }}"
+          VERBOSE="${{ inputs.verbose }}"
+          OUTPUT_FILE="${{ inputs.output-file }}"
+          
+          # Build command with optional flags
+          CMD="./waza run $EVAL_FILE"
+          
+          # Add context-dir if it exists
+          if [ -d "$CONTEXT_DIR" ]; then
+            CMD="$CMD --context-dir $CONTEXT_DIR"
+          fi
+          
+          # Add verbose flag if enabled
+          if [ "$VERBOSE" = "true" ]; then
+            CMD="$CMD --verbose"
+          fi
+          
+          # Add output file
+          if [ -n "$OUTPUT_FILE" ]; then
+            CMD="$CMD --output $OUTPUT_FILE"
+          fi
+          
+          echo "Running: $CMD"
+          $CMD
+        continue-on-error: true
+      
+      - name: Upload Results Artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: waza-evaluation-results
+          path: |
+            ${{ inputs.output-file || 'results.json' }}
+            transcripts/
+          retention-days: 30
+          if-no-files-found: warn
+      
+      - name: Check Evaluation Status
+        if: steps.run-eval.outcome == 'failure'
+        run: |
+          echo "::error::Waza evaluation failed"
+          exit 1
