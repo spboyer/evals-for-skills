@@ -82,6 +82,18 @@ The `waza-eval.yml` workflow accepts these inputs:
 | `verbose` | No | `true` | Enable verbose output |
 | `output-file` | No | `results.json` | Path to save results JSON |
 
+## Exit Codes
+
+The `waza run` command uses exit codes to indicate success or failure:
+
+| Exit Code | Meaning | Workflow Behavior |
+|-----------|---------|-------------------|
+| `0` | All tests passed | Workflow succeeds ✅ |
+| `1` | One or more tests failed | Workflow fails ❌ |
+| `2` | Configuration error | Workflow fails ❌ |
+
+This enables proper CI/CD integration - if tests fail, the workflow will fail, preventing merges or deployments.
+
 ## Outputs
 
 The workflow produces:
