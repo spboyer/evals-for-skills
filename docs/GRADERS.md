@@ -313,8 +313,10 @@ Validates agent behavior patterns like tool call counts, token usage, and execut
 | `max_tool_calls` | int | Maximum allowed tool calls |
 | `max_tokens` | int | Maximum token usage allowed |
 | `max_duration_ms` | int64 | Maximum execution time in milliseconds |
-| `required_tools` | list[str] | Tool names that MUST be called |
-| `forbidden_tools` | list[str] | Tool names that MUST NOT be called |
+| `required_tools` | list[str] | Tool names (exact matches) that MUST be called |
+| `forbidden_tools` | list[str] | Tool names (exact matches) that MUST NOT be called |
+
+**Note:** `required_tools` and `forbidden_tools` use exact string matching on tool names; patterns, wildcards, or regular expressions are not supported.
 
 **Scoring:** Composite score based on all behavior constraints passed/failed.
 
@@ -583,7 +585,7 @@ result = evaluator(query=query, response=response)
     rubric: |
       Evaluate how relevant the agent's response is to the user's query.
       
-      Query: [Available in context as 'output']
+      Query: [Available in the test case prompt; the agent's response is provided as 'output']
       
       Rate relevance (1-5):
       1 - Completely irrelevant
