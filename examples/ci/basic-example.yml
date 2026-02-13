@@ -1,0 +1,21 @@
+name: Basic Waza Eval Example
+
+# This is the simplest possible example of using the waza-eval workflow.
+# Copy this to .github/workflows/ and customize the eval-yaml path.
+
+on:
+  # Trigger on pull requests to main
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  run-eval:
+    name: Run Evaluation
+    uses: ./.github/workflows/waza-eval.yml
+    with:
+      # Path to your evaluation YAML file
+      eval-yaml: 'examples/code-explainer/eval.yaml'
+      # Optional: Enable verbose output (default: true)
+      verbose: true
+      # Optional: Specify output file name (default: results.json)
+      output-file: 'my-results.json'
