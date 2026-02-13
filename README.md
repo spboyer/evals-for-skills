@@ -177,6 +177,29 @@ tasks:
   - "tasks/*.yaml"
 ```
 
+## CI/CD Integration
+
+Waza includes reusable GitHub Actions workflows for running evaluations in CI/CD pipelines.
+
+### Quick Setup
+
+1. Use the reusable workflow in your `.github/workflows/`:
+
+```yaml
+jobs:
+  eval:
+    uses: ./.github/workflows/waza-eval.yml
+    with:
+      eval-yaml: 'examples/code-explainer/eval.yaml'
+      verbose: true
+```
+
+2. For matrix testing across multiple models, see the example at [`examples/ci/eval-on-pr.yml`](examples/ci/eval-on-pr.yml)
+
+3. The workflow automatically runs on PRs that modify evaluation files or skills
+
+See [`examples/ci/README.md`](examples/ci/README.md) for detailed documentation and more examples.
+
 ## Contributing
 
 See [AGENTS.md](AGENTS.md) for coding guidelines.
