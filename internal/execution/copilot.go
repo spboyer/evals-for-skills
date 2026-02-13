@@ -3,6 +3,7 @@ package execution
 import (
 	"context"
 	"fmt"
+	"log/slog"
 	"os"
 	"path/filepath"
 	"strings"
@@ -10,6 +11,7 @@ import (
 	"time"
 
 	copilot "github.com/github/copilot-sdk/go"
+	"github.com/spboyer/waza/internal/utils"
 )
 
 // CopilotEngine integrates with GitHub Copilot SDK
@@ -94,10 +96,25 @@ func (e *CopilotEngine) Execute(ctx context.Context, req *ExecutionRequest) (*Ex
 	}
 	e.client = client
 
+	// note, we're assuming you're _in_ the directory with the skill until we get our
+	// workspacing story in order.
+	cwd, err := os.Getwd()
+
+	if err != nil {
+		return nil, fmt.Errorf("failed to get current directory: %w", err)
+	}
+
+	slog.Debug("Adding skill directory", "path", cwd)
+
 	// Create session with updated API
 	session, err := e.client.CreateSession(ctx, &copilot.SessionConfig{
 		Model: e.modelID,
+		// these are the directory for the skill itself.
+		SkillDirectories: []string{
+			cwd,
+		},
 	})
+
 	if err != nil {
 		return nil, fmt.Errorf("failed to create session: %w", err)
 	}
@@ -111,6 +128,9 @@ func (e *CopilotEngine) Execute(ctx context.Context, req *ExecutionRequest) (*Ex
 
 	// Event handler with updated API
 	unsubscribe := session.On(eventsCollector.On)
+	defer unsubscribe()
+
+	unsubscribe = session.On(utils.SessionToSlog)
 	defer unsubscribe()
 
 	// Send prompt with updated API
