@@ -59,6 +59,9 @@ on:
         default: 'waza-evaluation-results'
   
   # Trigger on PR to main branches
+  # Note: When triggered automatically, this workflow runs the default eval file
+  # (examples/code-explainer/eval.yaml). For testing specific eval files, use
+  # workflow_dispatch or create dedicated workflows per example.
   pull_request:
     branches: [ main, develop ]
     paths:
