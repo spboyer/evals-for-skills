@@ -66,6 +66,32 @@ Run an evaluation benchmark from a spec file.
 | `--workers <n>` | | Concurrent workers (default: 4, requires `--parallel`) |
 | `--interpret` | | Print plain-language result interpretation |
 
+**Exit Codes**
+
+The `run` command uses exit codes to enable CI/CD integration:
+
+| Exit Code | Condition | Description |
+|-----------|-----------|-------------|
+| `0` | Success | All tests passed |
+| `1` | Test failure | One or more tests failed validation |
+| `2` | Configuration error | Invalid spec, missing files, or runtime error |
+
+Example CI usage:
+
+```bash
+# Fail the build if any tests fail
+waza run eval.yaml || exit $?
+
+# Capture specific exit codes
+waza run eval.yaml
+EXIT_CODE=$?
+if [ $EXIT_CODE -eq 1 ]; then
+  echo "Tests failed - check results"
+elif [ $EXIT_CODE -eq 2 ]; then
+  echo "Configuration error"
+fi
+```
+
 ### `waza init [directory]`
 
 Scaffold a new eval suite with `eval.yaml`, `tasks/`, and `fixtures/` directories.
