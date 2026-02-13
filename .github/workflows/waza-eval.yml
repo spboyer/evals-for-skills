@@ -106,7 +106,7 @@ jobs:
           chmod +x ./waza
       
       - name: Verify Binary
-        run: ./waza --version
+        run: ./waza --help
       
       - name: Determine Eval File
         id: eval-file
