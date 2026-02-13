@@ -162,7 +162,9 @@ func runCommandE(cmd *cobra.Command, args []string) error {
 
 	// Exit with error code if tests failed
 	if outcome.Digest.Failed > 0 || outcome.Digest.Errors > 0 {
-		return fmt.Errorf("benchmark completed with failures")
+		return &TestFailureError{
+			Message: fmt.Sprintf("benchmark completed with %d failed and %d error(s)", outcome.Digest.Failed, outcome.Digest.Errors),
+		}
 	}
 
 	return nil

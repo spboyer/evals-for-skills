@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/json"
+	"errors"
 	"io"
 	"os"
 	"path/filepath"
@@ -415,4 +416,99 @@ func TestRunCommand_InterpretRunsMock(t *testing.T) {
 
 	err := cmd.Execute()
 	assert.NoError(t, err)
+}
+
+// ---------------------------------------------------------------------------
+// Exit code behavior
+// ---------------------------------------------------------------------------
+
+func TestRunCommand_ReturnsTestFailureErrorOnTestFailure(t *testing.T) {
+	resetRunGlobals()
+
+	// Create a spec with a task that will fail validation
+	dir := t.TempDir()
+	taskDir := filepath.Join(dir, "tasks")
+	require.NoError(t, os.MkdirAll(taskDir, 0o755))
+
+	// Task with a code grader that will fail (checks for impossible condition)
+	task := `id: failing-task
+name: Failing Task
+inputs:
+  prompt: "This will fail"
+graders:
+  - name: impossible_check
+    type: code
+    config:
+      assertions:
+        - "False"  # This will always fail
+`
+	require.NoError(t, os.WriteFile(filepath.Join(taskDir, "task.yaml"), []byte(task), 0o644))
+
+	spec := `name: test-eval-failure
+skill: test-skill
+version: "1.0"
+config:
+  trials_per_task: 1
+  timeout_seconds: 30
+  parallel: false
+  executor: mock
+  model: test-model
+tasks:
+  - "tasks/*.yaml"
+`
+	specPath := filepath.Join(dir, "eval.yaml")
+	require.NoError(t, os.WriteFile(specPath, []byte(spec), 0o644))
+
+	cmd := newRunCommand()
+	cmd.SetArgs([]string{specPath})
+	cmd.SetOut(io.Discard)
+	cmd.SetErr(io.Discard)
+
+	err := cmd.Execute()
+	require.Error(t, err)
+
+	// Verify it's a TestFailureError
+	var testFailureErr *TestFailureError
+	assert.True(t, errors.As(err, &testFailureErr), "expected TestFailureError type")
+	assert.Contains(t, err.Error(), "benchmark completed with")
+}
+
+func TestRunCommand_ReturnsRegularErrorOnConfigFailure(t *testing.T) {
+	resetRunGlobals()
+
+	// Test with invalid spec (unknown engine type)
+	dir := t.TempDir()
+	taskDir := filepath.Join(dir, "tasks")
+	require.NoError(t, os.MkdirAll(taskDir, 0o755))
+	require.NoError(t, os.WriteFile(
+		filepath.Join(taskDir, "t.yaml"),
+		[]byte("id: t1\nname: t\ninputs:\n  prompt: hi\n"),
+		0o644,
+	))
+
+	spec := `name: test
+skill: s
+config:
+  trials_per_task: 1
+  timeout_seconds: 10
+  executor: invalid-engine-type
+  model: m
+tasks:
+  - "tasks/*.yaml"
+`
+	specPath := filepath.Join(dir, "eval.yaml")
+	require.NoError(t, os.WriteFile(specPath, []byte(spec), 0o644))
+
+	cmd := newRunCommand()
+	cmd.SetArgs([]string{specPath})
+	cmd.SetOut(io.Discard)
+	cmd.SetErr(io.Discard)
+
+	err := cmd.Execute()
+	require.Error(t, err)
+
+	// Verify it's NOT a TestFailureError (it's a config error)
+	var testFailureErr *TestFailureError
+	assert.False(t, errors.As(err, &testFailureErr), "expected regular error, not TestFailureError")
+	assert.Contains(t, err.Error(), "unknown engine type")
 }
