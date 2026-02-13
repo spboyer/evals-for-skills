@@ -1,6 +1,9 @@
 package execution
 
 import (
+	"fmt"
+	"os"
+
 	copilot "github.com/github/copilot-sdk/go"
 	"github.com/spboyer/waza/internal/models"
 )
@@ -16,6 +19,9 @@ func NewSessionEventsCollector() *SessionEventsCollector {
 }
 
 type SessionEventsCollector struct {
+	// SkillInvocations is a chronological list of skills invoked during the session
+	SkillInvocations []SkillInvocation
+
 	sessionEvents []copilot.SessionEvent
 	outputParts   []string
 	errorMsg      string
@@ -50,6 +56,25 @@ func (coll *SessionEventsCollector) On(event copilot.SessionEvent) {
 	case copilot.AssistantMessage, copilot.AssistantMessageDelta:
 		if event.Data.Content != nil {
 			coll.outputParts = append(coll.outputParts, *event.Data.Content)
+		}
+
+	case copilot.SkillInvoked:
+		si := SkillInvocation{}
+		// these and Content (the text of the relevant SKILL.md) are the only consistently populated fields
+		if event.Data.Name != nil {
+			si.Name = *event.Data.Name
+		}
+		if event.Data.Path != nil {
+			si.Path = *event.Data.Path
+		}
+		if si.Name != "" || si.Path != "" {
+			coll.SkillInvocations = append(coll.SkillInvocations, si)
+		} else {
+			// this shouldn't happen but if it does we at least want to know about it
+			if _, err := fmt.Fprintf(os.Stderr, "warning: received SkillInvoked event with no Name or Path: %+v\n", event); err != nil {
+				// this also shouldn't happen but if it does something's very wrong
+				panic("failed to write to stderr: " + err.Error())
+			}
 		}
 
 	case copilot.ToolExecutionStart:

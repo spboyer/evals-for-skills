@@ -162,15 +162,15 @@ func (e *CopilotEngine) Execute(ctx context.Context, req *ExecutionRequest) (*Ex
 
 	// Build response
 	resp := &ExecutionResponse{
-		FinalOutput:  joinStrings(eventsCollector.OutputParts()),
-		Events:       eventsCollector.SessionEvents(),
-		ModelID:      e.modelID,
-		SkillInvoked: req.SkillName,
-		DurationMs:   duration.Milliseconds(),
-		ToolCalls:    eventsCollector.ToolCalls(),
-		ErrorMsg:     errorMsg,
-		Success:      errorMsg == "",
-		WorkspaceDir: e.workspace,
+		FinalOutput:      joinStrings(eventsCollector.OutputParts()),
+		Events:           eventsCollector.SessionEvents(),
+		ModelID:          e.modelID,
+		SkillInvocations: eventsCollector.SkillInvocations,
+		DurationMs:       duration.Milliseconds(),
+		ToolCalls:        eventsCollector.ToolCalls(),
+		ErrorMsg:         errorMsg,
+		Success:          errorMsg == "",
+		WorkspaceDir:     e.workspace,
 	}
 
 	return resp, nil

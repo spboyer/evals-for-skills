@@ -40,6 +40,10 @@ func TestNewSessionEventsCollector(t *testing.T) {
 	require.Equal(t, 10, len(coll.SessionEvents()))
 	require.Equal(t, []string{"", "yes"}, coll.OutputParts())
 	require.Empty(t, coll.ErrorMessage())
+	require.Equal(t, []SkillInvocation{{
+		Name: "example",
+		Path: "/home/\u003credacted\u003e/.copilot/skills/example/SKILL.md",
+	}}, coll.SkillInvocations)
 
 	toolCalls := coll.ToolCalls()
 	require.Equal(t, []models.ToolCall{
