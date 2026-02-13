@@ -300,10 +300,11 @@ Validates agent behavior patterns like tool call counts, token usage, and execut
     max_tokens: 10000
     max_duration_ms: 300000
     required_tools:
-      - pattern: "bash"
+      - "bash"
+      - "view"
     forbidden_tools:
-      - pattern: "rm -rf"
-      - pattern: "sudo"
+      - "rm -rf"
+      - "sudo"
 ```
 
 **Options:**
@@ -311,9 +312,9 @@ Validates agent behavior patterns like tool call counts, token usage, and execut
 |--------|------|-------------|
 | `max_tool_calls` | int | Maximum allowed tool calls |
 | `max_tokens` | int | Maximum token usage allowed |
-| `max_duration_ms` | int | Maximum execution time in milliseconds |
-| `required_tools` | list | Tool patterns that MUST be called |
-| `forbidden_tools` | list | Tool patterns that MUST NOT be called |
+| `max_duration_ms` | int64 | Maximum execution time in milliseconds |
+| `required_tools` | list[str] | Tool names that MUST be called |
+| `forbidden_tools` | list[str] | Tool names that MUST NOT be called |
 
 **Scoring:** Composite score based on all behavior constraints passed/failed.
 
