@@ -66,7 +66,7 @@ func TestReadyCommandNoSkillMd(t *testing.T) {
 
 func TestReadyCommandWithEval(t *testing.T) {
 	tmpDir := t.TempDir()
-	
+
 	// Create SKILL.md
 	skillContent := `---
 name: test-skill-with-eval
@@ -105,7 +105,7 @@ tasks: []
 
 func TestReadyCommandHighCompliance(t *testing.T) {
 	tmpDir := t.TempDir()
-	
+
 	// Create SKILL.md with high compliance (includes triggers, anti-triggers, routing clarity)
 	skillContent := `---
 name: high-compliance-skill
@@ -139,7 +139,7 @@ This skill has high compliance.
 
 func TestReadyCommandLowCompliance(t *testing.T) {
 	tmpDir := t.TempDir()
-	
+
 	// Create SKILL.md with low compliance (short description, no triggers)
 	skillContent := `---
 name: low-compliance-skill
@@ -175,7 +175,7 @@ This skill has low compliance.
 
 func TestCheckReadiness(t *testing.T) {
 	tmpDir := t.TempDir()
-	
+
 	skillContent := `---
 name: readiness-test
 description: This is a test skill for checking the readiness report generation with proper frontmatter and adequate description length.
