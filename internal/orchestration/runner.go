@@ -298,16 +298,27 @@ func (r *TestRunner) runSequential(ctx context.Context, testCases []*models.Test
 			TotalTests: len(testCases),
 		})
 
-		outcome := r.runTest(ctx, tc, i+1, len(testCases))
+		outcome, wasCached := r.runTest(ctx, tc, i+1, len(testCases))
 		outcomes = append(outcomes, outcome)
 
-		r.notifyProgress(ProgressEvent{
-			EventType:  EventTestComplete,
-			TestName:   tc.DisplayName,
-			TestNum:    i + 1,
-			TotalTests: len(testCases),
-			Status:     outcome.Status,
-		})
+		if wasCached {
+			// Emit cached event instead of complete
+			r.notifyProgress(ProgressEvent{
+				EventType:  EventTestCached,
+				TestName:   tc.DisplayName,
+				TestNum:    i + 1,
+				TotalTests: len(testCases),
+				Status:     outcome.Status,
+			})
+		} else {
+			r.notifyProgress(ProgressEvent{
+				EventType:  EventTestComplete,
+				TestName:   tc.DisplayName,
+				TestNum:    i + 1,
+				TotalTests: len(testCases),
+				Status:     outcome.Status,
+			})
+		}
 	}
 
 	return outcomes
@@ -346,16 +357,26 @@ func (r *TestRunner) runConcurrent(ctx context.Context, testCases []*models.Test
 				TotalTests: len(testCases),
 			})
 
-			outcome := r.runTest(ctx, test, idx+1, len(testCases))
+			outcome, wasCached := r.runTest(ctx, test, idx+1, len(testCases))
 			resultChan <- result{index: idx, outcome: outcome}
 
-			r.notifyProgress(ProgressEvent{
-				EventType:  EventTestComplete,
-				TestName:   test.DisplayName,
-				TestNum:    idx + 1,
-				TotalTests: len(testCases),
-				Status:     outcome.Status,
-			})
+			if wasCached {
+				r.notifyProgress(ProgressEvent{
+					EventType:  EventTestCached,
+					TestName:   test.DisplayName,
+					TestNum:    idx + 1,
+					TotalTests: len(testCases),
+					Status:     outcome.Status,
+				})
+			} else {
+				r.notifyProgress(ProgressEvent{
+					EventType:  EventTestComplete,
+					TestName:   test.DisplayName,
+					TestNum:    idx + 1,
+					TotalTests: len(testCases),
+					Status:     outcome.Status,
+				})
+			}
 		}(i, tc)
 	}
 
@@ -373,7 +394,7 @@ func (r *TestRunner) runConcurrent(ctx context.Context, testCases []*models.Test
 	return results
 }
 
-func (r *TestRunner) runTest(ctx context.Context, tc *models.TestCase, testNum, totalTests int) models.TestOutcome {
+func (r *TestRunner) runTest(ctx context.Context, tc *models.TestCase, testNum, totalTests int) (models.TestOutcome, bool) {
 	spec := r.cfg.Spec()
 	
 	// Check cache if enabled
@@ -381,25 +402,19 @@ func (r *TestRunner) runTest(ctx context.Context, tc *models.TestCase, testNum, 
 		cacheKey, err := cache.CacheKey(spec, tc, r.cfg.FixtureDir())
 		if err == nil {
 			if cachedOutcome, found := r.cache.Get(cacheKey); found {
-				// Emit cached event
-				r.notifyProgress(ProgressEvent{
-					EventType:  EventTestCached,
-					TestName:   tc.DisplayName,
-					TestNum:    testNum,
-					TotalTests: totalTests,
-				})
-				return *cachedOutcome
+				// Return cached outcome with cached flag
+				return *cachedOutcome, true
 			}
 			// Run the test and cache the result
 			outcome := r.runTestUncached(ctx, tc, testNum, totalTests)
 			// Store in cache
 			_ = r.cache.Put(cacheKey, &outcome)
-			return outcome
+			return outcome, false
 		}
 	}
 	
 	// No cache or cache key generation failed
-	return r.runTestUncached(ctx, tc, testNum, totalTests)
+	return r.runTestUncached(ctx, tc, testNum, totalTests), false
 }
 
 func (r *TestRunner) runTestUncached(ctx context.Context, tc *models.TestCase, testNum, totalTests int) models.TestOutcome {
