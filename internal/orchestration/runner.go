@@ -15,6 +15,7 @@ import (
 	"github.com/spboyer/waza/internal/execution"
 	"github.com/spboyer/waza/internal/graders"
 	"github.com/spboyer/waza/internal/models"
+	"github.com/spboyer/waza/internal/utils"
 )
 
 // TestRunner orchestrates the execution of tests
@@ -487,17 +488,7 @@ func (r *TestRunner) buildExecutionRequest(tc *models.TestCase) *execution.Execu
 	}
 
 	// Resolve skill paths relative to spec directory
-	var resolvedSkillPaths []string
-	specDir := r.cfg.SpecDir()
-	for _, path := range spec.Config.SkillPaths {
-		if filepath.IsAbs(path) {
-			resolvedSkillPaths = append(resolvedSkillPaths, path)
-		} else {
-			// Resolve relative to spec directory
-			resolvedPath := filepath.Join(specDir, path)
-			resolvedSkillPaths = append(resolvedSkillPaths, resolvedPath)
-		}
-	}
+	resolvedSkillPaths := utils.ResolvePaths(spec.Config.SkillPaths, r.cfg.SpecDir())
 
 	return &execution.ExecutionRequest{
 		TestID:     tc.TestID,

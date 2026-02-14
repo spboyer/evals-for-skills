@@ -105,19 +105,15 @@ func (e *CopilotEngine) Execute(ctx context.Context, req *ExecutionRequest) (*Ex
 	}
 
 	// Build skill directories list: start with CWD, then add any from request
+	// Use map for O(n) duplicate detection
+	seen := make(map[string]bool)
+	seen[cwd] = true
 	skillDirs := []string{cwd}
 	
 	// Add skill directories from request, avoiding duplicates
 	for _, path := range req.SkillPaths {
-		// Skip if already in list (including CWD)
-		isDuplicate := false
-		for _, existing := range skillDirs {
-			if existing == path {
-				isDuplicate = true
-				break
-			}
-		}
-		if !isDuplicate {
+		if !seen[path] {
+			seen[path] = true
 			skillDirs = append(skillDirs, path)
 		}
 	}
