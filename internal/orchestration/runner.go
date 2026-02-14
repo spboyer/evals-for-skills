@@ -11,6 +11,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/spboyer/waza/internal/cache"
 	"github.com/spboyer/waza/internal/config"
 	"github.com/spboyer/waza/internal/execution"
 	"github.com/spboyer/waza/internal/graders"
@@ -26,6 +27,9 @@ type TestRunner struct {
 
 	// Task filtering
 	taskFilters []string
+	
+	// Result caching
+	cache *cache.Cache
 
 	// Progress tracking
 	progressMu sync.Mutex
@@ -45,6 +49,7 @@ const (
 	EventBenchmarkStopped  EventType = "benchmark_stopped"
 	EventTestStart         EventType = "test_start"
 	EventTestComplete      EventType = "test_complete"
+	EventTestCached        EventType = "test_cached"
 	EventRunStart          EventType = "run_start"
 	EventRunComplete       EventType = "run_complete"
 	EventAgentPrompt       EventType = "agent_prompt"
@@ -72,6 +77,13 @@ type RunnerOption func(*TestRunner)
 func WithTaskFilters(patterns ...string) RunnerOption {
 	return func(r *TestRunner) {
 		r.taskFilters = patterns
+	}
+}
+
+// WithCache enables result caching
+func WithCache(c *cache.Cache) RunnerOption {
+	return func(r *TestRunner) {
+		r.cache = c
 	}
 }
 
@@ -362,6 +374,35 @@ func (r *TestRunner) runConcurrent(ctx context.Context, testCases []*models.Test
 }
 
 func (r *TestRunner) runTest(ctx context.Context, tc *models.TestCase, testNum, totalTests int) models.TestOutcome {
+	spec := r.cfg.Spec()
+	
+	// Check cache if enabled
+	if r.cache != nil {
+		cacheKey, err := cache.CacheKey(spec, tc, r.cfg.FixtureDir())
+		if err == nil {
+			if cachedOutcome, found := r.cache.Get(cacheKey); found {
+				// Emit cached event
+				r.notifyProgress(ProgressEvent{
+					EventType:  EventTestCached,
+					TestName:   tc.DisplayName,
+					TestNum:    testNum,
+					TotalTests: totalTests,
+				})
+				return *cachedOutcome
+			}
+			// Run the test and cache the result
+			outcome := r.runTestUncached(ctx, tc, testNum, totalTests)
+			// Store in cache
+			_ = r.cache.Put(cacheKey, &outcome)
+			return outcome
+		}
+	}
+	
+	// No cache or cache key generation failed
+	return r.runTestUncached(ctx, tc, testNum, totalTests)
+}
+
+func (r *TestRunner) runTestUncached(ctx context.Context, tc *models.TestCase, testNum, totalTests int) models.TestOutcome {
 	spec := r.cfg.Spec()
 	runsPerTest := spec.Config.RunsPerTest
 
