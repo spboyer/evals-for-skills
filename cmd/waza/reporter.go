@@ -123,7 +123,16 @@ func FormatGitHubComment(outcome *models.EvaluationOutcome) string {
 							b.WriteString(fmt.Sprintf("**Run %d/%d** (%s):\n",
 								runIdx+1, len(to.Runs), run.Status))
 
-							for _, val := range run.Validations {
+							// Collect and sort validation names for consistent output
+							valNames := make([]string, 0, len(run.Validations))
+							for name := range run.Validations {
+								valNames = append(valNames, name)
+							}
+							sort.Strings(valNames)
+
+							// Print validations in sorted order
+							for _, name := range valNames {
+								val := run.Validations[name]
 								icon := "✅"
 								if !val.Passed {
 									icon = "❌"
