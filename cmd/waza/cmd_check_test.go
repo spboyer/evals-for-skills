@@ -12,12 +12,12 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestReadyCommand(t *testing.T) {
+func TestCheckCommand(t *testing.T) {
 	// Create a test skill with proper YAML frontmatter
 	tmpDir := t.TempDir()
 	skillContent := `---
 name: test-skill
-description: This is a test skill for unit testing the ready command functionality.
+description: This is a test skill for unit testing the check command functionality.
 ---
 
 # Test Skill
@@ -28,8 +28,8 @@ This is the body of the test skill.
 	err := os.WriteFile(skillPath, []byte(skillContent), 0644)
 	require.NoError(t, err)
 
-	// Run ready command
-	cmd := newReadyCommand()
+	// Run check command
+	cmd := newCheckCommand()
 	var output bytes.Buffer
 	cmd.SetOut(&output)
 	cmd.SetErr(&output)
@@ -50,10 +50,10 @@ This is the body of the test skill.
 	assert.Contains(t, result, "Next Steps")
 }
 
-func TestReadyCommandNoSkillMd(t *testing.T) {
+func TestCheckCommandNoSkillMd(t *testing.T) {
 	tmpDir := t.TempDir()
 
-	cmd := newReadyCommand()
+	cmd := newCheckCommand()
 	var output bytes.Buffer
 	cmd.SetOut(&output)
 	cmd.SetErr(&output)
@@ -64,7 +64,7 @@ func TestReadyCommandNoSkillMd(t *testing.T) {
 	assert.Contains(t, err.Error(), "no SKILL.md found")
 }
 
-func TestReadyCommandWithEval(t *testing.T) {
+func TestCheckCommandWithEval(t *testing.T) {
 	tmpDir := t.TempDir()
 
 	// Create SKILL.md
@@ -89,7 +89,7 @@ tasks: []
 	err = os.WriteFile(evalPath, []byte(evalContent), 0644)
 	require.NoError(t, err)
 
-	cmd := newReadyCommand()
+	cmd := newCheckCommand()
 	var output bytes.Buffer
 	cmd.SetOut(&output)
 	cmd.SetErr(&output)
@@ -103,7 +103,7 @@ tasks: []
 	assert.Contains(t, result, "eval.yaml detected")
 }
 
-func TestReadyCommandHighCompliance(t *testing.T) {
+func TestCheckCommandHighCompliance(t *testing.T) {
 	tmpDir := t.TempDir()
 
 	// Create SKILL.md with high compliance (includes triggers, anti-triggers, routing clarity)
@@ -120,7 +120,7 @@ This skill has high compliance.
 	err := os.WriteFile(skillPath, []byte(skillContent), 0644)
 	require.NoError(t, err)
 
-	cmd := newReadyCommand()
+	cmd := newCheckCommand()
 	var output bytes.Buffer
 	cmd.SetOut(&output)
 	cmd.SetErr(&output)
@@ -132,12 +132,12 @@ This skill has high compliance.
 	result := output.String()
 	assert.Contains(t, result, "Compliance Score: High")
 	assert.Contains(t, result, "Excellent!")
-	// Should not suggest compliance improvements since it's already High
+	// Should not suggest compliance improvements since it's alcheck High
 	assert.NotContains(t, strings.ToLower(result), "expand your description")
 	assert.NotContains(t, strings.ToLower(result), "add a 'use for:' section")
 }
 
-func TestReadyCommandLowCompliance(t *testing.T) {
+func TestCheckCommandLowCompliance(t *testing.T) {
 	tmpDir := t.TempDir()
 
 	// Create SKILL.md with low compliance (short description, no triggers)
@@ -154,7 +154,7 @@ This skill has low compliance.
 	err := os.WriteFile(skillPath, []byte(skillContent), 0644)
 	require.NoError(t, err)
 
-	cmd := newReadyCommand()
+	cmd := newCheckCommand()
 	var output bytes.Buffer
 	cmd.SetOut(&output)
 	cmd.SetErr(&output)

@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"strings"
 
 	"github.com/spboyer/waza/cmd/waza/dev"
 	"github.com/spboyer/waza/internal/skill"
@@ -13,26 +12,26 @@ import (
 	"github.com/spf13/cobra"
 )
 
-func newReadyCommand() *cobra.Command {
+func newCheckCommand() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "ready [skill-path]",
+		Use:   "check [skill-path]",
 		Short: "Check if a skill is ready for submission",
 		Long: `Check if a skill is ready for submission by running compliance, token, and eval checks.
 
 Performs the following checks:
   1. Compliance scoring - Validates frontmatter adherence (Low/Medium/Medium-High/High)
   2. Token budget - Checks if SKILL.md is within token limits
-  3. Evaluation - Runs evals if eval.yaml exists
+  3. Evaluation - Checks for eval.yaml presence
 
 Provides a plain-language summary and suggests next steps.
 
 If skill-path is omitted, the current working directory is used.
 
 Example:
-  waza ready skills/code-explainer
-  waza ready .`,
+  waza check skills/code-explainer
+  waza check .`,
 		Args:          cobra.MaximumNArgs(1),
-		RunE:          runReady,
+		RunE:          runCheck,
 		SilenceErrors: true,
 	}
 	return cmd
@@ -49,7 +48,7 @@ type readinessReport struct {
 	skillPath       string
 }
 
-func runReady(cmd *cobra.Command, args []string) error {
+func runCheck(cmd *cobra.Command, args []string) error {
 	skillDir := "."
 	if len(args) > 0 {
 		skillDir = args[0]
@@ -247,49 +246,4 @@ func generateNextSteps(report *readinessReport) []string {
 	return steps
 }
 
-func formatPlainLanguage(report *readinessReport) string {
-	var b strings.Builder
 
-	skillName := report.skillName
-	if skillName == "" {
-		skillName = "your skill"
-	}
-
-	b.WriteString(fmt.Sprintf("Let me check if %s is ready for submission.\n\n", skillName))
-
-	// Compliance
-	b.WriteString(fmt.Sprintf("Compliance: Your skill has a %s adherence level. ", report.complianceLevel))
-	if report.complianceLevel == dev.AdherenceHigh {
-		b.WriteString("Excellent! ")
-	} else if report.complianceLevel >= dev.AdherenceMediumHigh {
-		b.WriteString("This is good, but there's room for improvement. ")
-	} else {
-		b.WriteString("This needs work. ")
-	}
-
-	// Token budget
-	b.WriteString(fmt.Sprintf("Token usage is %d out of %d allowed. ", report.tokenCount, report.tokenLimit))
-	if report.tokenExceeded {
-		b.WriteString("This exceeds the limit. ")
-	} else {
-		b.WriteString("This is within budget. ")
-	}
-
-	// Eval
-	if report.hasEval {
-		b.WriteString("An evaluation suite exists. ")
-	} else {
-		b.WriteString("No evaluation suite found. ")
-	}
-
-	// Overall
-	isReady := report.complianceLevel.AtLeast(dev.AdherenceMediumHigh) && !report.tokenExceeded
-	b.WriteString("\n\n")
-	if isReady {
-		b.WriteString("✅ Overall: Your skill is ready for submission!")
-	} else {
-		b.WriteString("⚠️  Overall: Your skill needs some improvements before submission.")
-	}
-
-	return b.String()
-}

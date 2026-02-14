@@ -31,7 +31,7 @@ azd waza run examples/code-explainer/eval.yaml -v
 make build
 
 # Check if a skill is ready for submission
-./waza ready skills/my-skill
+./waza check skills/my-skill
 
 # Scaffold a new eval suite
 ./waza init my-eval --interactive
@@ -134,7 +134,7 @@ Iteratively score and improve skill frontmatter in a SKILL.md file.
 | `--max-iterations <n>` | Maximum improvement iterations (default: 5) |
 | `--auto` | Apply improvements without prompting |
 
-### `waza ready [skill-path]`
+### `waza check [skill-path]`
 
 Check if a skill is ready for submission with a comprehensive readiness report.
 
@@ -180,15 +180,15 @@ Consider:
 **Usage:**
 ```bash
 # Check current directory
-waza ready
+waza check
 
 # Check specific skill
-waza ready skills/my-skill
+waza check skills/my-skill
 
 # Suggested workflow
-waza ready skills/my-skill     # Check readiness
+waza check skills/my-skill     # Check readiness
 waza dev skills/my-skill       # Improve compliance if needed
-waza ready skills/my-skill     # Verify improvements
+waza check skills/my-skill     # Verify improvements
 ```
 
 ### `waza tokens count [paths...]`
