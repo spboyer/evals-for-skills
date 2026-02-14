@@ -6,6 +6,7 @@
 | Go implementation, CLI commands | Linus | Build cmd files, internal packages |
 | Tests, quality, edge cases | Basher | Write *_test.go files, verify CI |
 | Documentation, README, SKILL.md | Livingston | Update docs, write SKILL.md, PR body |
+| Demo guides, tutorials, feature docs | Saul | DEMO-GUIDE.md, TUTORIAL.md, GRADERS.md, examples/ READMEs |
 | Code review | Rusty | Review PRs, check quality |
 | Graders, Copilot SDK | Richard Park 👤 | #28 graders, #29 SDK, #22, #23 Cobra |
 | Sensei engine, compliance, tokens | Charles Lowell 👤 | #32-38 sensei, #47-51 tokens |

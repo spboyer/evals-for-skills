@@ -16,6 +16,7 @@
 | Linus | Backend Dev | `.ai-team/agents/linus/charter.md` | ✅ Active |
 | Basher | Tester | `.ai-team/agents/basher/charter.md` | ✅ Active |
 | Livingston | Docs & Integration | `.ai-team/agents/livingston/charter.md` | ✅ Active |
+| Saul | Documentation Lead | `.ai-team/agents/saul/charter.md` | ✅ Active |
 | Scribe | Session Logger | `.ai-team/agents/scribe/charter.md` | 📋 Silent |
 | Richard Park | Go Engineer | — | 👤 Human |
 | Charles Lowell | Go Engineer | — | 👤 Human |

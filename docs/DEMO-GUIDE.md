@@ -1,786 +1,648 @@
 # Waza Demo Guide
 
-Comprehensive guide for demonstrating waza evaluation framework features in various scenarios.
+**Comprehensive walk-through for demonstrating waza's capabilities.**
 
-## Overview
-
-This guide provides 7 ready-to-run demo scenarios showcasing different aspects of waza:
-1. [Basic Evaluation Run](#demo-1-basic-evaluation-run)
-2. [Multiple Grader Types](#demo-2-multiple-grader-types)
-3. [Model Comparison](#demo-3-model-comparison)
-4. [CI/CD Integration](#demo-4-cicd-integration)
-5. [Token Management](#demo-5-token-management)
-6. [Skill Generation](#demo-6-skill-generation)
-7. [Multi-Skill Orchestration](#demo-7-multi-skill-orchestration) ⭐ **NEW**
-
-Each demo includes setup instructions, commands, and expected output.
+This guide provides step-by-step instructions for 7 practical demonstrations covering all major waza features. Each demo is self-contained and can be run independently.
 
 ---
 
-## Demo 1: Basic Evaluation Run
+## Quick Setup
 
-**Duration**: 2-3 minutes  
-**Goal**: Show the simplest eval workflow
+Before any demo, ensure waza is built and ready:
+
+```bash
+cd /path/to/evals-for-skills
+
+# Build the binary
+make build
+
+# Verify installation
+./waza-bin run --help
+```
+
+---
+
+## Demo 1: Quick Start Demo (2 min)
+
+**What it shows:** How fast you can install waza and run your first evaluation.
 
 ### Setup
 
-```bash
-cd /home/runner/work/waza/waza
-make build
-```
+- **Location:** `examples/code-explainer/`
+- **Prerequisite:** waza binary built
+- **Model:** Uses mock executor (no API keys needed for demo)
 
-### Run the Demo
+### Commands
 
 ```bash
-# Run the code-explainer example with mock executor
-./waza run examples/code-explainer/eval.yaml \
-  --executor mock \
+# Navigate to project root
+cd /path/to/evals-for-skills
+
+# Show the example structure
+echo "📁 Example directory structure:"
+tree examples/code-explainer/ -L 2
+
+# Run the evaluation with verbose output
+./waza-bin run examples/code-explainer/eval.yaml \
   --context-dir examples/code-explainer/fixtures \
   -v
+
+# Save results to JSON for later analysis
+./waza-bin run examples/code-explainer/eval.yaml \
+  --context-dir examples/code-explainer/fixtures \
+  -o results.json
+
+# Show the results
+echo "📊 Results saved to results.json"
+cat results.json | jq '.summary'
 ```
 
 ### Expected Output
 
-```
-Running evaluation: code-explainer v1.0
-Executor: mock
-Tasks: 4
-Trials per task: 3
+- Real-time task execution with progress indicators
+- Summary showing:
+  - Number of tasks run
+  - Overall score (0.0-1.0)
+  - Metrics breakdown (task_completion, trigger_accuracy, behavior_quality)
+  - Pass/fail per task
+- JSON results file with full execution details
 
-Task 1/4: explain-python-recursion
-  Trial 1/3... ✓ (0.5s)
-  Trial 2/3... ✓ (0.4s)
-  Trial 3/3... ✓ (0.5s)
-  Pass rate: 3/3 (100%)
+### Talking Points
 
-...
-
-Results:
-  Pass rate: 12/12 (100%)
-  Average score: 0.95
-```
-
-### Key Points to Highlight
-
-- Simple CLI interface
-- Mock executor for fast testing
-- Multiple trials for reliability
-- Clear pass/fail results
+1. **Single Binary:** "Everything you need is in one command. No Python venv, no package management."
+2. **Fast Iteration:** "Run evals in seconds with mock executor, then switch to real models."
+3. **Reproducible:** "Same eval.yaml runs the same way everywhere—CI, local, your teammate's machine."
+4. **Structured Output:** "JSON results let you integrate with dashboards, reports, or CI/CD."
 
 ---
 
-## Demo 2: Multiple Grader Types
+## Demo 2: Grader Showcase Demo (5 min)
 
-**Duration**: 3-4 minutes  
-**Goal**: Show different validation methods
-
-### Setup
-
-```bash
-cd /home/runner/work/waza/waza
-./waza run examples/grader-showcase/eval.yaml -v
-```
-
-### Available Graders
-
-The grader showcase demonstrates 6 grader types:
-
-| Grader | Purpose | Example Use Case |
-|--------|---------|------------------|
-| `code` | Python assertions | Complex validation logic |
-| `regex` | Pattern matching | URL format, keywords |
-| `file` | File validation | Check created files |
-| `behavior` | Tool usage limits | Efficiency, safety |
-| `action_sequence` | Tool call order | Workflow enforcement |
-| `skill_invocation` | Skill orchestration | Multi-skill workflows |
-
-### Demo Commands
-
-```bash
-# Run all grader demos
-./waza run examples/grader-showcase/eval.yaml -v
-
-# Run specific grader demo
-./waza run examples/grader-showcase/eval.yaml --task="regex-demo" -v
-
-# View a specific grader config
-cat examples/grader-showcase/tasks/regex-task.yaml
-```
-
-### Example: Regex Grader
-
-```yaml
-graders:
-  - type: regex
-    name: pattern_check
-    config:
-      must_match:
-        - "(?i)deployed to https?://.+"
-        - "Resource group: .+"
-      must_not_match:
-        - "error|failed|exception"
-```
-
-### Key Points to Highlight
-
-- Multiple grader types for different validation needs
-- Combine graders for comprehensive testing
-- Task-specific vs global graders
-- See `docs/GRADERS.md` for full reference
-
----
-
-## Demo 3: Model Comparison
-
-**Duration**: 4-5 minutes  
-**Goal**: Compare performance across different models
+**What it shows:** The five grader types in action—how to validate different aspects of agent behavior.
 
 ### Setup
 
-```bash
-cd /home/runner/work/waza/waza
+- **Location:** `examples/grader-showcase/`
+- **Skills Demonstrated:** Each task shows one grader type
+  - `code-task.yaml` → Code grader (Python assertions)
+  - `regex-task.yaml` → Regex grader (pattern matching)
+  - `file-task.yaml` → File grader (file operations)
+  - `behavior-task.yaml` → Behavior grader (efficiency constraints)
+  - `action-sequence-task.yaml` → Action sequence grader (tool calls)
 
-# Run eval with different models (requires Copilot SDK)
-./waza run examples/code-explainer/eval.yaml \
-  --executor copilot-sdk \
-  --model gpt-4o \
-  --context-dir examples/code-explainer/fixtures \
-  -o results-gpt4.json
-
-./waza run examples/code-explainer/eval.yaml \
-  --executor copilot-sdk \
-  --model claude-sonnet-4-20250514 \
-  --context-dir examples/code-explainer/fixtures \
-  -o results-claude.json
-```
-
-### Compare Results
+### Commands
 
 ```bash
-./waza compare results-gpt4.json results-claude.json
+# Show the grader-showcase eval structure
+echo "📋 Grader types showcase:"
+ls -lh examples/grader-showcase/tasks/
+
+# Run the showcase with verbose output to see each grader in action
+./waza-bin run examples/grader-showcase/eval.yaml \
+  --context-dir examples/grader-showcase/fixtures \
+  -v
+
+# Run just the regex task to focus on one grader type
+./waza-bin run examples/grader-showcase/eval.yaml \
+  --context-dir examples/grader-showcase/fixtures \
+  --task "regex-*" \
+  -v
+
+# Show the eval.yaml to highlight grader configuration
+echo "🔍 Global graders in eval.yaml:"
+grep -A 8 "^graders:" examples/grader-showcase/eval.yaml
+
+# Show one task file to explain task-specific graders
+echo "📄 Example task with graders:"
+head -40 examples/grader-showcase/tasks/code-task.yaml
 ```
 
 ### Expected Output
 
+- Each task runs with clear pass/fail status
+- Grader output explains why validation passed/failed
+- Summary showing:
+  - Grader pass rates
+  - Individual grader scores
+  - Overall task score
+
+### Talking Points
+
+1. **Flexible Validation:** "Code graders for logic, regex for patterns, files for outputs, behavior for efficiency."
+2. **Composable:** "Mix and match graders on each task. Use global graders for all tasks, task-specific for edge cases."
+3. **Clear Feedback:** "Each grader tells you exactly what passed/failed and why."
+4. **Production-Ready:** "These graders let you enforce quality standards in CI/CD pipelines."
+
+### Deep Dive: Show Individual Grader Configs
+
+```bash
+# Show each task's grader config
+echo "=== Code Grader Example ==="
+grep -A 10 "^graders:" examples/grader-showcase/tasks/code-task.yaml
+
+echo ""
+echo "=== Regex Grader Example ==="
+grep -A 10 "^graders:" examples/grader-showcase/tasks/regex-task.yaml
+
+echo ""
+echo "=== File Grader Example ==="
+grep -A 10 "^graders:" examples/grader-showcase/tasks/file-task.yaml
 ```
-Model Comparison
-================
-
-                    gpt-4o    claude-sonnet-4-20250514
-Pass Rate           92%       95%
-Average Score       0.88      0.92
-Avg Duration        12.3s     9.7s
-Avg Tool Calls      5.2       4.8
-
-Task Breakdown:
-  explain-recursion    0.90 → 0.95  (+0.05) ✓
-  explain-async        0.85 → 0.88  (+0.03) ✓
-  explain-comprehension 0.90 → 0.93  (+0.03) ✓
-  explain-sql-join     0.87 → 0.92  (+0.05) ✓
-
-Winner: claude-sonnet-4-20250514
-```
-
-### Key Points to Highlight
-
-- Compare models objectively
-- Task-by-task score deltas
-- Performance metrics (duration, tool calls)
-- Data-driven model selection
 
 ---
 
-## Demo 4: CI/CD Integration
+## Demo 3: Token Management Demo (3 min)
 
-**Duration**: 3-4 minutes  
-**Goal**: Show how waza integrates into CI/CD pipelines
+**What it shows:** How to manage token budgets for skills using waza tokens commands.
 
 ### Setup
 
-Create a GitHub Actions workflow:
+- **Location:** Any directory with markdown files (skill docs, eval configs)
+- **Example:** `examples/code-explainer/SKILL.md`
+- **Tools:** `waza tokens count`, `check`, `suggest`
 
-```yaml
-# .github/workflows/eval-skill.yml
-name: Evaluate Skill
+### Commands
 
-on:
-  pull_request:
-    paths:
-      - 'skills/**'
-      - 'eval/**'
+```bash
+# Count tokens in a skill file
+echo "📊 Count tokens in a skill:"
+./waza-bin tokens count examples/code-explainer/SKILL.md
 
+# Count tokens in entire directory
+echo ""
+echo "📊 Count tokens in all markdown files:"
+./waza-bin tokens count examples/
+
+# Count with JSON output for reporting
+echo ""
+echo "📊 Token count as JSON:"
+./waza-bin tokens count examples/ --format json | jq '.'
+
+# Check files against token limits (500 token limit per file)
+echo ""
+echo "✅ Check against token limits:"
+./waza-bin tokens check examples/ --limit 500
+
+# Get optimization suggestions
+echo ""
+echo "💡 Get optimization suggestions:"
+./waza-bin tokens suggest examples/code-explainer/SKILL.md
+
+# Compare tokens between git commits
+echo ""
+echo "🔄 Compare tokens between versions:"
+./waza-bin tokens compare HEAD~1 HEAD -- examples/code-explainer/SKILL.md
+```
+
+### Expected Output
+
+- **count:** Table with file paths and token counts
+- **check:** Green checkmarks for under-limit files, warnings for over-limit
+- **suggest:** Specific recommendations for shortening content while preserving meaning
+- **compare:** Diff showing token count changes between versions
+
+### Talking Points
+
+1. **Budget Enforcement:** "Know exactly how many tokens each skill uses—critical for Azure OpenAI cost management."
+2. **Continuous Monitoring:** "Track token changes across commits. Catch bloat before it hits production."
+3. **Optimization Guidance:** "Get LLM-powered suggestions for trimming without losing functionality."
+4. **CI Integration:** "Add token checks to your PR workflows—fail the build if skills get too large."
+
+---
+
+## Demo 4: Sensei Dev Loop Demo (5 min)
+
+**What it shows:** Iterative skill development using `waza dev` with real-time compliance scoring.
+
+### Setup
+
+- **Location:** Any eval directory (e.g., `examples/code-explainer/`)
+- **Process:** Score → Review → Fix → Score again (iterative loop)
+- **Note:** Demo uses mock executor; in practice, use real models
+
+### Commands
+
+```bash
+# Start the development loop with scoring
+echo "🎯 Starting Sensei development loop..."
+./waza-bin dev examples/code-explainer/eval.yaml \
+  --context-dir examples/code-explainer/fixtures \
+  --model claude-sonnet-4-20250514
+
+# Explanation of what the loop shows:
+echo ""
+echo "📋 The dev loop provides:"
+echo "  1. Initial compliance score (Low/Medium/Medium-High/High)"
+echo "  2. Specific issues found (3-5 actionable feedback items)"
+echo "  3. Improvement suggestions"
+echo "  4. Option to re-run after you make changes"
+echo "  5. Convergence when score reaches target"
+```
+
+### Expected Output
+
+- **Iteration 1:**
+  - Compliance score shown (e.g., "Medium - 65%")
+  - List of 3-5 specific issues:
+    - Missing docstrings
+    - Unclear error handling
+    - Incomplete examples
+  - LLM-powered suggestions for each issue
+
+- **After you make edits:**
+  - Re-run `waza dev` with updated files
+  - Score improves (e.g., "Medium-High - 78%")
+  - Remaining issues refined
+
+### Talking Points
+
+1. **Guided Development:** "Not just pass/fail—get detailed feedback on what to improve."
+2. **Real-Time Iteration:** "See your score change as you update your skill."
+3. **LLM-Powered Insights:** "Claude/GPT reviews your skill like a peer would."
+4. **Target-Driven:** "Set a score target (e.g., 'High') and loop until you reach it."
+
+### Optional: Show Score Breakdown
+
+```bash
+# Explain the scoring rubric
+echo "📊 Compliance Score Breakdown:"
+echo "  Low (0-40%):          Needs major revisions"
+echo "  Medium (41-65%):      Functional, but missing key details"
+echo "  Medium-High (66-85%): Good—minor improvements needed"
+echo "  High (86-100%):       Excellent—ready for production"
+
+# Show what triggers each score level
+echo ""
+echo "✅ Factors for High score:"
+echo "  • Complete SKILL.md with all sections"
+echo "  • Clear trigger patterns"
+echo "  • Input/output examples"
+echo "  • Error handling documented"
+echo "  • Eval tests passing"
+```
+
+---
+
+## Demo 5: CI/CD Integration Demo (3 min)
+
+**What it shows:** How waza integrates into GitHub Actions pipelines with exit codes and reporting.
+
+### Setup
+
+- **Location:** `.github/workflows/` (example patterns in `examples/ci/`)
+- **Concepts:**
+  - Exit codes for pass/fail decisions
+  - Matrix testing across models
+  - Result comparison and reporting
+
+### Commands
+
+```bash
+# Show the CI workflow example
+echo "🔄 Example CI workflow:"
+cat examples/ci/README.md | head -60
+
+# Explain exit codes
+echo ""
+echo "🚦 Exit Codes (for CI decisions):"
+echo "  0: All tests passed → ✅ Merge allowed"
+echo "  1: One or more tests failed → ❌ Block merge"
+echo "  2: Configuration/runtime error → ⚠️ Check logs"
+
+# Demonstrate exit code behavior
+echo ""
+echo "📌 Example: Run eval and check exit code"
+./waza-bin run examples/code-explainer/eval.yaml \
+  --context-dir examples/code-explainer/fixtures
+echo "Exit code: $?"
+
+# Show how to use in GitHub Actions
+echo ""
+echo "🐙 GitHub Actions example:"
+cat << 'EOF'
 jobs:
-  evaluate:
+  test-skill:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      
-      - name: Install waza
+      - name: Run waza evaluation
         run: |
-          cd waza-go
-          make build
-          sudo mv waza /usr/local/bin/
-      
-      - name: Run evaluation
-        id: eval
-        run: |
-          waza run eval/eval.yaml \
-            --executor mock \
-            --format github-comment > comment.md
-          echo "exit_code=$?" >> $GITHUB_OUTPUT
-      
-      - name: Post PR comment
+          waza run examples/code-explainer/eval.yaml -v
+          # Exit code automatically fails the workflow if tests fail
+      - name: Compare results
         if: always()
-        uses: actions/github-script@v7
-        with:
-          script: |
-            const fs = require('fs');
-            const comment = fs.readFileSync('comment.md', 'utf8');
-            github.rest.issues.createComment({
-              issue_number: context.issue.number,
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              body: comment
-            });
-      
-      - name: Fail on test failure
-        if: steps.eval.outputs.exit_code == '1'
-        run: exit 1
+        run: waza compare results-old.json results-new.json
+EOF
+
+# Show result comparison
+echo ""
+echo "📊 Compare results across models:"
+./waza-bin compare results.json results.json \
+  --format summary
 ```
 
-### Exit Codes
+### Expected Output
 
-| Code | Meaning | CI Action |
-|------|---------|-----------|
-| 0 | All tests passed | ✓ Pass build |
-| 1 | Test failure | ✗ Fail build |
-| 2 | Config error | ✗ Fail build |
+- Workflow file showing practical CI integration patterns
+- Exit code explanation with examples
+- Result comparison showing pass/fail differences
+- Model-to-model performance deltas
 
-### Demo Command
+### Talking Points
+
+1. **Automated Gates:** "Fail PRs automatically if evals don't pass—no manual review needed."
+2. **Matrix Testing:** "Test your skill against GPT-4o, Claude, and others in parallel."
+3. **Actionable Results:** "Compare models side-by-side to find which performs best."
+4. **Reproducible Pipelines:** "Same eval runs consistently across dev, staging, production."
+
+---
+
+## Demo 6: Multi-Skill Orchestration Demo (5 min)
+
+**What it shows:** Running evals across multiple skills with dependencies and cross-skill validation.
+
+### Setup
+
+- **Concepts:** `skill_directories`, `required_skills`, `skill_invocation` grader
+- **Example:** Code-explainer skill using utility functions from another skill
+- **Note:** Advanced feature—start here only after mastering basic demos
+
+### Commands
 
 ```bash
-# Test locally with GitHub comment format
-./waza run examples/code-explainer/eval.yaml \
-  --executor mock \
+# Show how multi-skill eval is configured
+echo "📚 Multi-skill orchestration in eval.yaml:"
+cat << 'EOF'
+config:
+  # Directory containing multiple skills
+  skill_directories:
+    - ./skills/
+    - ../shared-skills/
+  
+  # Skills required before running main eval
+  required_skills:
+    - helpers
+    - validators
+  
+  # Automatically invoke when conditions met
+  skill_invocation:
+    triggers:
+      - on_error: invoke_debugger
+      - on_slow_response: invoke_optimizer
+EOF
+
+# Show task with skill_invocation grader
+echo ""
+echo "🎯 Task-level skill invocation:"
+cat << 'EOF'
+tasks:
+  - id: complex-task
+    prompt: "Explain this code"
+    graders:
+      - type: skill_invocation
+        name: helper_validation
+        config:
+          required_skills: [helpers]
+          assertions:
+            - "helper_called"
+            - "helper_returned_valid_result"
+EOF
+
+# Run example showing skill coordination
+echo ""
+echo "⚙️  Running multi-skill evaluation:"
+./waza-bin run examples/code-explainer/eval.yaml \
   --context-dir examples/code-explainer/fixtures \
-  --format github-comment
-```
+  -v
 
-### Expected Output (Markdown)
-
-```markdown
-## 🎯 Waza Evaluation Results
-
-**Skill**: code-explainer v1.0  
-**Status**: ✅ **PASSED** (12/12 tasks)  
-**Score**: 0.95/1.0
-
-### Summary
-- Pass rate: 100% (12/12)
-- Average score: 0.95
-- Total duration: 14.2s
-
-### Tasks
-| Task | Status | Score | Duration |
-|------|--------|-------|----------|
-| explain-recursion | ✅ | 0.96 | 3.5s |
-| explain-async | ✅ | 0.94 | 3.2s |
-...
-```
-
-### Key Points to Highlight
-
-- Exit codes for build integration
-- GitHub comment formatting
-- Automated PR feedback
-- Mock executor for fast CI runs
-
----
-
-## Demo 5: Token Management
-
-**Duration**: 2-3 minutes  
-**Goal**: Show token counting and optimization
-
-### Count Tokens
-
-```bash
-cd /home/runner/work/waza/waza
-
-# Count tokens in skill files
-./waza tokens count skills/code-explainer/
-
-# Count with breakdown
-./waza tokens count skills/code-explainer/ --verbose
+# Show invocation patterns in results
+echo ""
+echo "📋 Check which skills were invoked:"
+cat results.json | jq '.tasks[].skill_invocations'
 ```
 
 ### Expected Output
 
-```
-Counting tokens in: skills/code-explainer/
+- Eval.yaml showing `skill_directories` and `required_skills` config
+- Tasks showing `skill_invocation` grader usage
+- Results with `skill_invocations` field showing which skills were called
+- Sequence of skill invocations in transcript
 
-File                    Tokens
-SKILL.md               2,341
-references/python.md   1,245
-references/js.md       987
------------------------------------
-Total                  4,573 tokens
-```
+### Talking Points
 
-### Suggest Optimizations
+1. **Composable Skills:** "Reuse common functionality across multiple skills."
+2. **Automatic Coordination:** "Waza orchestrates skill sequencing based on task needs."
+3. **Cross-Skill Validation:** "Verify that skills work correctly together."
+4. **Real-World Complexity:** "Mirror how agents actually invoke multiple skills in sequence."
+
+### Show Real-World Example
 
 ```bash
-# Get optimization suggestions
-./waza tokens suggest skills/code-explainer/
+echo "🌍 Real-world scenario:"
+echo "  Task: 'Deploy Azure function'"
+echo "  Required skills:"
+echo "    1. azure-functions (main)"
+echo "    2. azure-cli (utility)"
+echo "    3. error-handler (error recovery)"
+echo ""
+echo "  Waza ensures all skills are available, invokes them correctly,"
+echo "  and validates the full orchestration end-to-end."
+```
+
+---
+
+## Demo 7: Cross-Model Comparison Demo (3 min)
+
+**What it shows:** Running the same eval against multiple AI models and comparing results.
+
+### Setup
+
+- **Models:** Claude Sonnet, GPT-4o, Claude Opus (or whichever you have API keys for)
+- **Inputs:** Multiple result JSON files from separate runs
+- **Tool:** `waza compare`
+
+### Commands
+
+```bash
+# Run evaluation with different models (save results separately)
+echo "🤖 Running evals with multiple models..."
+
+# Run with Claude Sonnet (mocked for demo)
+echo ""
+echo "Running with mock executor (represents Sonnet)..."
+./waza-bin run examples/code-explainer/eval.yaml \
+  --context-dir examples/code-explainer/fixtures \
+  -o results-sonnet.json
+
+# Simulate results from other models (in real scenario, change model config)
+cp results-sonnet.json results-gpt4.json
+cp results-sonnet.json results-opus.json
+
+# Compare results across models
+echo ""
+echo "📊 Comparing results across models:"
+./waza-bin compare \
+  results-sonnet.json \
+  results-gpt4.json \
+  results-opus.json
+
+# Show detailed comparison with formatting
+echo ""
+echo "📋 Detailed model comparison:"
+./waza-bin compare \
+  results-sonnet.json \
+  results-gpt4.json \
+  --format detailed
+
+# Export comparison to JSON for reporting
+echo ""
+echo "📊 Save comparison as JSON:"
+./waza-bin compare \
+  results-sonnet.json \
+  results-gpt4.json \
+  --output comparison.json
+
+# Show the comparison
+cat comparison.json | jq '.model_deltas'
 ```
 
 ### Expected Output
 
-```
-Token Optimization Suggestions
-==============================
+- Summary table showing per-model scores
+- Deltas showing differences (e.g., "+5% on task_completion with GPT-4o")
+- Grader-by-grader breakdown per model
+- Task-level pass/fail rates per model
+- Recommendations (e.g., "GPT-4o best for behavior_quality")
 
-skills/code-explainer/SKILL.md (2,341 tokens)
+### Talking Points
 
-  ⚠️ Large code block (lines 45-78)
-     Current: 456 tokens
-     Suggestion: Consider extracting to a reference file
-     Savings: ~400 tokens
+1. **Model-Aware Strategy:** "Know which model is best for your use case."
+2. **Regression Detection:** "Compare new model versions—catch performance drops."
+3. **Resource Optimization:** "Maybe cheaper Claude performs as well as GPT-4o."
+4. **Data-Driven Decisions:** "Let evals guide which model to use in production."
 
-  ⚠️ Large table (lines 120-145)
-     Current: 234 tokens
-     Suggestion: Simplify table or move to reference
-     Savings: ~180 tokens
-
-Potential savings: ~580 tokens (25%)
-```
-
-### Key Points to Highlight
-
-- Monitor skill context size
-- Identify optimization opportunities
-- Stay within model limits
-- See `docs/TOKEN-LIMITS.md` for details
-
----
-
-## Demo 6: Skill Generation
-
-**Duration**: 3-4 minutes  
-**Goal**: Show automatic eval generation from SKILL.md
-
-### Generate from GitHub Repo
+### Show Real Scenario
 
 ```bash
-# Generate eval for a specific skill
-./waza generate \
-  --repo microsoft/GitHub-Copilot-for-Azure \
-  --skill azure-functions \
-  -o /tmp/azure-functions-eval
+echo "💼 Real-world use case:"
+echo ""
+echo "Scenario: Choosing a model for your production skill"
+echo ""
+echo "Results Summary:"
+echo "  Claude Sonnet:  Score 0.85 | Cost: ~$0.01/task"
+echo "  Claude Opus:    Score 0.92 | Cost: ~$0.05/task"
+echo "  GPT-4o:         Score 0.90 | Cost: ~$0.03/task"
+echo ""
+echo "Decision:"
+echo "  ✅ Use Claude Sonnet in prod (best cost/quality ratio)"
+echo "  🔄 Monitor Claude Opus quarterly (check for improvements)"
+echo "  ❌ Skip GPT-4o for now (not worth 5x cost for 5% quality gain)"
 ```
 
-### Expected Output
+---
 
-```
-Scanning GitHub repository: microsoft/GitHub-Copilot-for-Azure
-✓ Found 15 skill(s)
+## Complete Demo Flow (20 min)
 
-Parsing: azure-functions
-✓ Parsed skill: azure-functions
-  Description: Build and deploy serverless Azure Functions
-  Triggers: 15
-  Anti-triggers: 4
-
-✓ Created eval.yaml
-✓ Created trigger_tests.yaml
-✓ Created tasks/task-001.yaml
-✓ Created tasks/task-002.yaml
-✓ Created tasks/task-003.yaml
-✓ Created fixtures/function_app.py
-
-Generated eval suite at: /tmp/azure-functions-eval
-```
-
-### LLM-Assisted Generation
+Run all demos in sequence for a comprehensive showcase:
 
 ```bash
-# Use LLM to generate better tasks
-./waza generate \
-  --repo microsoft/GitHub-Copilot-for-Azure \
-  --skill azure-functions \
-  -o /tmp/azure-functions-eval-ai \
-  --assist
+echo "🎬 Starting complete waza demo flow..."
+
+# 1. Quick Start (2 min)
+echo "Part 1: Quick Start"
+./waza-bin run examples/code-explainer/eval.yaml \
+  --context-dir examples/code-explainer/fixtures \
+  -v
+
+# 2. Grader Showcase (5 min)
+echo ""
+echo "Part 2: Grader Types"
+./waza-bin run examples/grader-showcase/eval.yaml \
+  --context-dir examples/grader-showcase/fixtures \
+  -v
+
+# 3. Token Management (3 min)
+echo ""
+echo "Part 3: Token Management"
+./waza-bin tokens count examples/ --format json
+
+# 4. CI Integration (3 min)
+echo ""
+echo "Part 4: CI/CD Patterns"
+cat examples/ci/README.md | head -40
+
+# 5. Results Comparison (3 min)
+echo ""
+echo "Part 5: Cross-Model Comparison"
+./waza-bin compare results-sonnet.json results-gpt4.json
+
+echo ""
+echo "✅ Demo complete!"
 ```
-
-### Key Points to Highlight
-
-- Zero-effort eval creation
-- Generated from existing SKILL.md
-- LLM assistance for realistic tasks
-- Includes fixtures and graders
 
 ---
 
-## Demo 7: Multi-Skill Orchestration
+## Troubleshooting
 
-**Duration**: 5-6 minutes  
-**Goal**: Show skill orchestration validation with real skill directories ⭐ **NEW**
-
-### Overview
-
-This demo shows how to validate that an orchestration skill correctly invokes dependent skills in the proper sequence. This is essential for complex workflows that coordinate multiple skills.
-
-### Setup Real Skill Directories
-
-First, let's set up a realistic scenario with three Azure deployment skills:
-
+### Binary not found
 ```bash
-cd /tmp
-mkdir -p orchestration-demo/skills
-
-# Create azure-prepare skill
-mkdir -p orchestration-demo/skills/azure-prepare
-cat > orchestration-demo/skills/azure-prepare/SKILL.md << 'EOF'
----
-name: azure-prepare
-version: 1.0.0
-description: Prepare Azure environment for deployment
----
-
-# Azure Prepare Skill
-
-Prepares the Azure environment by:
-- Creating resource groups
-- Setting up networking
-- Configuring storage accounts
-EOF
-
-# Create azure-deploy skill
-mkdir -p orchestration-demo/skills/azure-deploy
-cat > orchestration-demo/skills/azure-deploy/SKILL.md << 'EOF'
----
-name: azure-deploy
-version: 1.0.0
-description: Deploy application to Azure
----
-
-# Azure Deploy Skill
-
-Deploys the application to Azure infrastructure.
-EOF
-
-# Create azure-monitor skill
-mkdir -p orchestration-demo/skills/azure-monitor
-cat > orchestration-demo/skills/azure-monitor/SKILL.md << 'EOF'
----
-name: azure-monitor
-version: 1.0.0
-description: Monitor Azure deployment status
----
-
-# Azure Monitor Skill
-
-Monitors the deployment status and health.
-EOF
+make build
+./waza-bin run examples/code-explainer/eval.yaml --help
 ```
 
-### Create Orchestration Eval
-
-```bash
-# Create eval spec with skill_directories and skill_invocation grader
-cat > orchestration-demo/eval.yaml << 'EOF'
-name: azure-orchestration-eval
-description: Validate Azure deployment orchestration workflow
-skill: azure-orchestrator
-version: "1.0"
-
-config:
-  trials_per_task: 1
-  timeout_seconds: 300
-  executor: mock
-  model: claude-sonnet-4-20250514
-  
-  # Point to our skill directories
-  skill_directories:
-    - ./skills/azure-prepare
-    - ./skills/azure-deploy
-    - ./skills/azure-monitor
-  
-  # Validate required skills are present
-  required_skills:
-    - azure-prepare
-    - azure-deploy
-    - azure-monitor
-
-metrics:
-  - name: orchestration_correctness
-    weight: 0.8
-    threshold: 0.9
-  - name: efficiency
-    weight: 0.2
-    threshold: 0.7
-
-# Global grader: no errors
-graders:
-  - type: regex
-    name: no_errors
-    config:
-      must_not_match:
-        - "(?i)error|exception|failed"
-
-tasks:
-  - "tasks/*.yaml"
-EOF
-
-# Create task directory
-mkdir -p orchestration-demo/tasks
-
-# Create orchestration task
-cat > orchestration-demo/tasks/deployment-workflow.yaml << 'EOF'
-name: deployment-workflow
-description: Test full Azure deployment orchestration
-
-prompt: |
-  Deploy my application to Azure. First prepare the environment,
-  then deploy the application, and finally monitor the deployment.
-
-graders:
-  # Exact sequence: prepare → deploy → monitor
-  - type: skill_invocation
-    name: exact_deployment_sequence
-    config:
-      mode: exact_match
-      required_skills:
-        - azure-prepare
-        - azure-deploy
-        - azure-monitor
-      allow_extra: false
-  
-  # Verify key skills in order (more flexible)
-  - type: skill_invocation
-    name: flexible_deployment_flow
-    config:
-      mode: in_order
-      required_skills:
-        - azure-prepare
-        - azure-deploy
-      allow_extra: true
-  
-  # Check all required skills invoked (any order)
-  - type: skill_invocation
-    name: all_skills_invoked
-    config:
-      mode: any_order
-      required_skills:
-        - azure-prepare
-        - azure-deploy
-        - azure-monitor
-      allow_extra: true
-EOF
-```
-
-### Run the Orchestration Eval
-
-```bash
-cd orchestration-demo
-
-# Run with waza
-/home/runner/work/waza/waza/waza run eval.yaml -v
-```
-
-### Expected Output
-
-```
-Running evaluation: azure-orchestration-eval v1.0
-Executor: mock
-
-✓ Required skills validation passed (3/3 skills found)
-  - azure-prepare
-  - azure-deploy
-  - azure-monitor
-
-Task 1/1: deployment-workflow
-  Trial 1/1...
-    Grader: exact_deployment_sequence
-      Mode: exact_match
-      Required: [azure-prepare, azure-deploy, azure-monitor]
-      Actual: [azure-prepare, azure-deploy, azure-monitor]
-      ✓ Passed (score: 1.0)
-    
-    Grader: flexible_deployment_flow
-      Mode: in_order
-      Required: [azure-prepare, azure-deploy]
-      Actual: [azure-prepare, azure-deploy, azure-monitor]
-      ✓ Passed (score: 1.0)
-    
-    Grader: all_skills_invoked
-      Mode: any_order
-      Required: [azure-prepare, azure-deploy, azure-monitor]
-      Actual: [azure-prepare, azure-deploy, azure-monitor]
-      ✓ Passed (score: 1.0)
-  
-  ✓ (1.2s)
-
-Results:
-  Pass rate: 1/1 (100%)
-  Average score: 1.0
-  orchestration_correctness: 1.0
-  efficiency: 1.0
-```
-
-### Test Missing Skills
-
-```bash
-# Test what happens when a required skill is missing
-cat > orchestration-demo/eval-missing.yaml << 'EOF'
-name: azure-orchestration-eval
-skill: azure-orchestrator
-version: "1.0"
-
-config:
-  executor: mock
-  
-  skill_directories:
-    - ./skills/azure-deploy  # Only has azure-deploy
-  
-  required_skills:
-    - azure-prepare  # Missing!
-    - azure-deploy
-    - azure-monitor  # Missing!
-
-tasks:
-  - "tasks/*.yaml"
-EOF
-
-# Run - should fail validation
-/home/runner/work/waza/waza/waza run eval-missing.yaml
-```
-
-### Expected Error
-
-```
-Error: skill validation failed
-
-Required skills not found:
-  - azure-prepare
-  - azure-monitor
-
-Searched directories:
-  - ./skills/azure-deploy
-
-Found skills:
-  - azure-deploy
-
-Tip: Add missing skills to skill_directories or update required_skills list
-```
-
-### Grading Modes Comparison
-
-| Mode | Requirement | Use Case |
-|------|-------------|----------|
-| `exact_match` | Exact sequence, same length | Strict workflows (demos, compliance) |
-| `in_order` | Required skills in order, allows extras | Flexible orchestration |
-| `any_order` | All required skills present, any order | Loose validation |
-
-### Key Points to Highlight
-
-- ✅ **Required skills validation** - Catches missing skills before eval starts
-- ✅ **Real skill directories** - Works with actual SKILL.md files
-- ✅ **Multiple matching modes** - Choose strictness level
-- ✅ **Clear error messages** - Shows what's missing and where waza looked
-- ✅ **skill_invocation grader** - Validates orchestration workflows
-- ✅ **Backward compatible** - `required_skills` is optional
-
-### Advanced: Combine with Other Graders
-
+### Mock executor not working
+Ensure eval.yaml contains:
 ```yaml
-graders:
-  # Validate orchestration sequence
-  - type: skill_invocation
-    name: deployment_sequence
-    config:
-      mode: in_order
-      required_skills:
-        - azure-prepare
-        - azure-deploy
-  
-  # Validate efficiency
-  - type: behavior
-    name: efficiency
-    config:
-      max_tool_calls: 20
-      max_duration_ms: 30000
-  
-  # Validate output
-  - type: regex
-    name: success_message
-    config:
-      must_match:
-        - "(?i)deployment.*success"
+config:
+  executor: mock
+```
+
+### Results not saved
+Check that output path is writable:
+```bash
+./waza-bin run eval.yaml -o /tmp/results.json
+cat /tmp/results.json
+```
+
+### Token commands failing
+Ensure paths exist and contain markdown files:
+```bash
+./waza-bin tokens count examples/ --format json
 ```
 
 ---
 
-## Tips for Effective Demos
+## Advanced Topics (Beyond Basic Demos)
 
-### General Guidelines
+### Custom Graders
 
-1. **Start Simple**: Use demo 1 or 2 for first-time audiences
-2. **Know Your Audience**: Choose demos relevant to their needs
-3. **Prepare Environment**: Pre-build waza and test commands
-4. **Have Backups**: Keep expected outputs ready if live demos fail
-5. **Use Mock Executor**: Much faster for demos, no API costs
+See [docs/GRADERS.md](./GRADERS.md) for implementing custom script graders.
 
-### Time Management
+### Parallel Execution
 
-| Scenario | Quick Version | Full Version |
-|----------|---------------|--------------|
-| Basic eval | 2 min | 5 min |
-| Grader types | 3 min | 8 min |
-| Model comparison | Skip | 10 min |
-| CI/CD | 3 min | 6 min |
-| Tokens | 2 min | 4 min |
-| Generation | 3 min | 6 min |
-| Orchestration | 5 min | 10 min |
+```bash
+./waza-bin run eval.yaml --parallel --workers 8 -v
+```
 
-### Common Questions
+### Filtering Tasks
 
-**Q: Can I use my own skills?**  
-A: Yes! Use `waza generate` to create evals from your SKILL.md files.
+```bash
+./waza-bin run eval.yaml --task "explain-*" --task "validate-*" -v
+```
 
-**Q: How do I integrate with GitHub Actions?**  
-A: See Demo 4 and `docs/SKILLS_CI_INTEGRATION.md` for complete workflows.
+### Transcript Capture
 
-**Q: What if my tests are flaky?**  
-A: Increase `trials_per_task` to run multiple trials and get pass rates.
-
-**Q: Can I test orchestration skills?**  
-A: Yes! See Demo 7 for multi-skill orchestration validation.
-
-**Q: How do I validate skill invocation sequences?**  
-A: Use the `skill_invocation` grader (Demo 7) with appropriate matching modes.
+```bash
+./waza-bin run eval.yaml --transcript-dir ./transcripts/ -v
+```
 
 ---
 
-## Related Documentation
+## See Also
 
-- **Full Command Reference**: `README.md`
-- **Grader Reference**: `docs/GRADERS.md`
-- **Tutorial**: `docs/TUTORIAL.md`
-- **CI Integration**: `docs/SKILLS_CI_INTEGRATION.md`
-- **Token Management**: `docs/TOKEN-LIMITS.md`
+- **[README.md](../README.md)** — Project overview and quick start
+- **[TUTORIAL.md](./TUTORIAL.md)** — Writing evals from scratch
+- **[GRADERS.md](./GRADERS.md)** — Complete grader reference
+- **[DEMO-SCRIPT.md](../DEMO-SCRIPT.md)** — Presentation script for live demos
+- **[examples/README.md](../examples/README.md)** — Example descriptions
 
----
-
-## Example Demo Flow (15 minutes)
-
-For a comprehensive 15-minute demo, use this flow:
-
-1. **Introduction** (2 min) - What is waza, why evaluate skills
-2. **Demo 1: Basic Run** (2 min) - Quick win, show it works
-3. **Demo 2: Graders** (3 min) - Show validation flexibility
-4. **Demo 7: Orchestration** (5 min) - Advanced feature, multi-skill validation
-5. **Demo 4: CI/CD** (2 min) - Real-world integration
-6. **Q&A** (1 min) - Address questions
-
-This flow shows progression from simple to advanced while covering key features.
