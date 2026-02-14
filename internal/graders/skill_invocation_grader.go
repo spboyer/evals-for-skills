@@ -22,10 +22,10 @@ const (
 // an expected set of skills. It supports three matching modes and calculates
 // precision, recall, and F1 scores.
 type skillInvocationGrader struct {
-	name          string
-	matchingMode  SkillInvocationMatchingMode
+	name           string
+	matchingMode   SkillInvocationMatchingMode
 	requiredSkills []string
-	allowExtra    bool
+	allowExtra     bool
 }
 
 // SkillInvocationGraderParams holds the mapstructure-decoded parameters for the skill invocation grader.
@@ -56,10 +56,10 @@ func NewSkillInvocationGrader(name string, params SkillInvocationGraderParams) (
 	}
 
 	return &skillInvocationGrader{
-		name:          name,
-		matchingMode:  mode,
+		name:           name,
+		matchingMode:   mode,
 		requiredSkills: params.RequiredSkills,
-		allowExtra:    allowExtra,
+		allowExtra:     allowExtra,
 	}, nil
 }
 

@@ -495,6 +495,6 @@ func TestSkillInvocationGrader_PrecisionRecall(t *testing.T) {
 		result, err := g.Grade(context.Background(), ctx)
 		require.NoError(t, err)
 		require.Less(t, result.Details["precision"].(float64), 1.0) // Not all actual are in required
-		require.Equal(t, 1.0, result.Details["recall"])              // All required found
+		require.Equal(t, 1.0, result.Details["recall"])             // All required found
 	})
 }
