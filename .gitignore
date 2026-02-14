@@ -89,6 +89,7 @@ dist/
 
 # ignore common waza locations
 /waza
+/waza_debug
 /cmd/waza/waza
 
 # Go vendor (if used)

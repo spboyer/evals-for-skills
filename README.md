@@ -30,6 +30,9 @@ azd waza run examples/code-explainer/eval.yaml -v
 # Build
 make build
 
+# Check if a skill is ready for submission
+./waza ready skills/my-skill
+
 # Scaffold a new eval suite
 ./waza init my-eval --interactive
 
@@ -130,6 +133,63 @@ Iteratively score and improve skill frontmatter in a SKILL.md file.
 | `--target <level>` | Target adherence level: `low`, `medium`, `medium-high`, `high` (default: `medium-high`) |
 | `--max-iterations <n>` | Maximum improvement iterations (default: 5) |
 | `--auto` | Apply improvements without prompting |
+
+### `waza ready [skill-path]`
+
+Check if a skill is ready for submission with a comprehensive readiness report.
+
+Performs three types of checks:
+1. **Compliance scoring** — Validates frontmatter adherence (Low/Medium/Medium-High/High)
+2. **Token budget** — Checks if SKILL.md is within token limits (default: 500 tokens)
+3. **Evaluation suite** — Checks for the presence of eval.yaml
+
+Provides a plain-language summary and actionable next steps to improve the skill.
+
+**Example output:**
+```
+🔍 Skill Readiness Check
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Skill: code-explainer
+
+📋 Compliance Score: High
+   ✅ Excellent! Your skill meets all compliance requirements.
+
+📊 Token Budget: 450 / 500 tokens
+   ✅ Within budget (50 tokens remaining).
+
+🧪 Evaluation Suite: Found
+   ✅ eval.yaml detected. Run 'waza run eval.yaml' to test.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+📈 Overall Readiness
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+✅ Your skill is ready for submission!
+
+🎯 Next Steps
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+✨ No action needed! Your skill looks great.
+
+Consider:
+  • Running 'waza run eval.yaml' to verify functionality
+  • Submitting a PR to microsoft/skills
+```
+
+**Usage:**
+```bash
+# Check current directory
+waza ready
+
+# Check specific skill
+waza ready skills/my-skill
+
+# Suggested workflow
+waza ready skills/my-skill     # Check readiness
+waza dev skills/my-skill       # Improve compliance if needed
+waza ready skills/my-skill     # Verify improvements
+```
 
 ### `waza tokens count [paths...]`
 
