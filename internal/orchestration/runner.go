@@ -121,6 +121,11 @@ func (r *TestRunner) RunBenchmark(ctx context.Context) (*models.EvaluationOutcom
 		}
 	}()
 
+	// Preflight check: validate required skills
+	if err := r.validateRequiredSkills(); err != nil {
+		return nil, err
+	}
+
 	// Load test cases
 	testCases, err := r.loadTestCases()
 	if err != nil {
@@ -210,6 +215,48 @@ func (r *TestRunner) loadTestCases() ([]*models.TestCase, error) {
 	}
 
 	return testCases, nil
+}
+
+// validateRequiredSkills performs preflight validation that all required skills are present.
+func (r *TestRunner) validateRequiredSkills() error {
+	spec := r.cfg.Spec()
+
+	// If no required skills specified, skip validation
+	if len(spec.Config.RequiredSkills) == 0 {
+		return nil
+	}
+
+	// Get base directory for path resolution
+	baseDir := r.cfg.SpecDir()
+	if baseDir == "" {
+		baseDir = "."
+	}
+
+	// Resolve skill paths
+	resolvedPaths := utils.ResolvePaths(spec.Config.SkillPaths, baseDir)
+
+	// If required skills specified but no skill directories, that's an error
+	if len(resolvedPaths) == 0 {
+		return fmt.Errorf("required_skills specified but no skill_directories configured")
+	}
+
+	// Discover skills in the specified directories
+	discoveredSkills, err := discoverSkills(resolvedPaths)
+	if err != nil {
+		return fmt.Errorf("discovering skills: %w", err)
+	}
+
+	// Validate that all required skills were found
+	if err := validateRequiredSkills(spec.Config.RequiredSkills, discoveredSkills, resolvedPaths); err != nil {
+		return fmt.Errorf("skill validation failed:\n%w", err)
+	}
+
+	if r.verbose {
+		fmt.Printf("✓ Required skills validation passed (%d/%d skills found)\n\n",
+			len(spec.Config.RequiredSkills), len(spec.Config.RequiredSkills))
+	}
+
+	return nil
 }
 
 func (r *TestRunner) runSequential(ctx context.Context, testCases []*models.TestCase) []models.TestOutcome {

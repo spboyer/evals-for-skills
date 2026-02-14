@@ -1,6 +1,7 @@
 package orchestration
 
 import (
+	"os"
 	"path/filepath"
 	"testing"
 
@@ -173,3 +174,180 @@ func TestBuildExecutionRequest_TimeoutOverride(t *testing.T) {
 	// Verify timeout is overridden
 	assert.Equal(t, 300, req.TimeoutSec, "test case timeout should override spec timeout")
 }
+
+func TestValidateRequiredSkills_Integration(t *testing.T) {
+	// Create temporary directories for testing
+	tmpDir := t.TempDir()
+
+	// Create skill directories
+	skill1Dir := filepath.Join(tmpDir, "skill1")
+	skill2Dir := filepath.Join(tmpDir, "skill2")
+	skill3Dir := filepath.Join(tmpDir, "skill3")
+	require.NoError(t, os.MkdirAll(skill1Dir, 0755))
+	require.NoError(t, os.MkdirAll(skill2Dir, 0755))
+	require.NoError(t, os.MkdirAll(skill3Dir, 0755))
+
+	// Write SKILL.md files
+	skill1Content := `---
+name: azure-deploy
+description: Deploy to Azure
+---
+`
+	skill2Content := `---
+name: azure-prepare
+description: Prepare for Azure
+---
+`
+	skill3Content := `---
+name: azure-validate
+description: Validate Azure config
+---
+`
+	require.NoError(t, os.WriteFile(filepath.Join(skill1Dir, "SKILL.md"), []byte(skill1Content), 0644))
+	require.NoError(t, os.WriteFile(filepath.Join(skill2Dir, "SKILL.md"), []byte(skill2Content), 0644))
+	require.NoError(t, os.WriteFile(filepath.Join(skill3Dir, "SKILL.md"), []byte(skill3Content), 0644))
+
+	t.Run("all required skills found", func(t *testing.T) {
+		spec := &models.BenchmarkSpec{
+			SpecIdentity: models.SpecIdentity{
+				Name: "test-benchmark",
+			},
+			SkillName: "azure-deploy",
+			Config: models.Config{
+				EngineType:     "mock",
+				ModelID:        "gpt-4",
+				TimeoutSec:     60,
+				RunsPerTest:    1,
+				SkillPaths:     []string{skill1Dir, skill2Dir, skill3Dir},
+				RequiredSkills: []string{"azure-deploy", "azure-prepare", "azure-validate"},
+			},
+		}
+
+		cfg := config.NewBenchmarkConfig(spec, config.WithSpecDir(tmpDir))
+		runner := NewTestRunner(cfg, nil)
+
+		err := runner.validateRequiredSkills()
+		assert.NoError(t, err)
+	})
+
+	t.Run("some required skills missing", func(t *testing.T) {
+		spec := &models.BenchmarkSpec{
+			SpecIdentity: models.SpecIdentity{
+				Name: "test-benchmark",
+			},
+			SkillName: "azure-deploy",
+			Config: models.Config{
+				EngineType:     "mock",
+				ModelID:        "gpt-4",
+				TimeoutSec:     60,
+				RunsPerTest:    1,
+				SkillPaths:     []string{skill1Dir}, // Only has azure-deploy
+				RequiredSkills: []string{"azure-deploy", "azure-prepare", "azure-validate"},
+			},
+		}
+
+		cfg := config.NewBenchmarkConfig(spec, config.WithSpecDir(tmpDir))
+		runner := NewTestRunner(cfg, nil)
+
+		err := runner.validateRequiredSkills()
+		require.Error(t, err)
+		errMsg := err.Error()
+		assert.Contains(t, errMsg, "skill validation failed")
+		assert.Contains(t, errMsg, "azure-prepare")
+		assert.Contains(t, errMsg, "azure-validate")
+	})
+
+	t.Run("empty required_skills list skips validation", func(t *testing.T) {
+		spec := &models.BenchmarkSpec{
+			SpecIdentity: models.SpecIdentity{
+				Name: "test-benchmark",
+			},
+			SkillName: "azure-deploy",
+			Config: models.Config{
+				EngineType:     "mock",
+				ModelID:        "gpt-4",
+				TimeoutSec:     60,
+				RunsPerTest:    1,
+				SkillPaths:     []string{skill1Dir},
+				RequiredSkills: []string{}, // Empty list
+			},
+		}
+
+		cfg := config.NewBenchmarkConfig(spec, config.WithSpecDir(tmpDir))
+		runner := NewTestRunner(cfg, nil)
+
+		err := runner.validateRequiredSkills()
+		assert.NoError(t, err)
+	})
+
+	t.Run("nil required_skills skips validation", func(t *testing.T) {
+		spec := &models.BenchmarkSpec{
+			SpecIdentity: models.SpecIdentity{
+				Name: "test-benchmark",
+			},
+			SkillName: "azure-deploy",
+			Config: models.Config{
+				EngineType:  "mock",
+				ModelID:     "gpt-4",
+				TimeoutSec:  60,
+				RunsPerTest: 1,
+				SkillPaths:  []string{skill1Dir},
+				// RequiredSkills not set (nil)
+			},
+		}
+
+		cfg := config.NewBenchmarkConfig(spec, config.WithSpecDir(tmpDir))
+		runner := NewTestRunner(cfg, nil)
+
+		err := runner.validateRequiredSkills()
+		assert.NoError(t, err)
+	})
+
+	t.Run("empty skill_directories with required_skills returns error", func(t *testing.T) {
+		spec := &models.BenchmarkSpec{
+			SpecIdentity: models.SpecIdentity{
+				Name: "test-benchmark",
+			},
+			SkillName: "azure-deploy",
+			Config: models.Config{
+				EngineType:     "mock",
+				ModelID:        "gpt-4",
+				TimeoutSec:     60,
+				RunsPerTest:    1,
+				SkillPaths:     []string{}, // Empty
+				RequiredSkills: []string{"azure-deploy"},
+			},
+		}
+
+		cfg := config.NewBenchmarkConfig(spec, config.WithSpecDir(tmpDir))
+		runner := NewTestRunner(cfg, nil)
+
+		err := runner.validateRequiredSkills()
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "required_skills specified but no skill_directories configured")
+	})
+
+	t.Run("relative skill paths are resolved correctly", func(t *testing.T) {
+		spec := &models.BenchmarkSpec{
+			SpecIdentity: models.SpecIdentity{
+				Name: "test-benchmark",
+			},
+			SkillName: "azure-deploy",
+			Config: models.Config{
+				EngineType:     "mock",
+				ModelID:        "gpt-4",
+				TimeoutSec:     60,
+				RunsPerTest:    1,
+				SkillPaths:     []string{"skill1", "skill2"}, // Relative paths
+				RequiredSkills: []string{"azure-deploy", "azure-prepare"},
+			},
+		}
+
+		cfg := config.NewBenchmarkConfig(spec, config.WithSpecDir(tmpDir))
+		runner := NewTestRunner(cfg, nil)
+
+		err := runner.validateRequiredSkills()
+		assert.NoError(t, err)
+	})
+}
+
