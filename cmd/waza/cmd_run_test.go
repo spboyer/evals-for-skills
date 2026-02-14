@@ -21,6 +21,7 @@ func resetRunGlobals() {
 	parallel = false
 	workers = 0
 	interpret = false
+	format = "default"
 }
 
 // helper creates a valid minimal eval spec YAML in a temp dir,
@@ -511,4 +512,56 @@ tasks:
 	var testFailureErr *TestFailureError
 	assert.False(t, errors.As(err, &testFailureErr), "expected regular error, not TestFailureError")
 	assert.Contains(t, err.Error(), "unknown engine type")
+}
+
+// ---------------------------------------------------------------------------
+// --format flag
+// ---------------------------------------------------------------------------
+
+func TestRunCommand_FormatFlagParsed(t *testing.T) {
+	cmd := newRunCommand()
+	require.NoError(t, cmd.ParseFlags([]string{"--format", "github-comment"}))
+
+	val, err := cmd.Flags().GetString("format")
+	require.NoError(t, err)
+	assert.Equal(t, "github-comment", val)
+}
+
+func TestRunCommand_FormatFlagDefault(t *testing.T) {
+	cmd := newRunCommand()
+	require.NoError(t, cmd.ParseFlags([]string{}))
+
+	val, err := cmd.Flags().GetString("format")
+	require.NoError(t, err)
+	assert.Equal(t, "default", val)
+}
+
+func TestRunCommand_FormatGitHubComment(t *testing.T) {
+	resetRunGlobals()
+
+	specPath := createTestSpec(t, "mock")
+
+	cmd := newRunCommand()
+	cmd.SetArgs([]string{specPath, "--format", "github-comment"})
+	cmd.SetOut(io.Discard)
+	cmd.SetErr(io.Discard)
+
+	err := cmd.Execute()
+	assert.NoError(t, err, "github-comment format should execute successfully")
+}
+
+func TestRunCommand_FormatInvalid(t *testing.T) {
+	resetRunGlobals()
+
+	specPath := createTestSpec(t, "mock")
+
+	cmd := newRunCommand()
+	cmd.SetArgs([]string{specPath, "--format", "invalid-format"})
+	cmd.SetOut(io.Discard)
+	cmd.SetErr(io.Discard)
+
+	err := cmd.Execute()
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "unknown output format")
+	assert.Contains(t, err.Error(), "invalid-format")
 }

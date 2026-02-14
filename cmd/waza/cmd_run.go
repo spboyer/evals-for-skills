@@ -26,6 +26,7 @@ var (
 	parallel      bool
 	workers       int
 	interpret     bool
+	format        string
 )
 
 func newRunCommand() *cobra.Command {
@@ -48,6 +49,7 @@ Resources are loaded from the context directory (defaults to ./fixtures).`,
 	cmd.Flags().BoolVar(&parallel, "parallel", false, "Run tasks concurrently")
 	cmd.Flags().IntVar(&workers, "workers", 0, "Number of concurrent workers (default: 4, requires --parallel)")
 	cmd.Flags().BoolVar(&interpret, "interpret", false, "Print a plain-language interpretation of the results")
+	cmd.Flags().StringVar(&format, "format", "default", "Output format: default, github-comment")
 
 	return cmd
 }
@@ -143,13 +145,21 @@ func runCommandE(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("benchmark failed: %w", err)
 	}
 
-	// Print summary
-	printSummary(outcome)
+	// Print results based on format
+	switch format {
+	case "github-comment":
+		fmt.Print(FormatGitHubComment(outcome))
+	case "default":
+		// Print summary
+		printSummary(outcome)
 
-	// Print plain-language interpretation if requested
-	if interpret {
-		fmt.Println()
-		fmt.Print(reporting.FormatSummaryReport(outcome))
+		// Print plain-language interpretation if requested
+		if interpret {
+			fmt.Println()
+			fmt.Print(reporting.FormatSummaryReport(outcome))
+		}
+	default:
+		return fmt.Errorf("unknown output format: %s (supported: default, github-comment)", format)
 	}
 
 	// Save output if requested
