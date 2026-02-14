@@ -2,11 +2,22 @@ package main
 
 import (
 	"fmt"
+	"sort"
 	"strings"
 	"time"
 
 	"github.com/spboyer/waza/internal/models"
 )
+
+// formatDuration formats a duration in a consistent, human-readable way.
+// This ensures stable output regardless of Go version changes.
+func formatDuration(d time.Duration) string {
+	if d < time.Second {
+		return fmt.Sprintf("%dms", d.Milliseconds())
+	}
+	// Use the built-in formatting but ensure we control it
+	return d.String()
+}
 
 // FormatGitHubComment formats an EvaluationOutcome as a markdown comment for GitHub PRs
 func FormatGitHubComment(outcome *models.EvaluationOutcome) string {
@@ -24,8 +35,8 @@ func FormatGitHubComment(outcome *models.EvaluationOutcome) string {
 		statusIcon = "❌ Failed"
 	}
 
-	b.WriteString(fmt.Sprintf("**Status:** %s | **Score:** %.2f | **Duration:** %v\n\n",
-		statusIcon, digest.AggregateScore, duration))
+	b.WriteString(fmt.Sprintf("**Status:** %s | **Score:** %.2f | **Duration:** %s\n\n",
+		statusIcon, digest.AggregateScore, formatDuration(duration)))
 
 	// Summary stats
 	b.WriteString(fmt.Sprintf("- **Tests:** %d total, %d passed, %d failed, %d errors\n",
@@ -64,6 +75,8 @@ func FormatGitHubComment(outcome *models.EvaluationOutcome) string {
 				graderNames = append(graderNames, name)
 			}
 		}
+		// Sort grader names for consistent output
+		sort.Strings(graderNames)
 		graders := strings.Join(graderNames, ", ")
 		if graders == "" {
 			graders = "-"
