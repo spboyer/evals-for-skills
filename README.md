@@ -65,6 +65,7 @@ Run an evaluation benchmark from a spec file.
 | `--parallel` | | Run tasks concurrently |
 | `--workers <n>` | | Concurrent workers (default: 4, requires `--parallel`) |
 | `--interpret` | | Print plain-language result interpretation |
+| `--format <fmt>` | | Output format: `default` or `github-comment` (default: `default`) |
 
 **Exit Codes**
 
@@ -90,6 +91,10 @@ if [ $EXIT_CODE -eq 1 ]; then
 elif [ $EXIT_CODE -eq 2 ]; then
   echo "Configuration error"
 fi
+
+# Post results as PR comment (GitHub Actions)
+waza run eval.yaml --format github-comment > comment.md
+gh pr comment $PR_NUMBER --body-file comment.md
 ```
 
 ### `waza init [directory]`

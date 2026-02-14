@@ -102,14 +102,14 @@ func FormatGitHubComment(outcome *models.EvaluationOutcome) string {
 		for _, to := range outcome.TestOutcomes {
 			if to.Status != models.StatusPassed {
 				b.WriteString(fmt.Sprintf("#### %s\n\n", to.DisplayName))
-				
+
 				// Show validation failures from runs
 				if len(to.Runs) > 0 {
 					for runIdx, run := range to.Runs {
 						if run.Status != models.StatusPassed {
 							b.WriteString(fmt.Sprintf("**Run %d/%d** (%s):\n",
 								runIdx+1, len(to.Runs), run.Status))
-							
+
 							for _, val := range run.Validations {
 								icon := "✅"
 								if !val.Passed {
