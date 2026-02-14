@@ -9,6 +9,7 @@ import (
 	"os"
 	"path/filepath"
 	"sort"
+	"sync"
 
 	"github.com/spboyer/waza/internal/models"
 )
@@ -16,6 +17,7 @@ import (
 // Cache provides caching for evaluation results
 type Cache struct {
 	dir string
+	mu  sync.Mutex
 }
 
 // New creates a new cache instance with the specified directory
@@ -92,6 +94,9 @@ func (c *Cache) Get(key string) (*models.TestOutcome, bool) {
 		return nil, false
 	}
 
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
 	path := c.cachePath(key)
 	data, err := os.ReadFile(path)
 	if err != nil {
@@ -113,6 +118,9 @@ func (c *Cache) Put(key string, outcome *models.TestOutcome) error {
 	if c.dir == "" {
 		return nil
 	}
+
+	c.mu.Lock()
+	defer c.mu.Unlock()
 
 	// Ensure cache directory exists
 	if err := os.MkdirAll(c.dir, 0755); err != nil {
@@ -137,6 +145,9 @@ func (c *Cache) Clear() error {
 	if c.dir == "" {
 		return nil
 	}
+
+	c.mu.Lock()
+	defer c.mu.Unlock()
 
 	// Check if directory exists
 	if _, err := os.Stat(c.dir); os.IsNotExist(err) {

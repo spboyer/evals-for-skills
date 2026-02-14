@@ -1,8 +1,10 @@
 package cache
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
+	"sync"
 	"testing"
 
 	"github.com/spboyer/waza/internal/models"
@@ -515,5 +517,117 @@ func TestCache_Clear_SafetyChecks(t *testing.T) {
 		// Directory should not exist
 		_, err = os.Stat(cacheDir)
 		assert.True(t, os.IsNotExist(err))
+	})
+}
+
+func TestCache_ConcurrentOperations(t *testing.T) {
+	cacheDir := t.TempDir()
+	c := New(cacheDir)
+
+	// Create test outcomes for different keys
+	numGoroutines := 10
+	numOperations := 50
+
+	t.Run("concurrent Put operations on different keys", func(t *testing.T) {
+		var wg sync.WaitGroup
+		for i := 0; i < numGoroutines; i++ {
+			wg.Add(1)
+			go func(id int) {
+				defer wg.Done()
+				for j := 0; j < numOperations; j++ {
+					key := fmt.Sprintf("key-%d-%d", id, j)
+					outcome := &models.TestOutcome{
+						TestID: fmt.Sprintf("test-%d-%d", id, j),
+						Status: models.StatusPassed,
+					}
+					err := c.Put(key, outcome)
+					assert.NoError(t, err)
+				}
+			}(i)
+		}
+		wg.Wait()
+
+		// Verify all entries were written
+		entries, err := os.ReadDir(cacheDir)
+		require.NoError(t, err)
+		assert.Equal(t, numGoroutines*numOperations, len(entries))
+	})
+
+	t.Run("concurrent Get operations", func(t *testing.T) {
+		// Pre-populate cache
+		testKey := "shared-key"
+		testOutcome := &models.TestOutcome{
+			TestID: "shared-test",
+			Status: models.StatusPassed,
+		}
+		require.NoError(t, c.Put(testKey, testOutcome))
+
+		// Concurrent reads
+		var wg sync.WaitGroup
+		for i := 0; i < numGoroutines; i++ {
+			wg.Add(1)
+			go func() {
+				defer wg.Done()
+				for j := 0; j < numOperations; j++ {
+					outcome, found := c.Get(testKey)
+					assert.True(t, found)
+					if found {
+						assert.Equal(t, "shared-test", outcome.TestID)
+					}
+				}
+			}()
+		}
+		wg.Wait()
+	})
+
+	t.Run("concurrent Put on same key", func(t *testing.T) {
+		// This tests that concurrent writes to the same key don't cause corruption
+		sharedKey := "same-key"
+		var wg sync.WaitGroup
+		for i := 0; i < numGoroutines; i++ {
+			wg.Add(1)
+			go func(id int) {
+				defer wg.Done()
+				outcome := &models.TestOutcome{
+					TestID: fmt.Sprintf("test-%d", id),
+					Status: models.StatusPassed,
+				}
+				err := c.Put(sharedKey, outcome)
+				assert.NoError(t, err)
+			}(i)
+		}
+		wg.Wait()
+
+		// Verify the cache file is valid JSON and can be read
+		outcome, found := c.Get(sharedKey)
+		assert.True(t, found, "cache entry should exist after concurrent writes")
+		assert.NotNil(t, outcome, "cached outcome should be valid")
+	})
+
+	t.Run("concurrent mixed operations", func(t *testing.T) {
+		// Mix of Gets and Puts
+		var wg sync.WaitGroup
+		for i := 0; i < numGoroutines; i++ {
+			wg.Add(1)
+			go func(id int) {
+				defer wg.Done()
+				for j := 0; j < numOperations; j++ {
+					if j%2 == 0 {
+						// Put operation
+						key := fmt.Sprintf("mixed-key-%d", id)
+						outcome := &models.TestOutcome{
+							TestID: fmt.Sprintf("mixed-test-%d", id),
+							Status: models.StatusPassed,
+						}
+						_ = c.Put(key, outcome)
+					} else {
+						// Get operation
+						key := fmt.Sprintf("mixed-key-%d", id)
+						_, _ = c.Get(key)
+					}
+				}
+			}(i)
+		}
+		wg.Wait()
 	})
 }

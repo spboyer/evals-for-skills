@@ -407,8 +407,10 @@ func (r *TestRunner) runTest(ctx context.Context, tc *models.TestCase, testNum, 
 			}
 			// Run the test and cache the result
 			outcome := r.runTestUncached(ctx, tc, testNum, totalTests)
-			// Store in cache
-			_ = r.cache.Put(cacheKey, &outcome)
+			// Store in cache and log any failures
+			if err := r.cache.Put(cacheKey, &outcome); err != nil {
+				fmt.Fprintf(os.Stderr, "[WARN] Failed to write cache for test %q: %v\n", tc.DisplayName, err)
+			}
 			return outcome, false
 		}
 	}
