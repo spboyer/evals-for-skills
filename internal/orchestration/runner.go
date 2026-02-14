@@ -486,12 +486,26 @@ func (r *TestRunner) buildExecutionRequest(tc *models.TestCase) *execution.Execu
 		timeout = *tc.TimeoutSec
 	}
 
+	// Resolve skill paths relative to spec directory
+	var resolvedSkillPaths []string
+	specDir := r.cfg.SpecDir()
+	for _, path := range spec.Config.SkillPaths {
+		if filepath.IsAbs(path) {
+			resolvedSkillPaths = append(resolvedSkillPaths, path)
+		} else {
+			// Resolve relative to spec directory
+			resolvedPath := filepath.Join(specDir, path)
+			resolvedSkillPaths = append(resolvedSkillPaths, resolvedPath)
+		}
+	}
+
 	return &execution.ExecutionRequest{
 		TestID:     tc.TestID,
 		Message:    tc.Stimulus.Message,
 		Context:    tc.Stimulus.Metadata,
 		Resources:  resources,
 		SkillName:  spec.SkillName,
+		SkillPaths: resolvedSkillPaths,
 		TimeoutSec: timeout,
 	}
 }

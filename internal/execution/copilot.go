@@ -104,15 +104,34 @@ func (e *CopilotEngine) Execute(ctx context.Context, req *ExecutionRequest) (*Ex
 		return nil, fmt.Errorf("failed to get current directory: %w", err)
 	}
 
-	slog.Debug("Adding skill directory", "path", cwd)
+	// Build skill directories list: start with CWD, then add any from request
+	skillDirs := []string{cwd}
+	
+	// Add skill directories from request, avoiding duplicates
+	for _, path := range req.SkillPaths {
+		// Skip if already in list (including CWD)
+		isDuplicate := false
+		for _, existing := range skillDirs {
+			if existing == path {
+				isDuplicate = true
+				break
+			}
+		}
+		if !isDuplicate {
+			skillDirs = append(skillDirs, path)
+		}
+	}
+
+	// Log skill directories in verbose mode
+	for _, dir := range skillDirs {
+		slog.Debug("Adding skill directory", "path", dir)
+	}
 
 	// Create session with updated API
 	session, err := e.client.CreateSession(ctx, &copilot.SessionConfig{
 		Model: e.modelID,
 		// these are the directory for the skill itself.
-		SkillDirectories: []string{
-			cwd,
-		},
+		SkillDirectories: skillDirs,
 	})
 
 	if err != nil {
