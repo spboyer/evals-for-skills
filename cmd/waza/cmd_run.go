@@ -113,7 +113,7 @@ func runCommandE(cmd *cobra.Command, args []string) error {
 	// Setup cache if enabled
 	var resultCache *cache.Cache
 	useCaching := enableCache && !disableCache
-	
+
 	// Skip cache for non-deterministic graders
 	if useCaching && cache.HasNonDeterministicGraders(spec) {
 		if verbose {
@@ -121,7 +121,7 @@ func runCommandE(cmd *cobra.Command, args []string) error {
 		}
 		useCaching = false
 	}
-	
+
 	if useCaching {
 		// Resolve cache directory to absolute path
 		absCacheDir, err := filepath.Abs(runCacheDir)

@@ -27,7 +27,7 @@ type TestRunner struct {
 
 	// Task filtering
 	taskFilters []string
-	
+
 	// Result caching
 	cache *cache.Cache
 
@@ -396,7 +396,7 @@ func (r *TestRunner) runConcurrent(ctx context.Context, testCases []*models.Test
 
 func (r *TestRunner) runTest(ctx context.Context, tc *models.TestCase, testNum, totalTests int) (models.TestOutcome, bool) {
 	spec := r.cfg.Spec()
-	
+
 	// Check cache if enabled
 	if r.cache != nil {
 		cacheKey, err := cache.CacheKey(spec, tc, r.cfg.FixtureDir())
@@ -412,7 +412,7 @@ func (r *TestRunner) runTest(ctx context.Context, tc *models.TestCase, testNum, 
 			return outcome, false
 		}
 	}
-	
+
 	// No cache or cache key generation failed
 	return r.runTestUncached(ctx, tc, testNum, totalTests), false
 }
