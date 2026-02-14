@@ -3,25 +3,28 @@
 
 FROM golang:1.25-alpine AS builder
 
-# Install build dependencies
-RUN apk add --no-cache git make
-
 WORKDIR /build
 
-# Copy go mod files
+# Copy go mod files first for better layer caching
 COPY go.mod go.sum ./
+
+# Download dependencies
 RUN go mod download
 
 # Copy source code
 COPY . .
 
-# Build the binary
-RUN go build -v -o waza ./cmd/waza
+# Build the binary with static linking
+RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -ldflags '-s -w' -o waza ./cmd/waza
 
-# Runtime stage - minimal image
-FROM alpine:latest
+# Verify the binary works
+RUN ./waza --version
 
-RUN apk add --no-cache ca-certificates git
+# Runtime stage - minimal alpine image
+FROM alpine:3.19
+
+# Install CA certificates for HTTPS
+RUN apk --no-cache add ca-certificates
 
 WORKDIR /workspace
 
@@ -31,6 +34,6 @@ COPY --from=builder /build/waza /usr/local/bin/waza
 # Verify installation
 RUN waza --version
 
-# Default command
+# Default command shows help
 ENTRYPOINT ["waza"]
 CMD ["--help"]
