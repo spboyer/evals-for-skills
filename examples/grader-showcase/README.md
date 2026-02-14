@@ -396,6 +396,7 @@ waza run examples/grader-showcase/eval.yaml --filter="behavior|action"
 ## Related Documentation
 
 - **Full Grader Reference**: See `docs/GRADERS.md`
+- **Demo Guide**: See `docs/DEMO-GUIDE.md` for live demo scenarios
 - **Code Explainer Example**: See `examples/code-explainer/`
 - **CI Integration Examples**: See `examples/ci/`
 

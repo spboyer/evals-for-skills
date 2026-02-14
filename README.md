@@ -313,11 +313,21 @@ Waza supports multiple grader types for comprehensive evaluation:
 |--------|---------|---------------|
 | `code` | Python/JavaScript assertion-based validation | [docs/GRADERS.md](docs/GRADERS.md#code---assertion-based-grader) |
 | `regex` | Pattern matching in output | [docs/GRADERS.md](docs/GRADERS.md#regex---pattern-matching-grader) |
+| `file` | File existence and content validation | [docs/GRADERS.md](docs/GRADERS.md#file---file-system-validation) |
 | `behavior` | Agent behavior constraints (tool calls, tokens, duration) | [docs/GRADERS.md](docs/GRADERS.md#behavior---agent-behavior-validation) |
 | `action_sequence` | Tool call sequence validation with F1 scoring | [docs/GRADERS.md](docs/GRADERS.md#action_sequence---tool-call-sequence-validation) |
+| `skill_invocation` | Skill orchestration sequence validation | [docs/GRADERS.md](docs/GRADERS.md#skill_invocation---skill-invocation-sequence-validation) |
 | `prompt` | LLM-as-judge evaluation with rubrics (planned) | [docs/GRADERS.md](docs/GRADERS.md#prompt---llm-based-evaluation) |
 
 See the complete [Grader Reference](docs/GRADERS.md) for detailed configuration options and examples.
+
+## Documentation
+
+- **[Demo Guide](docs/DEMO-GUIDE.md)** - 7 live demo scenarios for presentations
+- **[Grader Reference](docs/GRADERS.md)** - Complete grader types and configuration
+- **[Tutorial](docs/TUTORIAL.md)** - Getting started with writing skill evals
+- **[CI Integration](docs/SKILLS_CI_INTEGRATION.md)** - GitHub Actions workflows for microsoft/skills
+- **[Token Management](docs/TOKEN-LIMITS.md)** - Tracking and optimizing skill context size
 
 ## Contributing
 
