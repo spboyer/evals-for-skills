@@ -40,7 +40,7 @@ func CacheKey(spec *models.BenchmarkSpec, task *models.TestCase, fixtureDir stri
 		return "", err
 	}
 
-	// Include config (model, engine, timeout)
+	// Include config (model, engine, timeout, runs)
 	if err := writeString(h, spec.Config.ModelID); err != nil {
 		return "", err
 	}
@@ -48,6 +48,9 @@ func CacheKey(spec *models.BenchmarkSpec, task *models.TestCase, fixtureDir stri
 		return "", err
 	}
 	if err := writeInt(h, spec.Config.TimeoutSec); err != nil {
+		return "", err
+	}
+	if err := writeInt(h, spec.Config.RunsPerTest); err != nil {
 		return "", err
 	}
 
@@ -140,6 +143,31 @@ func (c *Cache) Clear() error {
 		return nil
 	}
 
+	// Safety check: verify this is a waza cache directory before removing
+	// Check for presence of at least one .json cache file or empty directory
+	entries, err := os.ReadDir(c.dir)
+	if err != nil {
+		return fmt.Errorf("reading cache directory: %w", err)
+	}
+
+	// If directory is not empty, verify it contains only cache files
+	if len(entries) > 0 {
+		hasValidCache := false
+		for _, entry := range entries {
+			if entry.IsDir() {
+				return fmt.Errorf("cache directory contains subdirectories - refusing to delete for safety")
+			}
+			if filepath.Ext(entry.Name()) == ".json" {
+				hasValidCache = true
+			} else {
+				return fmt.Errorf("cache directory contains non-cache files - refusing to delete for safety")
+			}
+		}
+		if !hasValidCache {
+			return fmt.Errorf("no valid cache files found in directory - refusing to delete for safety")
+		}
+	}
+
 	return os.RemoveAll(c.dir)
 }
 
@@ -162,12 +190,14 @@ func HasNonDeterministicGraders(spec *models.BenchmarkSpec) bool {
 // Helper functions
 
 func writeString(w io.Writer, s string) error {
-	_, err := w.Write([]byte(s))
+	// Write string with null byte delimiter to prevent hash collisions
+	_, err := w.Write([]byte(s + "\x00"))
 	return err
 }
 
 func writeInt(w io.Writer, i int) error {
-	_, err := fmt.Fprintf(w, "%d", i)
+	// Write int with null byte delimiter to prevent hash collisions
+	_, err := fmt.Fprintf(w, "%d\x00", i)
 	return err
 }
 

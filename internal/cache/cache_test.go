@@ -361,3 +361,159 @@ func TestCacheKey_MissingFixtures(t *testing.T) {
 	require.NoError(t, err)
 	assert.NotEmpty(t, key)
 }
+
+func TestCacheKey_DifferentRunsPerTaskChangesKey(t *testing.T) {
+	spec1 := &models.BenchmarkSpec{
+		SpecIdentity: models.SpecIdentity{Name: "test"},
+		SkillName:    "skill",
+		Config: models.Config{
+			ModelID:     "gpt-4",
+			EngineType:  "copilot-sdk",
+			TimeoutSec:  300,
+			RunsPerTest: 3,
+		},
+	}
+
+	spec2 := &models.BenchmarkSpec{
+		SpecIdentity: models.SpecIdentity{Name: "test"},
+		SkillName:    "skill",
+		Config: models.Config{
+			ModelID:     "gpt-4",
+			EngineType:  "copilot-sdk",
+			TimeoutSec:  300,
+			RunsPerTest: 5, // Different runs
+		},
+	}
+
+	task := &models.TestCase{
+		TestID: "test-1",
+		Stimulus: models.TestStimulus{
+			Message: "Test",
+		},
+	}
+
+	key1, err := CacheKey(spec1, task, "")
+	require.NoError(t, err)
+
+	key2, err := CacheKey(spec2, task, "")
+	require.NoError(t, err)
+
+	assert.NotEqual(t, key1, key2, "changing RunsPerTest should change cache key")
+}
+
+func TestCacheKey_NoHashCollision(t *testing.T) {
+	// Test that field delimiters prevent hash collisions
+	spec1 := &models.BenchmarkSpec{
+		SpecIdentity: models.SpecIdentity{Name: "ab"},
+		SkillName:    "cd",
+		Config: models.Config{
+			ModelID:     "gpt-4",
+			EngineType:  "copilot-sdk",
+			TimeoutSec:  300,
+			RunsPerTest: 1,
+		},
+	}
+
+	spec2 := &models.BenchmarkSpec{
+		SpecIdentity: models.SpecIdentity{Name: "abc"},
+		SkillName:    "d",
+		Config: models.Config{
+			ModelID:     "gpt-4",
+			EngineType:  "copilot-sdk",
+			TimeoutSec:  300,
+			RunsPerTest: 1,
+		},
+	}
+
+	task := &models.TestCase{
+		TestID: "test-1",
+		Stimulus: models.TestStimulus{
+			Message: "Test",
+		},
+	}
+
+	key1, err := CacheKey(spec1, task, "")
+	require.NoError(t, err)
+
+	key2, err := CacheKey(spec2, task, "")
+	require.NoError(t, err)
+
+	assert.NotEqual(t, key1, key2, "field delimiters should prevent hash collisions")
+}
+
+func TestCache_Clear_SafetyChecks(t *testing.T) {
+	t.Run("refuses to clear directory with subdirectories", func(t *testing.T) {
+		cacheDir := t.TempDir()
+		c := New(cacheDir)
+
+		// Add a cache file
+		outcome := &models.TestOutcome{TestID: "test", Status: models.StatusPassed}
+		require.NoError(t, c.Put("key1", outcome))
+
+		// Add a subdirectory
+		subDir := filepath.Join(cacheDir, "subdir")
+		require.NoError(t, os.Mkdir(subDir, 0755))
+
+		// Clear should fail
+		err := c.Clear()
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "subdirectories")
+
+		// Cache directory should still exist
+		_, err = os.Stat(cacheDir)
+		assert.NoError(t, err)
+	})
+
+	t.Run("refuses to clear directory with non-json files", func(t *testing.T) {
+		cacheDir := t.TempDir()
+		c := New(cacheDir)
+
+		// Add a cache file
+		outcome := &models.TestOutcome{TestID: "test", Status: models.StatusPassed}
+		require.NoError(t, c.Put("key1", outcome))
+
+		// Add a non-JSON file
+		nonCacheFile := filepath.Join(cacheDir, "README.txt")
+		require.NoError(t, os.WriteFile(nonCacheFile, []byte("test"), 0644))
+
+		// Clear should fail
+		err := c.Clear()
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "non-cache files")
+
+		// Cache directory should still exist
+		_, err = os.Stat(cacheDir)
+		assert.NoError(t, err)
+	})
+
+	t.Run("successfully clears valid cache directory", func(t *testing.T) {
+		cacheDir := t.TempDir()
+		c := New(cacheDir)
+
+		// Add cache files
+		outcome := &models.TestOutcome{TestID: "test", Status: models.StatusPassed}
+		require.NoError(t, c.Put("key1", outcome))
+		require.NoError(t, c.Put("key2", outcome))
+
+		// Clear should succeed
+		err := c.Clear()
+		assert.NoError(t, err)
+
+		// Directory should not exist
+		_, err = os.Stat(cacheDir)
+		assert.True(t, os.IsNotExist(err))
+	})
+
+	t.Run("successfully clears empty cache directory", func(t *testing.T) {
+		cacheDir := t.TempDir()
+		c := New(cacheDir)
+
+		// Clear empty directory should succeed
+		err := c.Clear()
+		assert.NoError(t, err)
+
+		// Directory should not exist
+		_, err = os.Stat(cacheDir)
+		assert.True(t, os.IsNotExist(err))
+	})
+}
