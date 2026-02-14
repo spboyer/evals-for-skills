@@ -139,7 +139,7 @@ func runCommandE(cmd *cobra.Command, args []string) error {
 		}
 		fmt.Printf("Parallel: %d workers\n", w)
 	}
-	
+
 	// Print skill directories in verbose mode
 	if verbose && len(spec.Config.SkillPaths) > 0 {
 		fmt.Printf("Skill Directories:\n")
@@ -148,7 +148,7 @@ func runCommandE(cmd *cobra.Command, args []string) error {
 			fmt.Printf("  - %s\n", path)
 		}
 	}
-	
+
 	fmt.Println()
 
 	outcome, err := runner.RunBenchmark(ctx)

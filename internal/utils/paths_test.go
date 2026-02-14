@@ -9,10 +9,10 @@ import (
 
 func TestResolvePaths(t *testing.T) {
 	tests := []struct {
-		name      string
-		paths     []string
-		baseDir   string
-		expected  []string
+		name     string
+		paths    []string
+		baseDir  string
+		expected []string
 	}{
 		{
 			name:     "empty list",
@@ -49,7 +49,7 @@ func TestResolvePaths(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			result := ResolvePaths(tt.paths, tt.baseDir)
-			
+
 			// Clean paths for comparison (normalize separators and . .. references)
 			if tt.expected != nil {
 				cleanExpected := make([]string, len(tt.expected))

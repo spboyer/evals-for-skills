@@ -109,7 +109,7 @@ func (e *CopilotEngine) Execute(ctx context.Context, req *ExecutionRequest) (*Ex
 	seen := make(map[string]bool)
 	seen[cwd] = true
 	skillDirs := []string{cwd}
-	
+
 	// Add skill directories from request, avoiding duplicates
 	for _, path := range req.SkillPaths {
 		if !seen[path] {
