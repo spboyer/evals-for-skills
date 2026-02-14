@@ -245,5 +245,3 @@ func generateNextSteps(report *readinessReport) []string {
 
 	return steps
 }
-
-
