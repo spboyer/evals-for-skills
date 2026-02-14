@@ -42,7 +42,7 @@ func TestResolvePaths(t *testing.T) {
 			name:     "mixed paths",
 			paths:    []string{"/abs", "rel", "../parent"},
 			baseDir:  "/base/sub",
-			expected: []string{"/abs", "/base/sub/rel", "/base/sub/../parent"},
+			expected: []string{"/abs", "/base/sub/rel", "/base/parent"},
 		},
 	}
 
