@@ -13,39 +13,39 @@ import (
 
 func TestBuildExecutionRequest_SkillPaths(t *testing.T) {
 	tests := []struct {
-		name           string
-		specDir        string
-		skillPaths     []string
-		expectedPaths  []string
-		description    string
+		name          string
+		specDir       string
+		skillPaths    []string
+		expectedPaths []string
+		description   string
 	}{
 		{
-			name:           "no skill paths",
-			specDir:        "/home/user/evals",
-			skillPaths:     nil,
-			expectedPaths:  []string{},
-			description:    "empty skill paths should result in empty list",
+			name:          "no skill paths",
+			specDir:       "/home/user/evals",
+			skillPaths:    nil,
+			expectedPaths: []string{},
+			description:   "empty skill paths should result in empty list",
 		},
 		{
-			name:           "absolute paths",
-			specDir:        "/home/user/evals",
-			skillPaths:     []string{"/absolute/path/one", "/absolute/path/two"},
-			expectedPaths:  []string{"/absolute/path/one", "/absolute/path/two"},
-			description:    "absolute paths should be passed through unchanged",
+			name:          "absolute paths",
+			specDir:       "/home/user/evals",
+			skillPaths:    []string{"/absolute/path/one", "/absolute/path/two"},
+			expectedPaths: []string{"/absolute/path/one", "/absolute/path/two"},
+			description:   "absolute paths should be passed through unchanged",
 		},
 		{
-			name:           "relative paths",
-			specDir:        "/home/user/evals",
-			skillPaths:     []string{"skills", "../shared-skills"},
-			expectedPaths:  []string{"/home/user/evals/skills", "/home/user/shared-skills"},
-			description:    "relative paths should be resolved relative to spec directory",
+			name:          "relative paths",
+			specDir:       "/home/user/evals",
+			skillPaths:    []string{"skills", "../shared-skills"},
+			expectedPaths: []string{"/home/user/evals/skills", "/home/user/shared-skills"},
+			description:   "relative paths should be resolved relative to spec directory",
 		},
 		{
-			name:           "mixed paths",
-			specDir:        "/home/user/evals",
-			skillPaths:     []string{"/absolute/skills", "relative/skills"},
-			expectedPaths:  []string{"/absolute/skills", "/home/user/evals/relative/skills"},
-			description:    "mixed absolute and relative paths should be handled correctly",
+			name:          "mixed paths",
+			specDir:       "/home/user/evals",
+			skillPaths:    []string{"/absolute/skills", "relative/skills"},
+			expectedPaths: []string{"/absolute/skills", "/home/user/evals/relative/skills"},
+			description:   "mixed absolute and relative paths should be handled correctly",
 		},
 	}
 
@@ -89,7 +89,7 @@ func TestBuildExecutionRequest_SkillPaths(t *testing.T) {
 			// Verify skill paths
 			require.NotNil(t, req, "execution request should not be nil")
 			assert.Equal(t, len(tt.expectedPaths), len(req.SkillPaths), tt.description)
-			
+
 			// Clean paths for comparison (handle different path separators)
 			for i, expectedPath := range tt.expectedPaths {
 				if i < len(req.SkillPaths) {
@@ -350,4 +350,3 @@ description: Validate Azure config
 		assert.NoError(t, err)
 	})
 }
-

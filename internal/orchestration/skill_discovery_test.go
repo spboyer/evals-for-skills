@@ -208,15 +208,15 @@ func TestValidateRequiredSkills(t *testing.T) {
 		// Check that error message is well-formatted
 		errMsg := err.Error()
 		lines := strings.Split(errMsg, "\n")
-		
+
 		// Should have multiple lines with clear sections
 		assert.Greater(t, len(lines), 5, "Error message should be multi-line")
-		
+
 		// Check structure
 		foundRequiredSection := false
 		foundSearchedSection := false
 		foundDiscoveredSection := false
-		
+
 		for _, line := range lines {
 			if strings.Contains(line, "required skills not found") {
 				foundRequiredSection = true
@@ -228,7 +228,7 @@ func TestValidateRequiredSkills(t *testing.T) {
 				foundDiscoveredSection = true
 			}
 		}
-		
+
 		assert.True(t, foundRequiredSection, "Should have required skills section")
 		assert.True(t, foundSearchedSection, "Should have searched directories section")
 		assert.True(t, foundDiscoveredSection, "Should have found skills section")
