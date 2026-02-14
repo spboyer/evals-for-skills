@@ -78,12 +78,12 @@ func validateRequiredSkills(requiredSkills []string, discoveredSkills map[string
 		for _, skillName := range missing {
 			sb.WriteString(fmt.Sprintf("  - %s\n", skillName))
 		}
-		sb.WriteString(fmt.Sprintf("\nSearched directories:\n"))
+		sb.WriteString("\nSearched directories:\n")
 		for _, dir := range searchedDirs {
 			sb.WriteString(fmt.Sprintf("  - %s\n", dir))
 		}
 		if len(discoveredSkills) > 0 {
-			sb.WriteString(fmt.Sprintf("\nFound skills:\n"))
+			sb.WriteString("\nFound skills:\n")
 			for skillName := range discoveredSkills {
 				sb.WriteString(fmt.Sprintf("  - %s\n", skillName))
 			}

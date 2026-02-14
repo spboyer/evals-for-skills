@@ -17,7 +17,7 @@ func TestDiscoverSkills(t *testing.T) {
 	// Create skill directories with SKILL.md files
 	skill1Dir := filepath.Join(tmpDir, "skill1")
 	skill2Dir := filepath.Join(tmpDir, "skill2")
-	skill3Dir := filepath.Join(tmpDir, "skill3-no-skillmd")
+	skill3Dir := filepath.Join(tmpDir, "skill3")
 	require.NoError(t, os.MkdirAll(skill1Dir, 0755))
 	require.NoError(t, os.MkdirAll(skill2Dir, 0755))
 	require.NoError(t, os.MkdirAll(skill3Dir, 0755))
