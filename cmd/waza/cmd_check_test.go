@@ -132,7 +132,7 @@ This skill has high compliance.
 	result := output.String()
 	assert.Contains(t, result, "Compliance Score: High")
 	assert.Contains(t, result, "Excellent!")
-	// Should not suggest compliance improvements since it's alcheck High
+	// Should not suggest compliance improvements since it's already High
 	assert.NotContains(t, strings.ToLower(result), "expand your description")
 	assert.NotContains(t, strings.ToLower(result), "add a 'use for:' section")
 }
