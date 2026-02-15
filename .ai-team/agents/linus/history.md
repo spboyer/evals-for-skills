@@ -30,4 +30,9 @@
 - **Fork PR push pattern:** When a PR comes from a fork, the branch lives on the fork remote (e.g., `wbreza`), not `origin`. Push with `--force-with-lease` to the fork remote after `git fetch <remote> <branch>` to update the tracking ref. The PR on origin updates automatically.
 📌 Team update (2026-02-12): azd-publish skill location convention — repo-level skills go under `.github/skills/`, project eval skills go under `skills/`. — decided by Wallace Breza
 📌 Team update (2026-02-12): PR #111 tokens compare command approved and merged. Closes #51 (E4). — decided by Rusty
+- **Multi-model support (#39, PR #152):** Added `--model` CLI flag (`StringArrayVar`) and `modelResult` type to `cmd/waza/cmd_run.go`. Extracted `runSingleModel()` from `runCommandE()` to enable iterating over multiple models. When multiple `--model` flags are given, each model gets its own engine creation, benchmark run, and per-model summary. A `printModelComparison()` table is printed at the end. Multi-model output uses `{base}_{model}.json` naming. Test failures in a multi-model run are captured (not fatal) so all models complete. `resetRunGlobals()` updated to clear `modelOverrides`.
+📌 Team update (2026-02-15): All developers must use claude-opus-4.6 for code. For code review, if developer isn't using Opus, reviewer uses it. — decided by Shayne Boyer
+📌 Team update (2026-02-15): Don't take assigned work. Only pick up unassigned issues. — decided by Shayne Boyer
+📌 Team update (2026-02-15): Multi-model execution is sequential (not parallel). Each model gets fresh engine in loop. Test failures non-fatal so all models complete. — decided by Linus
+📌 Team update (2026-02-15): Microsoft/skills repo moving to plugin bundle structure (.github/plugins/<bundle>/skills/). CI must support both flat and nested layouts. — decided by Shayne Boyer
 <!-- Append new learnings below. -->

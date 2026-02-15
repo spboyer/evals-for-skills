@@ -90,3 +90,11 @@
 - **Suggestions:** count all trigger patterns (not just "USE FOR:"), atomic writes, context.Context plumbing, --dry-run flag, tests for non-existent path and --target low.
 - **Copilot reviewer alignment:** 3 of 4 inline comments were valid (trigger count mismatch, parser fragility, comment/code mismatch). The 4th was a typo fix.
 - **Lesson:** Deep reviews catch UX inconsistencies and future-proofing gaps that fast-model reviews miss, but the fast model correctly identified all structural and correctness aspects.
+
+📌 Team update (2026-02-15): Review @copilot PRs with claude-opus-4.6 before merging — quality gate for doc PRs. — decided by Shayne Boyer
+📌 Team update (2026-02-15): Auto-assign unblocked work to squad/@copilot. Don't ask, just assign and go. — decided by Shayne Boyer
+📌 Team update (2026-02-15): After feature PRs merge (CLI, graders, YAML format, examples), route doc updates to Saul. Issue #148 tracks this. — decided by Shayne Boyer
+📌 Team update (2026-02-15): All developers use claude-opus-4.6. For code review, if developer isn't using Opus, reviewer uses it. — decided by Shayne Boyer
+📌 Team update (2026-02-15): Don't take assigned work. Only pick up unassigned issues. — decided by Shayne Boyer
+📌 Team update (2026-02-15): Multi-model execution is sequential (not parallel). Test failures non-fatal so all models complete. — decided by Linus
+📌 Team update (2026-02-15): Microsoft/skills repo moving to plugin bundle structure. CI must support both flat and nested layouts. — decided by Shayne Boyer

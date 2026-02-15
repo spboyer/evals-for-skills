@@ -75,3 +75,45 @@
 Test discipline: use table-driven subtests for pattern detection, validate against real fixture loading (code-explainer=Low, waza=High), test exact terminal output (box-drawing, emoji width awareness, rune counting), mock scorer interface for loop testing.
 **Why:** Clear, testable compliance framework enables future skill compliance automation across the team's codebase. Reference implementation pattern reduces drift across similar tools.
 
+### 2026-02-13: User directive — Review @copilot PRs with Opus 4.6
+**By:** Shayne Boyer (via Copilot)
+**What:** Always review @copilot PRs with Opus 4.6 before merging — double-check quality before auto-merge.
+**Why:** User request — @copilot doc PRs need a quality gate
+
+### 2026-02-14: User directive — Auto-assign unblocked work
+**By:** Shayne Boyer (via Copilot)
+**What:** Don't ask before assigning unblocked work to the squad or @copilot — just assign it and go.
+**Why:** User request — reduces back-and-forth, keeps the pipeline moving
+
+### 2026-02-14: User directive — Route doc updates to Saul after feature merges
+**By:** Shayne Boyer (via Copilot)
+**What:** After any feature PR merges that changes CLI commands, graders, eval YAML format, or examples, route a doc update task to Saul. Saul owns DEMO-GUIDE.md, GRADERS.md, TUTORIAL.md, examples/ READMEs, and the main README. Standing issue #148 tracks this.
+**Why:** User wants documentation kept current automatically as features ship. Saul is the designated docs team member.
+
+### 2026-02-14: User directive — Skills repo plugin bundle structure
+**By:** Shayne Boyer (via Copilot)
+**What:** The microsoft/skills repo is being reorganized from a flat `.github/skills/` layout (133 items) into plugin bundles (`.github/plugins/<bundle>/skills/<name>/`). Waza CI compatibility (#60) and any future skills integration must support both the current flat layout and the new nested plugin bundle layout. Key bundles: azure-skills (18 orchestration), azure-sdk-python (41), azure-sdk-dotnet (29), azure-sdk-typescript (24), azure-sdk-java (26), azure-sdk-rust (7), azure-core (6).
+**Why:** User shared the distribution strategy gist (https://gist.github.com/spboyer/011190893f33d82d967180cdc5a2432d) — this is the planned future state and all CI work should be forward-compatible
+
+### 2026-02-15: User directive — Don't take assigned work
+**By:** Shayne Boyer (via Copilot)
+**What:** Don't take anyone's work if it is assigned. Only pick up unassigned issues.
+**Why:** User request
+
+### 2026-02-15: User directive — Developer model policy
+**By:** Shayne Boyer (via Copilot)
+**What:** All developers (code-writing agents) must use claude-opus-4.6. If they are not, use this model for code review.
+**Why:** User request — captured for team memory
+
+### 2026-02-15: Multi-model execution architecture
+**By:** Linus (Backend Dev)
+**Related:** #39 (E3), PR #152
+**What:** When multiple `--model` flags are given, models are evaluated sequentially (not concurrently). Each model gets its own engine instance created fresh inside the loop. The `runSingleModel()` function encapsulates the full benchmark lifecycle for one model — config, engine, runner, execution, summary.
+**Why:** Sequential execution is simpler, avoids resource contention between engines, and produces cleaner output (each model's progress prints in order). Parallel model execution can be added later as a separate flag if needed. The `modelResult` type and `printModelComparison()` function are ready for it — they operate on a collected slice regardless of execution order.
+
+### 2026-02-15: Test failures in multi-model runs are non-fatal
+**By:** Linus (Backend Dev)
+**Related:** #39 (E3), PR #152
+**What:** When running multiple models, a `TestFailureError` from one model doesn't abort the remaining models. The error is recorded and the last one is returned after all models complete. Infrastructure errors (load failure, unknown engine) still abort immediately.
+**Why:** The whole point of comparison runs is to see how different models perform. Aborting on the first failure defeats the purpose. The user still gets a non-zero exit code if any model had failures.
+

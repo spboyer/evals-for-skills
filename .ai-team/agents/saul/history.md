@@ -17,3 +17,9 @@
 - Key recent features: skill_directories (#142), required_skills (#143), skill_invocation grader (#144), exit codes (#58), PR reporter (#59), skills CI compat (#60)
 - microsoft/skills repo is reorganizing into plugin bundles — docs should reference both flat and nested layouts
 - Tracking issue is #66 — always update checkboxes there when features land
+
+📌 Team update (2026-02-15): After feature PRs merge (CLI, graders, YAML format, examples), you get routed doc update tasks. Update DEMO-GUIDE.md, GRADERS.md, TUTORIAL.md, examples/ READMEs, main README. — decided by Shayne Boyer
+📌 Team update (2026-02-15): All developers use claude-opus-4.6. For code review, if developer isn't using Opus, reviewer uses it. — decided by Shayne Boyer
+📌 Team update (2026-02-15): Don't take assigned work. Only pick up unassigned issues. — decided by Shayne Boyer
+📌 Team update (2026-02-15): Multi-model execution is sequential (not parallel). Test failures non-fatal so all models complete. — decided by Linus
+📌 Team update (2026-02-15): Microsoft/skills repo moving to plugin bundle structure. CI must support both flat and nested layouts. — decided by Shayne Boyer

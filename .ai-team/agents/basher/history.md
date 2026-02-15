@@ -19,3 +19,7 @@
 - Multi-model runs save output as `<base>_<model>.json` per model, NOT to the original `--output` path. Tests must check per-model file paths.
 - `resetRunGlobals()` must include `modelOverrides = nil` — Cobra `StringArrayVar` persists across test cases in the same process.
 - For capturing stdout from `fmt.Printf` (not Cobra output), use `os.Pipe()` redirect since `cmd.SetOut(io.Discard)` only affects Cobra's own writer.
+📌 Team update (2026-02-15): All developers must use claude-opus-4.6 for code. For code review, if developer isn't using Opus, reviewer uses it. — decided by Shayne Boyer
+📌 Team update (2026-02-15): Don't take assigned work. Only pick up unassigned issues. — decided by Shayne Boyer
+📌 Team update (2026-02-15): Multi-model execution is sequential (not parallel). Test failures non-fatal so all models complete. — decided by Linus
+📌 Team update (2026-02-15): Microsoft/skills repo moving to plugin bundle structure. CI must support both flat and nested layouts. — decided by Shayne Boyer
