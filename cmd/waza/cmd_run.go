@@ -307,7 +307,8 @@ func printModelComparison(results []modelResult) {
 			durationMs = mr.outcome.Digest.DurationMs
 		}
 		duration := time.Duration(durationMs) * time.Millisecond
-		fmt.Printf("%-20s %-8.2f %-10.1f%% %v\n", mr.modelID, score, passRate, duration)
+		passStr := fmt.Sprintf("%.1f%%", passRate)
+		fmt.Printf("%-20s %-8.2f %-10s %v\n", mr.modelID, score, passStr, duration)
 	}
 	fmt.Println()
 }
