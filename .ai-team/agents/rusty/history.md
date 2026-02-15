@@ -98,3 +98,13 @@
 📌 Team update (2026-02-15): Don't take assigned work. Only pick up unassigned issues. — decided by Shayne Boyer
 📌 Team update (2026-02-15): Multi-model execution is sequential (not parallel). Test failures non-fatal so all models complete. — decided by Linus
 📌 Team update (2026-02-15): Microsoft/skills repo moving to plugin bundle structure. CI must support both flat and nested layouts. — decided by Shayne Boyer
+
+### 2026-02-15: PR #152 Review — --model flag for multi-model evaluation (#39)
+- **Author:** Linus (Backend Dev), branch `squad/39-multi-model-support`
+- **Verdict:** APPROVE WITH NITS. Clean implementation, two non-blocking issues.
+- **Epic:** E3 (Evaluation Framework) — Closes #39 [E3-01] Support multiple model execution.
+- **Architecture:** `runSingleModel()` extraction is well-structured — each model gets its own engine instance, runner, and context. Spec mutation (`spec.Config.ModelID = modelID`) in the loop is safe because `runSingleModel` reads it only at creation time. Error handling distinguishes `TestFailureError` (continue in multi-model) from infrastructure errors (abort immediately). `sanitizeModelName()` handles `/`, `\`, `:`, space. Per-model JSON output uses `base_model.ext` naming.
+- **Nits found:** (1) Comparison table `%-10.1f%%` format puts a gap between value and `%` sign (cosmetic). (2) `runSingleModel` creates engine but never calls `engine.Shutdown()` — pre-existing issue (also absent on main), not introduced by this PR.
+- **Test coverage:** 9 tests + 3 subtests covering flag parsing, override, multi-model, backward compat, comparison table output, edge cases. `resetRunGlobals()` correctly includes `modelOverrides = nil`.
+- **CI:** Build clean, go vet clean, all tests pass (including all pre-existing tests unchanged).
+- **Lesson:** When extracting a loop body into a helper, always verify resource lifecycle (init/defer-shutdown) is preserved per iteration. In this case, engine.Shutdown() was already missing upstream, so the extraction didn't regress.

@@ -121,14 +121,14 @@ func displayReadinessReport(out interface{ Write([]byte) (int, error) }, report 
 	w := out
 
 	// Header
-	_, _ = fmt.Fprintf(w, "\n🔍 Skill Readiness Check\n")
-	_, _ = fmt.Fprintf(w, "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n")
+	fmt.Fprintf(w, "\n🔍 Skill Readiness Check\n")                        //nolint:errcheck
+	fmt.Fprintf(w, "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n") //nolint:errcheck
 
 	skillName := report.skillName
 	if skillName == "" {
 		skillName = "unnamed-skill"
 	}
-	_, _ = fmt.Fprintf(w, "Skill: %s\n\n", skillName)
+	fmt.Fprintf(w, "Skill: %s\n\n", skillName) //nolint:errcheck
 
 	// 1. Compliance Check
 	_, _ = fmt.Fprintf(w, "📋 Compliance Score: %s\n", report.complianceLevel)
