@@ -19,7 +19,12 @@
 - Multi-model runs save output as `<base>_<model>.json` per model, NOT to the original `--output` path. Tests must check per-model file paths.
 - `resetRunGlobals()` must include `modelOverrides = nil` — Cobra `StringArrayVar` persists across test cases in the same process.
 - For capturing stdout from `fmt.Printf` (not Cobra output), use `os.Pipe()` redirect since `cmd.SetOut(io.Discard)` only affects Cobra's own writer.
+- **2026-02-15:** Wrote 21 tests for engine.Shutdown() lifecycle (#153). Two test files: `internal/execution/engine_shutdown_test.go` (12 tests: MockEngine/CopilotEngine shutdown contract, SpyEngine test double for tracking calls) and `cmd/waza/cmd_run_shutdown_test.go` (9 tests: shutdown on success, test failure, invalid format, unknown engine, multi-model, output write, github-comment format, cache enabled, verbose). SpyEngine uses `atomic.Int32` for thread safety.
+- `SpyEngine` in `internal/execution/engine_shutdown_test.go` is an exported type — if Linus adds an engine factory or injection point, tests in `cmd/waza` can use `execution.SpyEngine` directly for stronger assertions.
+- `CopilotEngine.Shutdown` cleans both `e.client` and `e.workspace`. Tests can set `engine.workspace` directly (under lock) to simulate workspace cleanup without needing the full SDK.
 📌 Team update (2026-02-15): All developers must use claude-opus-4.6 for code. For code review, if developer isn't using Opus, reviewer uses it. — decided by Shayne Boyer
 📌 Team update (2026-02-15): Don't take assigned work. Only pick up unassigned issues. — decided by Shayne Boyer
 📌 Team update (2026-02-15): Multi-model execution is sequential (not parallel). Test failures non-fatal so all models complete. — decided by Linus
 📌 Team update (2026-02-15): Microsoft/skills repo moving to plugin bundle structure. CI must support both flat and nested layouts. — decided by Shayne Boyer
+📌 Team update (2026-02-15): All code-writing agents must use claude-opus-4.6 model — decided by Shayne Boyer
+📌 Team update (2026-02-15): Don't take assigned work — only pick up unassigned issues — decided by Shayne Boyer

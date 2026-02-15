@@ -108,3 +108,19 @@
 - **Test coverage:** 9 tests + 3 subtests covering flag parsing, override, multi-model, backward compat, comparison table output, edge cases. `resetRunGlobals()` correctly includes `modelOverrides = nil`.
 - **CI:** Build clean, go vet clean, all tests pass (including all pre-existing tests unchanged).
 - **Lesson:** When extracting a loop body into a helper, always verify resource lifecycle (init/defer-shutdown) is preserved per iteration. In this case, engine.Shutdown() was already missing upstream, so the extraction didn't regress.
+
+### 2026-02-15: E3 Evaluation Framework Backlog Triage
+- **Task:** Assess four unassigned E3 issues and recommend prioritization
+- **Issues triaged:** #44 (suggestions), #106 (tool_call rubrics), #107 (task rubrics), #138 (multi-model recommendations)
+- **Key findings:**
+  1. **#44 ready NOW** — Charles already extracted suggestion engine in PR #117. Main work: consolidate into `internal/suggestions/` package shared by `waza dev` and `waza run --suggestions`. No blockers. Assign to Linus.
+  2. **#106 & #107 blocked by #104** — Both port Azure ML `.prompty` templates to YAML rubrics. Identical structure, work in parallel after #104 merges. Assign to Livingston (docs-integration role fits).
+  3. **#138 blocked by #39 + #104** — Capstone E3 feature (multi-model recommendations). #39 merged (PR #152). Waiting on #104 prompt grader stability. Needs design clarity: What are optimization dimensions? (cost/quality/latency/consistency?)
+- **Critical blocker:** #104 (prompt grader) unblocks 3 of 4 issues downstream. Recommend prioritizing in parallel track.
+- **Architecture decisions captured:**
+  - Suggestion engine must be a shared package, not duplicated in `waza dev` and `waza run`.
+  - Azure ML porting establishes reusable rubric YAML pattern — capture for future evaluators.
+  - Recommendation engine requires explicit rubric design (dimensions) before prompt engineering.
+- **Deliverable:** Triage analysis written to `.ai-team/decisions/inbox/rusty-eval-backlog-triage.md`
+📌 Team update (2026-02-15): Don't take assigned work — only pick up unassigned issues — decided by Shayne Boyer
+📌 Team update (2026-02-15): Engine shutdown fix (#153) complete — merged 21 tests from Basher covering all exit paths. Critical path blocker #104 (Prompt Grader) unblocks 50% of E3 backlog. — Rusty (Lead)

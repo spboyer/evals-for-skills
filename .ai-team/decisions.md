@@ -100,10 +100,10 @@ Test discipline: use table-driven subtests for pattern detection, validate again
 **What:** Don't take anyone's work if it is assigned. Only pick up unassigned issues.
 **Why:** User request
 
-### 2026-02-15: User directive — Developer model policy
+### 2026-02-15: User directive — Model policy (consolidated)
 **By:** Shayne Boyer (via Copilot)
-**What:** All developers (code-writing agents) must use claude-opus-4.6. If they are not, use this model for code review.
-**Why:** User request — captured for team memory
+**What:** All code-writing agents (Linus, Basher, and any agent producing Go code) must use claude-opus-4.6 model. Additionally, always review @copilot PRs with Opus 4.6 before merging to ensure quality.
+**Why:** User request — code quality assurance and consistent developer experience
 
 ### 2026-02-15: Multi-model execution architecture
 **By:** Linus (Backend Dev)
@@ -117,3 +117,58 @@ Test discipline: use table-driven subtests for pattern detection, validate again
 **What:** When running multiple models, a `TestFailureError` from one model doesn't abort the remaining models. The error is recorded and the last one is returned after all models complete. Infrastructure errors (load failure, unknown engine) still abort immediately.
 **Why:** The whole point of comparison runs is to see how different models perform. Aborting on the first failure defeats the purpose. The user still gets a non-zero exit code if any model had failures.
 
+
+### 2026-02-15: PR #152 review verdict
+**By:** Rusty (Lead)
+**What:** APPROVE WITH NITS. Two non-blocking issues:
+1. **Comparison table formatting** — `%-10.1f%%` format string in `printModelComparison` produces `100.0     %` instead of `100.0%`. Fix: use `fmt.Sprintf("%.1f%%", passRate)` and print with `%-10s`.
+2. **Engine shutdown** — `runSingleModel` creates an engine per model but never calls `engine.Shutdown()`. Pre-existing on main (not a regression), but should be addressed as a follow-up since multi-model runs now create N engines per invocation.
+
+All acceptance criteria met: --model flag, multi-model loop, comparison table, per-model JSON output, backward compatibility preserved.
+**Why:** Implementation is architecturally sound — clean extraction, correct error semantics (TestFailureError continues, infra errors abort), proper state isolation per model iteration. Tests are comprehensive (9+3 covering all paths). Build and all tests pass. The two nits are cosmetic/pre-existing and don't block merge.
+
+### 2026-02-15: Engine shutdown must use context.Background() for defer cleanup
+**By:** Linus
+**What:** `defer engine.Shutdown(context.Background())` placed after engine creation in `runSingleModel()`. Uses `context.Background()` instead of the benchmark's `ctx` since shutdown is independent cleanup.
+**Why:** Shutdown should not be cancelled if the benchmark context is cancelled — engines must always release resources. This also prevents a subtle ordering issue where `ctx` is declared later in the function.
+
+### 2026-02-15: Engine Shutdown test strategy
+**By:** Basher (Tester)
+**Related:** #153 (engine.Shutdown() leak in runSingleModel)
+**What:** Created two test files covering engine.Shutdown() lifecycle:
+- `internal/execution/engine_shutdown_test.go` — unit tests for Shutdown contract on MockEngine, CopilotEngine, and a reusable SpyEngine test double
+- `cmd/waza/cmd_run_shutdown_test.go` — integration tests verifying Shutdown runs in every runSingleModel exit path
+
+**Key design decisions:**
+1. **SpyEngine is exported** — so `cmd/waza` tests can import `execution.SpyEngine` if Linus adds an engine factory or injection hook. Currently the engine is hardcoded in a switch statement, so cmd-level tests use indirect verification.
+2. **CopilotEngine workspace tests set internal state directly** — rather than requiring the full Copilot SDK, the test locks the mutex and sets `engine.workspace` to a temp dir, then verifies Shutdown clears it. This is a pragmatic tradeoff.
+3. **Multi-model Shutdown test** — verifies each model iteration creates and shuts down its own engine independently. This is critical because the loop in `runCommandE` creates a new engine per model.
+
+**Why:** Without these tests, Shutdown leaks are invisible — they don't cause test failures, they cause resource leaks in production (temp dirs, copilot client connections). The SpyEngine pattern makes future Shutdown contract violations immediately detectable.
+
+### 2026-02-15: E3 Evaluation Framework Backlog Triage
+**By:** Rusty (Lead)
+**Related:** E3 (Epic), Issues #44, #106, #107, #138
+**What:** Prioritized four unassigned E3 evaluation framework issues:
+1. **#44 (P1) — LLM-powered improvement suggestions** — **READY NOW, assign to Linus**
+   - No blockers; internal feature building on Charles's PR #117
+   - Effort: 1-2 days (refactor + tests)
+   - Architecture: Extract `internal/suggestions/` package, consolidate with `waza dev` logic
+2. **#106, #107 (P1, tool_call & task rubrics)** — **Blocked on #104 (Prompt Grader)**
+   - Parallel work after #104 merges
+   - Recommend Livingston
+   - Effort: 2-3 days per rubric set
+   - Work: Azure ML `.prompty` schema translation to waza YAML
+3. **#138 (P1, multi-model recommendation engine)** — **Blocked on #104 + #39 (now merged in PR #152)**
+   - Capstone E3 feature (highest complexity)
+   - Recommend Linus
+   - Effort: 3-4 days (rubric design + aggregation + LLM judging)
+   - Requires: result aggregation, statistical analysis, recommendation rubric design
+4. **Critical path blocker:** #104 (Prompt Grader) unblocks 50% of E3 backlog. Recommend prioritizing merge in parallel track.
+
+**Key decisions captured:**
+- Suggestion engine must consolidate logic between `waza dev` (E2) and `waza run --suggestions` (E3)
+- Rubric porting establishes reusable pattern for future evaluators (Azure ML schema mapping → YAML)
+- #138 recommendation rubric needs design clarity: primary optimization target (cost vs. quality vs. balanced)?
+
+**Why:** Unblocks sprint planning. Clear prioritization and dependency analysis reduces rework. #44 is ready immediately for squad momentum.

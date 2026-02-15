@@ -35,4 +35,8 @@
 📌 Team update (2026-02-15): Don't take assigned work. Only pick up unassigned issues. — decided by Shayne Boyer
 📌 Team update (2026-02-15): Multi-model execution is sequential (not parallel). Each model gets fresh engine in loop. Test failures non-fatal so all models complete. — decided by Linus
 📌 Team update (2026-02-15): Microsoft/skills repo moving to plugin bundle structure (.github/plugins/<bundle>/skills/). CI must support both flat and nested layouts. — decided by Shayne Boyer
+- **Engine shutdown contract (#153):** `AgentEngine.Shutdown(ctx context.Context) error` must be called after engine use. In `runSingleModel()`, `defer engine.Shutdown(context.Background())` is placed immediately after the engine creation switch block. Uses `context.Background()` rather than the benchmark's `ctx` because shutdown is cleanup — it shouldn't inherit cancellation from the benchmark run.
 <!-- Append new learnings below. -->
+📌 Team update (2026-02-15): All code-writing agents must use claude-opus-4.6 model — decided by Shayne Boyer
+📌 Team update (2026-02-15): Don't take assigned work — only pick up unassigned issues — decided by Shayne Boyer
+📌 Team update (2026-02-15): E3 backlog triage complete — #44 ready to start immediately (no blockers). #106/#107 blocked on #104. #138 is capstone feature. — Rusty (Lead)
