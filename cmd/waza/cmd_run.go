@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -32,7 +33,14 @@ var (
 	enableCache    bool
 	disableCache   bool
 	runCacheDir    string
+	modelOverrides []string
 )
+
+// modelResult pairs a model identifier with its evaluation outcome.
+type modelResult struct {
+	modelID string
+	outcome *models.EvaluationOutcome
+}
 
 func newRunCommand() *cobra.Command {
 	cmd := &cobra.Command{
@@ -58,6 +66,7 @@ Resources are loaded from the context directory (defaults to ./fixtures).`,
 	cmd.Flags().BoolVar(&enableCache, "cache", false, "Enable result caching (default: false)")
 	cmd.Flags().BoolVar(&disableCache, "no-cache", false, "Disable result caching (default)")
 	cmd.Flags().StringVar(&runCacheDir, "cache-dir", ".waza-cache", "Cache directory for storing results")
+	cmd.Flags().StringArrayVar(&modelOverrides, "model", nil, "Model to use (overrides spec config, can be repeated for comparison)")
 
 	return cmd
 }
@@ -79,6 +88,63 @@ func runCommandE(cmd *cobra.Command, args []string) error {
 		spec.Config.Workers = workers
 	}
 
+	// Determine the list of models to evaluate
+	modelsToRun := []string{spec.Config.ModelID}
+	if len(modelOverrides) > 0 {
+		modelsToRun = modelOverrides
+	}
+	multiModel := len(modelsToRun) > 1
+
+	// Run evaluation for each model, collecting results
+	var allResults []modelResult
+	var lastErr error
+
+	for _, modelID := range modelsToRun {
+		// Override spec model for this iteration
+		spec.Config.ModelID = modelID
+
+		outcome, err := runSingleModel(cmd, spec, specPath)
+		if err != nil {
+			var testErr *TestFailureError
+			if errors.As(err, &testErr) {
+				// Test failures are recorded but don't stop a multi-model run
+				allResults = append(allResults, modelResult{modelID: modelID, outcome: outcome})
+				lastErr = err
+				continue
+			}
+			return err
+		}
+		allResults = append(allResults, modelResult{modelID: modelID, outcome: outcome})
+	}
+
+	// Print comparison table when multiple models were evaluated
+	if multiModel && len(allResults) > 0 {
+		printModelComparison(allResults)
+	}
+
+	// Save per-model results when --output is specified with multiple models
+	if outputPath != "" && multiModel {
+		ext := filepath.Ext(outputPath)
+		base := strings.TrimSuffix(outputPath, ext)
+		for _, mr := range allResults {
+			perModelPath := fmt.Sprintf("%s_%s%s", base, sanitizeModelName(mr.modelID), ext)
+			if err := saveOutcome(mr.outcome, perModelPath); err != nil {
+				return fmt.Errorf("failed to save output for model %s: %w", mr.modelID, err)
+			}
+			fmt.Printf("Results saved to: %s\n", perModelPath)
+		}
+	}
+
+	if lastErr != nil {
+		return lastErr
+	}
+
+	return nil
+}
+
+// runSingleModel executes a benchmark for one model and returns the outcome.
+// It prints the per-model summary and saves output for single-model runs.
+func runSingleModel(_ *cobra.Command, spec *models.BenchmarkSpec, specPath string) (*models.EvaluationOutcome, error) {
 	// Get spec directory for resolving relative paths
 	specDir := filepath.Dir(specPath)
 	if !filepath.IsAbs(specDir) {
@@ -91,10 +157,8 @@ func runCommandE(cmd *cobra.Command, args []string) error {
 	// Resolve fixture/context dir relative to spec file if not absolute
 	fixtureDir := contextDir
 	if fixtureDir == "" {
-		// Default to "fixtures" subdirectory in spec directory
 		fixtureDir = filepath.Join(specDir, "fixtures")
 	} else if !filepath.IsAbs(fixtureDir) {
-		// If relative, make it relative to current working directory, not spec dir
 		absFixtureDir, err := filepath.Abs(fixtureDir)
 		if err == nil {
 			fixtureDir = absFixtureDir
@@ -103,8 +167,8 @@ func runCommandE(cmd *cobra.Command, args []string) error {
 
 	// Create config with both directories
 	cfg := config.NewBenchmarkConfig(spec,
-		config.WithSpecDir(specDir),       // For resolving test file patterns
-		config.WithFixtureDir(fixtureDir), // For loading resource files
+		config.WithSpecDir(specDir),
+		config.WithFixtureDir(fixtureDir),
 		config.WithVerbose(verbose),
 		config.WithOutputPath(outputPath),
 		config.WithTranscriptDir(transcriptDir),
@@ -114,7 +178,6 @@ func runCommandE(cmd *cobra.Command, args []string) error {
 	var resultCache *cache.Cache
 	useCaching := enableCache && !disableCache
 
-	// Skip cache for non-deterministic graders
 	if useCaching && cache.HasNonDeterministicGraders(spec) {
 		if verbose {
 			fmt.Println("Note: Caching disabled due to non-deterministic graders (behavior, prompt)")
@@ -123,10 +186,9 @@ func runCommandE(cmd *cobra.Command, args []string) error {
 	}
 
 	if useCaching {
-		// Resolve cache directory to absolute path
 		absCacheDir, err := filepath.Abs(runCacheDir)
 		if err != nil {
-			return fmt.Errorf("resolving cache directory: %w", err)
+			return nil, fmt.Errorf("resolving cache directory: %w", err)
 		}
 		resultCache = cache.New(absCacheDir)
 		if verbose {
@@ -143,7 +205,7 @@ func runCommandE(cmd *cobra.Command, args []string) error {
 	case "copilot-sdk":
 		engine = execution.NewCopilotEngineBuilder(spec.Config.ModelID).Build()
 	default:
-		return fmt.Errorf("unknown engine type: %s", spec.Config.EngineType)
+		return nil, fmt.Errorf("unknown engine type: %s", spec.Config.EngineType)
 	}
 
 	// Create runner with optional task filters and cache
@@ -177,7 +239,6 @@ func runCommandE(cmd *cobra.Command, args []string) error {
 		fmt.Printf("Parallel: %d workers\n", w)
 	}
 
-	// Print skill directories in verbose mode
 	if verbose && len(spec.Config.SkillPaths) > 0 {
 		fmt.Printf("Skill Directories:\n")
 		resolvedPaths := utils.ResolvePaths(spec.Config.SkillPaths, specDir)
@@ -190,7 +251,7 @@ func runCommandE(cmd *cobra.Command, args []string) error {
 
 	outcome, err := runner.RunBenchmark(ctx)
 	if err != nil {
-		return fmt.Errorf("benchmark failed: %w", err)
+		return nil, fmt.Errorf("benchmark failed: %w", err)
 	}
 
 	// Print results based on format
@@ -198,34 +259,63 @@ func runCommandE(cmd *cobra.Command, args []string) error {
 	case "github-comment":
 		fmt.Print(FormatGitHubComment(outcome))
 	case "default":
-		// Print summary
 		printSummary(outcome)
 
-		// Print plain-language interpretation if requested
 		if interpret {
 			fmt.Println()
 			fmt.Print(reporting.FormatSummaryReport(outcome))
 		}
 	default:
-		return fmt.Errorf("unknown output format: %s (supported: default, github-comment)", format)
+		return nil, fmt.Errorf("unknown output format: %s (supported: default, github-comment)", format)
 	}
 
-	// Save output if requested
-	if outputPath != "" {
+	// Save output for single-model runs (multi-model saves are handled by the caller)
+	if outputPath != "" && len(modelOverrides) <= 1 {
 		if err := saveOutcome(outcome, outputPath); err != nil {
-			return fmt.Errorf("failed to save output: %w", err)
+			return nil, fmt.Errorf("failed to save output: %w", err)
 		}
 		fmt.Printf("\nResults saved to: %s\n", outputPath)
 	}
 
-	// Exit with error code if tests failed
+	// Return test failure as error so caller can decide how to handle it
 	if outcome.Digest.Failed > 0 || outcome.Digest.Errors > 0 {
-		return &TestFailureError{
+		return outcome, &TestFailureError{
 			Message: fmt.Sprintf("benchmark completed with %d failed and %d error(s)", outcome.Digest.Failed, outcome.Digest.Errors),
 		}
 	}
 
-	return nil
+	return outcome, nil
+}
+
+// printModelComparison renders a comparison table for multi-model runs.
+func printModelComparison(results []modelResult) {
+	fmt.Println()
+	fmt.Println("═" + strings.Repeat("═", 54))
+	fmt.Println(" MODEL COMPARISON")
+	fmt.Println("═" + strings.Repeat("═", 54))
+	fmt.Println()
+	fmt.Printf("%-20s %-8s %-10s %s\n", "Model", "Score", "Pass Rate", "Duration")
+	fmt.Println("─" + strings.Repeat("─", 54))
+
+	for _, mr := range results {
+		score := 0.0
+		passRate := 0.0
+		durationMs := int64(0)
+		if mr.outcome != nil {
+			score = mr.outcome.Digest.AggregateScore
+			passRate = mr.outcome.Digest.SuccessRate * 100
+			durationMs = mr.outcome.Digest.DurationMs
+		}
+		duration := time.Duration(durationMs) * time.Millisecond
+		fmt.Printf("%-20s %-8.2f %-10.1f%% %v\n", mr.modelID, score, passRate, duration)
+	}
+	fmt.Println()
+}
+
+// sanitizeModelName replaces characters that are invalid in filenames.
+func sanitizeModelName(name string) string {
+	r := strings.NewReplacer("/", "-", "\\", "-", ":", "-", " ", "-")
+	return r.Replace(name)
 }
 
 func verboseProgressListener(event orchestration.ProgressEvent) {
