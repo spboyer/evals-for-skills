@@ -3,6 +3,7 @@ package main
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io"
 	"os"
 	"path/filepath"
@@ -565,4 +566,259 @@ func TestRunCommand_FormatInvalid(t *testing.T) {
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "unknown output format")
 	assert.Contains(t, err.Error(), "invalid-format")
+}
+
+// ---------------------------------------------------------------------------
+// --model flag: multi-model support (#39)
+// ---------------------------------------------------------------------------
+
+func TestRunCommand_ModelFlagParsed(t *testing.T) {
+	cmd := newRunCommand()
+	require.NoError(t, cmd.ParseFlags([]string{"--model", "gpt-4o-mini"}))
+
+	vals, err := cmd.Flags().GetStringArray("model")
+	require.NoError(t, err)
+	assert.Equal(t, []string{"gpt-4o-mini"}, vals)
+}
+
+func TestRunCommand_ModelFlagMultiple(t *testing.T) {
+	cmd := newRunCommand()
+	require.NoError(t, cmd.ParseFlags([]string{
+		"--model", "gpt-4o",
+		"--model", "claude-sonnet",
+	}))
+
+	vals, err := cmd.Flags().GetStringArray("model")
+	require.NoError(t, err)
+	assert.Equal(t, []string{"gpt-4o", "claude-sonnet"}, vals)
+}
+
+func TestRunCommand_ModelFlagEdgeCases(t *testing.T) {
+	tests := []struct {
+		name     string
+		flags    []string
+		expected []string
+	}{
+		{
+			name:     "single model",
+			flags:    []string{"--model", "gpt-4o"},
+			expected: []string{"gpt-4o"},
+		},
+		{
+			name:     "three models for comparison",
+			flags:    []string{"--model", "gpt-4o", "--model", "claude-sonnet", "--model", "gpt-4o-mini"},
+			expected: []string{"gpt-4o", "claude-sonnet", "gpt-4o-mini"},
+		},
+		{
+			name:     "model with version suffix",
+			flags:    []string{"--model", "gpt-4o-2024-08-06"},
+			expected: []string{"gpt-4o-2024-08-06"},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			cmd := newRunCommand()
+			require.NoError(t, cmd.ParseFlags(tt.flags))
+
+			vals, err := cmd.Flags().GetStringArray("model")
+			require.NoError(t, err)
+			assert.Equal(t, tt.expected, vals)
+		})
+	}
+}
+
+func TestRunCommand_ModelOverridesSpec(t *testing.T) {
+	resetRunGlobals()
+
+	// Spec declares model: claude-sonnet; CLI overrides with gpt-4o-mini.
+	dir := t.TempDir()
+	taskDir := filepath.Join(dir, "tasks")
+	require.NoError(t, os.MkdirAll(taskDir, 0o755))
+	require.NoError(t, os.WriteFile(
+		filepath.Join(taskDir, "t.yaml"),
+		[]byte("id: t1\nname: t\ninputs:\n  prompt: hi\n"),
+		0o644,
+	))
+
+	spec := `name: test-override
+skill: test-skill
+version: "1.0"
+config:
+  trials_per_task: 1
+  timeout_seconds: 30
+  executor: mock
+  model: claude-sonnet
+tasks:
+  - "tasks/*.yaml"
+`
+	specPath := filepath.Join(dir, "eval.yaml")
+	require.NoError(t, os.WriteFile(specPath, []byte(spec), 0o644))
+	outFile := filepath.Join(dir, "results.json")
+
+	cmd := newRunCommand()
+	cmd.SetArgs([]string{specPath, "--model", "gpt-4o-mini", "--output", outFile})
+	cmd.SetOut(io.Discard)
+	cmd.SetErr(io.Discard)
+
+	err := cmd.Execute()
+	require.NoError(t, err)
+
+	data, err := os.ReadFile(outFile)
+	require.NoError(t, err)
+
+	var result map[string]any
+	require.NoError(t, json.Unmarshal(data, &result))
+	cfg, ok := result["config"].(map[string]any)
+	require.True(t, ok, "expected config key in output JSON")
+	assert.Equal(t, "gpt-4o-mini", cfg["model_id"],
+		"--model flag should override spec config model")
+}
+
+func TestRunCommand_MultiModelExecution(t *testing.T) {
+	resetRunGlobals()
+
+	specPath := createTestSpec(t, "mock")
+	outDir := t.TempDir()
+	outFile := filepath.Join(outDir, "results.json")
+
+	cmd := newRunCommand()
+	cmd.SetArgs([]string{
+		specPath,
+		"--model", "gpt-4o",
+		"--model", "claude-sonnet",
+		"--output", outFile,
+	})
+	cmd.SetOut(io.Discard)
+	cmd.SetErr(io.Discard)
+
+	err := cmd.Execute()
+	require.NoError(t, err)
+
+	// Multi-model saves per-model files: results_<model>.json
+	for _, model := range []string{"gpt-4o", "claude-sonnet"} {
+		perModelPath := filepath.Join(outDir, fmt.Sprintf("results_%s.json", model))
+		data, err := os.ReadFile(perModelPath)
+		require.NoError(t, err, "expected per-model output for %s", model)
+		assert.Greater(t, len(data), 0)
+
+		var result map[string]any
+		require.NoError(t, json.Unmarshal(data, &result))
+		cfg, ok := result["config"].(map[string]any)
+		require.True(t, ok)
+		assert.Equal(t, model, cfg["model_id"],
+			"per-model output should reflect the model that was evaluated")
+	}
+}
+
+func TestRunCommand_NoModelFlagPreservesYAML(t *testing.T) {
+	resetRunGlobals()
+
+	specPath := createTestSpec(t, "mock") // spec has model: test-model
+	outFile := filepath.Join(t.TempDir(), "results.json")
+
+	cmd := newRunCommand()
+	cmd.SetArgs([]string{specPath, "--output", outFile})
+	cmd.SetOut(io.Discard)
+	cmd.SetErr(io.Discard)
+
+	err := cmd.Execute()
+	require.NoError(t, err)
+
+	data, err := os.ReadFile(outFile)
+	require.NoError(t, err)
+
+	var result map[string]any
+	require.NoError(t, json.Unmarshal(data, &result))
+	cfg, ok := result["config"].(map[string]any)
+	require.True(t, ok)
+	assert.Equal(t, "test-model", cfg["model_id"],
+		"without --model flag, spec config model should be preserved")
+}
+
+func TestRunCommand_ModelNameInOutputJSON(t *testing.T) {
+	resetRunGlobals()
+
+	specPath := createTestSpec(t, "mock")
+	outFile := filepath.Join(t.TempDir(), "results.json")
+
+	cmd := newRunCommand()
+	cmd.SetArgs([]string{specPath, "--model", "gpt-4o", "--output", outFile})
+	cmd.SetOut(io.Discard)
+	cmd.SetErr(io.Discard)
+
+	err := cmd.Execute()
+	require.NoError(t, err)
+
+	data, err := os.ReadFile(outFile)
+	require.NoError(t, err)
+
+	var result map[string]any
+	require.NoError(t, json.Unmarshal(data, &result))
+
+	// Model name must appear in config section of output
+	cfg, ok := result["config"].(map[string]any)
+	require.True(t, ok)
+	assert.Equal(t, "gpt-4o", cfg["model_id"],
+		"model name should appear in results JSON config")
+}
+
+func TestRunCommand_SingleModelMatchingSpecIsNoop(t *testing.T) {
+	resetRunGlobals()
+
+	specPath := createTestSpec(t, "mock") // model: test-model
+	outFile := filepath.Join(t.TempDir(), "results.json")
+
+	// Passing --model with the same value as the spec should behave
+	// identically to not passing --model at all.
+	cmd := newRunCommand()
+	cmd.SetArgs([]string{specPath, "--model", "test-model", "--output", outFile})
+	cmd.SetOut(io.Discard)
+	cmd.SetErr(io.Discard)
+
+	err := cmd.Execute()
+	require.NoError(t, err)
+
+	data, err := os.ReadFile(outFile)
+	require.NoError(t, err)
+
+	var result map[string]any
+	require.NoError(t, json.Unmarshal(data, &result))
+	cfg, ok := result["config"].(map[string]any)
+	require.True(t, ok)
+	assert.Equal(t, "test-model", cfg["model_id"],
+		"--model matching spec model should produce identical results")
+}
+
+func TestRunCommand_MultiModelComparisonTablePrinted(t *testing.T) {
+	resetRunGlobals()
+
+	specPath := createTestSpec(t, "mock")
+
+	// Capture stdout to verify the comparison table is printed.
+	oldStdout := os.Stdout
+	r, w, err := os.Pipe()
+	require.NoError(t, err)
+	os.Stdout = w
+
+	cmd := newRunCommand()
+	cmd.SetArgs([]string{specPath, "--model", "gpt-4o", "--model", "claude-sonnet"})
+	cmd.SetErr(io.Discard)
+
+	execErr := cmd.Execute()
+
+	_ = w.Close()
+	os.Stdout = oldStdout
+
+	out, readErr := io.ReadAll(r)
+	require.NoError(t, readErr)
+	require.NoError(t, execErr)
+
+	output := string(out)
+	assert.Contains(t, output, "MODEL COMPARISON",
+		"multi-model run should print comparison table header")
+	assert.Contains(t, output, "gpt-4o",
+		"comparison table should list gpt-4o")
+	assert.Contains(t, output, "claude-sonnet",
+		"comparison table should list claude-sonnet")
 }
