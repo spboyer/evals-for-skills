@@ -807,7 +807,7 @@ func TestRunCommand_MultiModelComparisonTablePrinted(t *testing.T) {
 
 	execErr := cmd.Execute()
 
-	_ = w.Close()
+	require.NoError(t, w.Close())
 	os.Stdout = oldStdout
 
 	out, readErr := io.ReadAll(r)
