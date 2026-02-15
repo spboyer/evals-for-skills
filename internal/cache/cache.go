@@ -251,7 +251,7 @@ func hashFile(h io.Writer, path string) error {
 	if err != nil {
 		return err
 	}
-	defer f.Close()
+	defer func() { _ = f.Close() }()
 
 	if _, err := io.Copy(h, f); err != nil {
 		return err

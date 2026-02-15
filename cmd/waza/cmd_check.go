@@ -121,92 +121,93 @@ func displayReadinessReport(out interface{ Write([]byte) (int, error) }, report 
 	w := out
 
 	// Header
-	fmt.Fprintf(w, "\n🔍 Skill Readiness Check\n")
-	fmt.Fprintf(w, "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n")
+	_, _ = fmt.Fprintf(w, "\n🔍 Skill Readiness Check\n")
+	_, _ = fmt.Fprintf(w, "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n")
 
 	skillName := report.skillName
 	if skillName == "" {
 		skillName = "unnamed-skill"
 	}
-	fmt.Fprintf(w, "Skill: %s\n\n", skillName)
+	_, _ = fmt.Fprintf(w, "Skill: %s\n\n", skillName)
 
 	// 1. Compliance Check
-	fmt.Fprintf(w, "📋 Compliance Score: %s\n", report.complianceLevel)
-	if report.complianceLevel == dev.AdherenceHigh {
-		fmt.Fprintf(w, "   ✅ Excellent! Your skill meets all compliance requirements.\n")
-	} else if report.complianceLevel == dev.AdherenceMediumHigh {
-		fmt.Fprintf(w, "   ⚠️  Good, but could be improved. Missing routing clarity.\n")
-	} else if report.complianceLevel == dev.AdherenceMedium {
-		fmt.Fprintf(w, "   ⚠️  Needs improvement. Missing anti-triggers and routing clarity.\n")
-	} else {
-		fmt.Fprintf(w, "   ❌ Needs significant improvement. Description too short or missing triggers.\n")
+	_, _ = fmt.Fprintf(w, "📋 Compliance Score: %s\n", report.complianceLevel)
+	switch report.complianceLevel {
+	case dev.AdherenceHigh:
+		_, _ = fmt.Fprintf(w, "   ✅ Excellent! Your skill meets all compliance requirements.\n")
+	case dev.AdherenceMediumHigh:
+		_, _ = fmt.Fprintf(w, "   ⚠️  Good, but could be improved. Missing routing clarity.\n")
+	case dev.AdherenceMedium:
+		_, _ = fmt.Fprintf(w, "   ⚠️  Needs improvement. Missing anti-triggers and routing clarity.\n")
+	default:
+		_, _ = fmt.Fprintf(w, "   ❌ Needs significant improvement. Description too short or missing triggers.\n")
 	}
 
 	if len(report.complianceScore.Issues) > 0 {
-		fmt.Fprintf(w, "   Issues found:\n")
+		_, _ = fmt.Fprintf(w, "   Issues found:\n")
 		for _, issue := range report.complianceScore.Issues {
 			emoji := "⚠️"
 			if issue.Severity == "error" {
 				emoji = "❌"
 			}
-			fmt.Fprintf(w, "   %s %s\n", emoji, issue.Message)
+			_, _ = fmt.Fprintf(w, "   %s %s\n", emoji, issue.Message)
 		}
 	}
-	fmt.Fprintf(w, "\n")
+	_, _ = fmt.Fprintf(w, "\n")
 
 	// 2. Token Budget Check
-	fmt.Fprintf(w, "📊 Token Budget: %d / %d tokens\n", report.tokenCount, report.tokenLimit)
+	_, _ = fmt.Fprintf(w, "📊 Token Budget: %d / %d tokens\n", report.tokenCount, report.tokenLimit)
 	if report.tokenExceeded {
 		over := report.tokenCount - report.tokenLimit
-		fmt.Fprintf(w, "   ❌ Exceeds limit by %d tokens. Consider reducing content.\n", over)
+		_, _ = fmt.Fprintf(w, "   ❌ Exceeds limit by %d tokens. Consider reducing content.\n", over)
 	} else {
 		remaining := report.tokenLimit - report.tokenCount
-		fmt.Fprintf(w, "   ✅ Within budget (%d tokens remaining).\n", remaining)
+		_, _ = fmt.Fprintf(w, "   ✅ Within budget (%d tokens remaining).\n", remaining)
 	}
-	fmt.Fprintf(w, "\n")
+	_, _ = fmt.Fprintf(w, "\n")
 
 	// 3. Evaluation Check
-	fmt.Fprintf(w, "🧪 Evaluation Suite: ")
+	_, _ = fmt.Fprintf(w, "🧪 Evaluation Suite: ")
 	if report.hasEval {
-		fmt.Fprintf(w, "Found\n")
-		fmt.Fprintf(w, "   ✅ eval.yaml detected. Run 'waza run eval.yaml' to test.\n")
+		_, _ = fmt.Fprintf(w, "Found\n")
+		_, _ = fmt.Fprintf(w, "   ✅ eval.yaml detected. Run 'waza run eval.yaml' to test.\n")
 	} else {
-		fmt.Fprintf(w, "Not Found\n")
-		fmt.Fprintf(w, "   ⚠️  No eval.yaml found. Consider creating tests.\n")
+		_, _ = fmt.Fprintf(w, "Not Found\n")
+		_, _ = fmt.Fprintf(w, "   ⚠️  No eval.yaml found. Consider creating tests.\n")
 	}
-	fmt.Fprintf(w, "\n")
+	_, _ = fmt.Fprintf(w, "\n")
 
 	// Overall Readiness Assessment
-	fmt.Fprintf(w, "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n")
-	fmt.Fprintf(w, "📈 Overall Readiness\n")
-	fmt.Fprintf(w, "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n")
+	_, _ = fmt.Fprintf(w, "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n")
+	_, _ = fmt.Fprintf(w, "📈 Overall Readiness\n")
+	_, _ = fmt.Fprintf(w, "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n")
 
 	isReady := report.complianceLevel.AtLeast(dev.AdherenceMediumHigh) &&
 		!report.tokenExceeded
 
 	if isReady {
-		fmt.Fprintf(w, "✅ Your skill is ready for submission!\n\n")
+		_, _ = fmt.Fprintf(w, "✅ Your skill is ready for submission!\n\n")
 	} else {
-		fmt.Fprintf(w, "⚠️  Your skill needs some work before submission.\n\n")
+		_, _ = fmt.Fprintf(w, "⚠️  Your skill needs some work before submission.\n\n")
 	}
 
 	// Next Steps
-	fmt.Fprintf(w, "🎯 Next Steps\n")
-	fmt.Fprintf(w, "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n")
+	_, _ = fmt.Fprintf(w, "🎯 Next Steps\n")
+	_, _ = fmt.Fprintf(w, "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n")
 
 	steps := generateNextSteps(report)
 	if len(steps) == 0 {
-		fmt.Fprintf(w, "✨ No action needed! Your skill looks great.\n")
-		fmt.Fprintf(w, "\nConsider:\n")
-		fmt.Fprintf(w, "  • Running 'waza run eval.yaml' to verify functionality\n")
-		fmt.Fprintf(w, "  • Submitting a PR to microsoft/skills\n")
+		_, _ = fmt.Fprintf(w, "✨ No action needed! Your skill looks great.\n")
+		_, _ = fmt.Fprintf(w, "\nConsider:\n")
+		_, _ = fmt.Fprintf(w, "  • Running 'waza run eval.yaml' to verify functionality\n")
+		_, _ = fmt.Fprintf(w, "  • Submitting a PR to microsoft/skills\n")
 	} else {
-		fmt.Fprintf(w, "To improve your skill:\n\n")
+		_, _ = fmt.Fprintf(w, "To improve your skill:\n\n")
 		for i, step := range steps {
-			fmt.Fprintf(w, "%d. %s\n", i+1, step)
+			_, _ = fmt.Fprintf(w, "%d. %s\n", i+1, step)
 		}
 	}
-	fmt.Fprintf(w, "\n")
+	_, _ = fmt.Fprintf(w, "\n")
 }
 
 func generateNextSteps(report *readinessReport) []string {

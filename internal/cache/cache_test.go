@@ -41,7 +41,7 @@ func TestCacheKey(t *testing.T) {
 	}
 
 	tempDir := t.TempDir()
-	
+
 	// Create fixture files
 	file1 := filepath.Join(tempDir, "file1.txt")
 	file2 := filepath.Join(tempDir, "file2.txt")
@@ -233,8 +233,8 @@ func TestHasNonDeterministicGraders(t *testing.T) {
 		expected bool
 	}{
 		{
-			name: "no graders",
-			graders: []models.GraderConfig{},
+			name:     "no graders",
+			graders:  []models.GraderConfig{},
 			expected: false,
 		},
 		{
@@ -619,7 +619,7 @@ func TestCache_ConcurrentOperations(t *testing.T) {
 							TestID: fmt.Sprintf("mixed-test-%d", id),
 							Status: models.StatusPassed,
 						}
-						_ = c.Put(key, outcome)
+						require.NoError(t, c.Put(key, outcome))
 					} else {
 						// Get operation
 						key := fmt.Sprintf("mixed-key-%d", id)
