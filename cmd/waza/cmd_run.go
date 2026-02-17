@@ -320,7 +320,7 @@ func runSingleModel(_ *cobra.Command, spec *models.BenchmarkSpec, specPath strin
 			if w <= 0 {
 				w = 4
 			}
-			tr := trigger.NewRunner(triggerSpec, engine, verbose, os.Stdout, w)
+			tr := trigger.NewRunner(triggerSpec, engine, cfg, os.Stdout)
 			if verbose {
 				fmt.Println("Running trigger tests...")
 			}

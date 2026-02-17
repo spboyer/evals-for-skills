@@ -8,17 +8,18 @@ import (
 	"slices"
 	"sync"
 
+	"github.com/spboyer/waza/internal/config"
 	"github.com/spboyer/waza/internal/execution"
 	"github.com/spboyer/waza/internal/models"
+	"github.com/spboyer/waza/internal/utils"
 )
 
 // Runner executes trigger tests and returns classification metrics.
 type Runner struct {
-	spec    *TestSpec
-	engine  execution.AgentEngine
-	verbose bool
-	out     io.Writer
-	workers int
+	spec   *TestSpec
+	engine execution.AgentEngine
+	cfg    *config.BenchmarkConfig
+	out    io.Writer
 }
 
 type task struct {
@@ -33,11 +34,8 @@ type taskResult struct {
 	err       error
 }
 
-func NewRunner(spec *TestSpec, engine execution.AgentEngine, verbose bool, out io.Writer, workers int) *Runner {
-	if workers <= 0 {
-		workers = 4
-	}
-	return &Runner{spec: spec, engine: engine, verbose: verbose, out: out, workers: workers}
+func NewRunner(spec *TestSpec, engine execution.AgentEngine, cfg *config.BenchmarkConfig, out io.Writer) *Runner {
+	return &Runner{spec: spec, engine: engine, cfg: cfg, out: out}
 }
 
 func (r *Runner) Run(ctx context.Context) (*models.TriggerMetrics, error) {
@@ -49,8 +47,12 @@ func (r *Runner) Run(ctx context.Context) (*models.TriggerMetrics, error) {
 		tasks = append(tasks, task{prompt: p.Prompt, confidence: p.Confidence, shouldTrigger: false})
 	}
 
+	workers := r.cfg.Spec().Config.Workers
+	if workers <= 0 {
+		workers = 4
+	}
 	outcomes := make([]taskResult, len(tasks))
-	sem := make(chan struct{}, r.workers)
+	sem := make(chan struct{}, workers)
 	var wg sync.WaitGroup
 	for i, t := range tasks {
 		wg.Add(1)
@@ -77,7 +79,7 @@ func (r *Runner) Run(ctx context.Context) (*models.TriggerMetrics, error) {
 		o := outcomes[i]
 		if o.err != nil {
 			errorCount++
-			if r.verbose && r.out != nil {
+			if r.cfg.Verbose() && r.out != nil {
 				if _, err := fmt.Fprintf(r.out, "    ✗ [error] %q: %v\n", t.prompt, o.err); err != nil {
 					fmt.Fprintf(os.Stderr, "error writing trigger test output: %v\n", err)
 				}
@@ -97,7 +99,7 @@ func (r *Runner) Run(ctx context.Context) (*models.TriggerMetrics, error) {
 			icon = "✗"
 		}
 
-		if r.verbose && r.out != nil {
+		if r.cfg.Verbose() && r.out != nil {
 			label := "should trigger"
 			if !t.shouldTrigger {
 				label = "should NOT trigger"
@@ -133,11 +135,15 @@ func (r *Runner) Run(ctx context.Context) (*models.TriggerMetrics, error) {
 }
 
 func (r *Runner) testTrigger(ctx context.Context, prompt string) (*execution.ExecutionResponse, error) {
-	resp, err := r.engine.Execute(ctx, &execution.ExecutionRequest{
+	spec := r.cfg.Spec()
+	timeout := spec.Config.TimeoutSec
+	if timeout <= 0 {
+		timeout = 60
+	}
+	return r.engine.Execute(ctx, &execution.ExecutionRequest{
 		Message:    prompt,
 		SkillName:  r.spec.Skill,
-		TimeoutSec: 60,
+		SkillPaths: utils.ResolvePaths(spec.Config.SkillPaths, r.cfg.SpecDir()),
+		TimeoutSec: timeout,
 	})
-
-	return resp, err
 }

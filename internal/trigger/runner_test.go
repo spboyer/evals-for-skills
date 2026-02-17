@@ -7,7 +7,9 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/spboyer/waza/internal/config"
 	"github.com/spboyer/waza/internal/execution"
+	"github.com/spboyer/waza/internal/models"
 )
 
 func TestDiscover(t *testing.T) {
@@ -98,7 +100,8 @@ func TestRunnerWithMockEngine(t *testing.T) {
 	}
 
 	engine := &stubEngine{skill: "mock-skill"}
-	r := NewRunner(spec, engine, false, nil, 1)
+	cfg := config.NewBenchmarkConfig(&models.BenchmarkSpec{SkillName: "mock-skill"})
+	r := NewRunner(spec, engine, cfg, nil)
 	m, err := r.Run(t.Context())
 	if err != nil {
 		t.Fatal(err)
@@ -133,6 +136,52 @@ func (e *stubEngine) Execute(_ context.Context, req *execution.ExecutionRequest)
 	}, nil
 }
 
+func TestRunnerRunConfig(t *testing.T) {
+	spec := &TestSpec{
+		Skill: "my-skill",
+		ShouldTriggerPrompts: []TestPrompt{
+			{Prompt: "hello"},
+		},
+	}
+
+	engine := &capturingEngine{}
+	cfg := config.NewBenchmarkConfig(
+		&models.BenchmarkSpec{
+			SkillName: "my-skill",
+			Config: models.Config{
+				TimeoutSec: 120,
+				SkillPaths: []string{"skills/a", "skills/b"},
+			},
+		},
+		config.WithSpecDir("/base"),
+	)
+	r := NewRunner(spec, engine, cfg, nil)
+	if _, err := r.Run(t.Context()); err != nil {
+		t.Fatal(err)
+	}
+	if engine.lastReq == nil {
+		t.Fatal("expected a captured request")
+	}
+	if engine.lastReq.TimeoutSec != 120 {
+		t.Errorf("TimeoutSec = %d, want 120", engine.lastReq.TimeoutSec)
+	}
+	if len(engine.lastReq.SkillPaths) != 2 {
+		t.Errorf("SkillPaths = %v, want 2 entries", engine.lastReq.SkillPaths)
+	}
+}
+
+type capturingEngine struct {
+	lastReq *execution.ExecutionRequest
+}
+
+func (e *capturingEngine) Initialize(context.Context) error { return nil }
+func (e *capturingEngine) Shutdown(context.Context) error   { return nil }
+
+func (e *capturingEngine) Execute(_ context.Context, req *execution.ExecutionRequest) (*execution.ExecutionResponse, error) {
+	e.lastReq = req
+	return &execution.ExecutionResponse{FinalOutput: "ok", Success: true}, nil
+}
+
 func TestRunnerNeverTriggers(t *testing.T) {
 	spec := &TestSpec{
 		Skill: "my-skill",
@@ -145,7 +194,8 @@ func TestRunnerNeverTriggers(t *testing.T) {
 	}
 
 	engine := &noTriggerEngine{}
-	r := NewRunner(spec, engine, false, nil, 1)
+	cfg := config.NewBenchmarkConfig(&models.BenchmarkSpec{SkillName: "my-skill"})
+	r := NewRunner(spec, engine, cfg, nil)
 	m, err := r.Run(t.Context())
 	if err != nil {
 		t.Fatal(err)
@@ -176,7 +226,8 @@ func TestRunnerPartialErrors(t *testing.T) {
 	}
 
 	engine := &errorOnPromptEngine{errorPrompt: "bad", skill: "my-skill"}
-	r := NewRunner(spec, engine, false, nil, 1)
+	cfg := config.NewBenchmarkConfig(&models.BenchmarkSpec{SkillName: "my-skill"})
+	r := NewRunner(spec, engine, cfg, nil)
 	m, err := r.Run(t.Context())
 	if err != nil {
 		t.Fatal(err)
@@ -206,7 +257,8 @@ func TestRunnerAllErrors(t *testing.T) {
 	}
 
 	engine := &errorOnPromptEngine{errorPrompt: "bad", skill: "my-skill"}
-	r := NewRunner(spec, engine, false, nil, 1)
+	cfg := config.NewBenchmarkConfig(&models.BenchmarkSpec{SkillName: "my-skill"})
+	r := NewRunner(spec, engine, cfg, nil)
 	m, err := r.Run(t.Context())
 	if err != nil {
 		t.Fatal(err)
