@@ -1,0 +1,84 @@
+# Tool Input Accuracy Rubric
+# Adapted from Azure ML's tool_input_accuracy evaluator
+# Source: https://github.com/Azure/azureml-assets/tree/main/assets/evaluators/builtin/tool_input_accuracy
+# For use with waza's `prompt` grader (see #104)
+
+name: tool_input_accuracy
+description: >
+  Performs a strict binary evaluation (PASS/FAIL) of whether ALL parameters passed
+  to tool calls are correct. Checks groundedness, type compliance, format compliance,
+  required parameters, unexpected parameters, and value appropriateness.
+version: "1.0.0"
+
+# Binary pass/fail: 0 or 1 → 0.0 or 1.0
+score_normalization:
+  type: binary
+  values: [0, 1]
+  normalized_map:
+    0: 0.0
+    1: 1.0
+
+input_mapping:
+  query: "session_transcript"
+  tool_calls: "tool_calls"
+  tool_definitions: "tool_definitions"
+
+evaluation_criteria: |
+  The evaluation must check ALL of the following criteria. If ANY criterion fails,
+  the overall result is FAIL:
+
+  1. **Parameter Groundedness**: ALL parameters must be derived from or supported by
+     information in the conversation history/query. NO fabricated or unsupported values.
+
+  2. **Type Compliance**: ALL parameters must match the exact type specified in the
+     tool definitions (string, number, boolean, array, object, etc.).
+
+  3. **Format Compliance**: ALL parameters must follow the exact format, structure,
+     and constraints specified in the tool definitions.
+
+  4. **Required Parameters**: ALL required parameters must be provided. Missing any
+     required parameter results in FAIL.
+
+  5. **Unexpected Parameters**: NO parameters should be provided that are not defined
+     in the tool definition. Any extra/unexpected parameters result in FAIL.
+
+  6. **Value Appropriateness**: ALL parameter values must be contextually appropriate
+     and meaningful for the tool's purpose.
+
+rating_levels:
+  0:
+    label: "Fail"
+    description: >
+      Any of the evaluation criteria fails, including: any parameter lacks grounding
+      in conversation history, any parameter has wrong type, any parameter has wrong
+      format/structure, any required parameter is missing, any unexpected parameter
+      is present, or any parameter value is inappropriate for the context.
+
+  1:
+    label: "Pass"
+    description: >
+      ALL criteria are satisfied perfectly. Every single parameter is properly
+      grounded in conversation history/query, correct type per tool definition,
+      proper format and structure, all required parameters present, no unexpected
+      parameters, and contextually appropriate values.
+
+chain_of_thought: |
+  Structure your reasoning as follows:
+  1. **Identify all tool calls**: List every tool call made by the agent.
+  2. **For each tool call, check each parameter against all criteria**:
+     - Is the parameter grounded in conversation history?
+     - Does it match the expected type from the tool definition?
+     - Does it follow the required format and constraints?
+     - Are all required parameters present?
+     - Are there any unexpected/undefined parameters?
+     - Is the value contextually appropriate?
+  3. **Aggregate results**: If ANY parameter fails ANY criterion, the overall
+     result is FAIL. Only PASS if every parameter passes every criterion.
+
+output_schema:
+  chain_of_thought: "string — step-by-step analysis of all parameters"
+  details:
+    total_parameters_passed: "integer"
+    correct_parameters_passed: "integer"
+    incorrect_parameters: "list of strings describing incorrect parameters with reasons"
+  result: "integer 0 or 1"

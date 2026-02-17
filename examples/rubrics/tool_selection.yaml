@@ -1,0 +1,112 @@
+# Tool Selection Rubric
+# Adapted from Azure ML's tool_selection evaluator
+# Source: https://github.com/Azure/azureml-assets/tree/main/assets/evaluators/builtin/tool_selection
+# For use with waza's `prompt` grader (see #104)
+
+name: tool_selection
+description: >
+  Evaluates whether the agent chose the right tools, avoided unnecessary tools,
+  and didn't miss essential tools needed to address the user's query. Focuses on
+  tool names only — does not evaluate parameter correctness or result correctness.
+version: "1.0.0"
+
+# Binary pass/fail: 0 or 1 → 0.0 or 1.0
+score_normalization:
+  type: binary
+  values: [0, 1]
+  normalized_map:
+    0: 0.0
+    1: 1.0
+
+input_mapping:
+  query: "session_transcript"
+  tool_calls: "tool_calls"
+  tool_definitions: "tool_definitions"
+
+evaluation_criteria: |
+  Evaluate based on these factors:
+
+  1. **Tool Selection**: Are the selected tools appropriate and useful for
+     addressing the user's query?
+
+  2. **Tool Completeness**: Did the agent select all ESSENTIAL tools available
+     in the tool definitions that are REQUIRED to address the core request?
+
+  3. **Tool Efficiency**: Did the agent avoid selecting unnecessary or redundant
+     tools?
+
+  4. **Scope Limitation**: ONLY evaluate tool selections in the agent's current
+     response. Tool calls in the conversation history are for context only.
+     Focus exclusively on the agent's response to the user's LAST query.
+
+  **Success Criteria**: Tools should be relevant to help answer the query. The
+  focus is on appropriate tool choice and the selected tools' ability to address
+  the user's query.
+
+  **Important**: If a tool was already called in prior conversation turns and its
+  data is still available, the agent does NOT need to call it again.
+
+rating_levels:
+  0:
+    label: "Fail"
+    description: >
+      The tool selection fails if any of the following are true:
+      tools selected are irrelevant or inappropriate; essential tools available
+      in definitions and needed to complete the task are not selected (and haven't
+      been called previously); the agent selected tools showing a fundamental
+      misunderstanding of the task requirements.
+    examples:
+      - >
+        User asks for weather information → Agent selects a file search tool
+        instead of the weather-fetching tool.
+      - >
+        User asks to analyze sales data and generate a report → Agent selects
+        only a data retrieval tool but misses the report generation tool (and
+        no prior data retrieval exists in conversation).
+
+  1:
+    label: "Pass"
+    description: >
+      The tool selection passes when all necessary tools have been selected
+      (considering both current tool calls and previous calls in conversation
+      history), even if redundant or unnecessary tools were also selected. All
+      essential tools must be available, and no selected tools should be
+      completely irrelevant.
+    examples:
+      - >
+        User asks for weather forecast → Agent selects weather tool (necessary)
+        plus calendar and reminder tools (unnecessary but not harmful).
+      - >
+        User asks for projected spend → Agent selects projection tool and has
+        access to spending data from previous tool calls in the conversation.
+
+chain_of_thought: |
+  Structure your reasoning as follows:
+  1. **Understand the user's query**: Analyze what the user is asking and identify
+     the specific operation type needed.
+  2. **Review conversation history for existing data**: Examine the conversation
+     history to identify what tools have already been called and what data is
+     already available. If a tool was called earlier and provided the necessary
+     data, the agent does NOT need to call it again.
+  3. **Identify required tools**: Determine which tools from available definitions
+     would be necessary, excluding tools already called with needed data.
+  4. **Analyze selected tools**: Examine which tools the agent actually selected.
+  5. **Evaluate appropriateness**: Assess if selected tools are relevant and most
+     appropriate for the specific query type.
+  6. **Check completeness**: Verify if essential tools are missing, counting only
+     tools not previously called whose data is needed.
+  7. **Assess efficiency**: Determine if unnecessary or redundant tools were selected.
+  8. **Determine the result**: Assign 0 (Fail) if tools are irrelevant, incorrect,
+     or missing essential tools not previously called. Assign 1 (Pass) if all needed
+     tools are selected (considering conversation history).
+
+output_schema:
+  explanation: "string — reasoning about tool selection appropriateness"
+  details:
+    correct_tool_selections: "integer"
+    wrong_tool_selections: "integer"
+    excessive_tools_used: "integer"
+    excessive_tools_list: "list of tool names"
+    missing_tools: "integer"
+    missing_tools_list: "list of tool names"
+  score: "integer 0 or 1"

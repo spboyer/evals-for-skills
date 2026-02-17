@@ -1,0 +1,95 @@
+# Tool Output Utilization Rubric
+# Adapted from Azure ML's tool_output_utilization evaluator
+# Source: https://github.com/Azure/azureml-assets/tree/main/assets/evaluators/builtin/tool_output_utilization
+# For use with waza's `prompt` grader (see #104)
+
+name: tool_output_utilization
+description: >
+  Binary evaluator that judges whether an agent correctly understands and uses
+  the outputs returned by tools it invoked. Focuses ONLY on incorrect, missing,
+  or fabricated uses of tool outputs — whether they appear in the final response
+  or are reused as inputs to subsequent tool calls. Does NOT judge tool selection,
+  correctness of new inputs, or general reasoning quality.
+version: "1.0.0"
+
+# Binary pass/fail: 0 or 1 → 0.0 or 1.0
+score_normalization:
+  type: binary
+  values: [0, 1]
+  normalized_map:
+    0: 0.0
+    1: 1.0
+
+input_mapping:
+  query: "session_transcript"
+  response: "agent_response"
+  tool_definitions: "tool_definitions"
+
+evaluation_criteria: |
+  Focus exclusively on uses of tool outputs. A "use" means any appearance or
+  incorporation of a prior tool output within the agent's response — either as
+  part of the textual content to the user or as a parameter inside a new tool call.
+
+  Do NOT evaluate:
+  - The correctness of which tool was used.
+  - Whether new tool inputs are valid by themselves.
+  - Task success or completeness.
+
+  Your judgment concerns ONLY whether previously returned tool outputs are
+  correctly understood and reused where they appear.
+
+  Conservative rule: if any tool-derived information appears incorrectly used
+  in the response, omitted when relevant, or fabricated, mark it as a fault.
+
+  If tool outputs are missing but the response claims to use them, that counts
+  as a fabricated use. If a tool fails, that is outside your scope — unless the
+  response misuses or misreports the failed output.
+
+rating_levels:
+  0:
+    label: "Fail"
+    description: >
+      Any misuse, fabrication, omission, or misinterpretation of a tool output,
+      including when a prior tool output is reused incorrectly in a new tool call.
+    fault_formats:
+      - "claim → MISMATCH (expected X, saw Y) mapped to tool_name.field_path"
+      - "claim → FABRICATED (no supporting tool field)"
+      - "use → FABRICATED (referenced value not found in prior tool outputs)"
+      - "use → MISMATCH (expected X, used Y) mapped to tool_name.field_path"
+    examples:
+      - >
+        Agent reports temperature as 28°F when tool returned 28 (Celsius per
+        tool definition). MISMATCH on unit interpretation.
+      - >
+        Agent claims item is in stock when tool returned qty=0. FABRICATED claim.
+      - >
+        User asks for checking account transactions. Agent uses savings account ID
+        (SAV200) instead of checking account ID (CHK100) from prior tool output.
+
+  1:
+    label: "Pass"
+    description: >
+      No faulty uses of tool outputs found. All tool-derived claims and uses
+      in the response match the prior tool outputs correctly (exact or
+      faithfully paraphrased).
+    examples:
+      - >
+        Agent correctly reports account balances from tool output and uses the
+        correct account IDs when making a transfer tool call.
+
+chain_of_thought: |
+  Structure your reasoning as follows:
+  1. **Identify all instances** in the response where tool outputs are used —
+     either referenced in text (factual claims) or reused as parameters in new
+     tool calls.
+  2. **For each instance**: Cross-check against the corresponding tool outputs
+     in the conversation history. If the usage faithfully matches → OK. If the
+     agent uses wrong values, wrong entities, incorrect transformations, or
+     fabricates data → record as fault.
+  3. **Populate the result**: List all detected faults (empty if none), provide
+     a concise rationale, and assign pass or fail.
+
+output_schema:
+  faulty_details: "list of strings — fault descriptions (empty if none)"
+  reason: "string — 1–2 sentence summary of why pass or fail"
+  label: "string — 'pass' or 'fail'"

@@ -1,0 +1,136 @@
+# Tool Call Accuracy Rubric
+# Adapted from Azure ML's tool_call_accuracy evaluator
+# Source: https://github.com/Azure/azureml-assets/tree/main/assets/evaluators/builtin/tool_call_accuracy
+# For use with waza's `prompt` grader (see #104)
+
+name: tool_call_accuracy
+description: >
+  Evaluates the overall effectiveness of ALL tool calls made by an agent in response
+  to a user's query. Considers collective relevance, parameter correctness, completeness,
+  efficiency, and execution success.
+version: "1.0.0"
+
+# Ordinal scale: 1–5 mapped to 0.0–1.0
+score_normalization:
+  type: ordinal
+  raw_min: 1
+  raw_max: 5
+  normalized_min: 0.0
+  normalized_max: 1.0
+  formula: "(raw - 1) / 4"
+
+input_mapping:
+  query: "session_transcript"
+  tool_calls: "tool_calls"
+  tool_definitions: "tool_definitions"
+
+evaluation_criteria: |
+  Evaluate based on these factors:
+
+  1. **Collective Relevance**: Do the tool calls, taken together, appropriately
+     address the user's query?
+
+  2. **Parameter Correctness**: Are all parameter values extracted from or reasonably
+     inferred from the conversation?
+     - Fabricated parameters automatically result in Level 2.
+
+  3. **Completeness**: Did the agent make all necessary tool calls available in the
+     tool definitions?
+     - Failed calls don't count as missing.
+
+  4. **Efficiency**: Did the agent avoid unnecessary duplicate tool calls with
+     identical parameters?
+     - Don't penalize single tools returning multiple results (like file_search).
+
+  5. **Execution Success**: Were tool calls executed successfully or recovered from
+     errors appropriately?
+
+  6. **Scope Limitation**: ONLY evaluate tool calls in the agent's response to the
+     user's LAST query. Prior tool calls are context only.
+
+  **Success Criteria**: Tools should retrieve relevant data to help answer the query.
+  Complete final answers are not required from individual tools.
+
+  **Tool Assessment**: Focus solely on appropriate use of available tools, not on
+  capabilities beyond what tools can provide.
+
+rating_levels:
+  1:
+    label: "Irrelevant"
+    description: >
+      Tool calls were not relevant to the user's query, resulting in irrelevant
+      or unhelpful output.
+    example: >
+      User asks for distance between two cities → Agent calls a weather function
+      to get the weather in the two cities.
+
+  2:
+    label: "Partially Relevant — Wrong Execution"
+    description: >
+      Tool calls were somewhat related to the user's query, but the agent could not
+      reach information that helps address the query due to one or more of:
+      incorrect parameters, missing tool calls (available in definitions), or
+      tool errors with no successful retrial.
+    examples:
+      - >
+        User asks for coordinates of Chicago. Agent calls the correct tool but
+        passes 'New York' instead of 'Chicago' as parameter.
+      - >
+        User asks a question needing 3 tool calls. Agent calls only 1 of the 3.
+
+  3:
+    label: "Relevant but Inefficient"
+    description: >
+      Tool calls were relevant with correct and grounded parameters leading to
+      correct output. However, multiple excessive, unnecessary tool calls were made.
+      Do NOT penalize built-in tools like file_search that naturally return multiple
+      results in a single call.
+    example: >
+      User asks for popular hotels in a place. Agent calls the same tool with the
+      same parameters multiple times, even though a single call is sufficient.
+
+  4:
+    label: "Correct with Retrials"
+    description: >
+      Tool calls were fully relevant and efficient. Correct tools were called with
+      correct grounded parameters. A tool returned an error, but the agent retried
+      and successfully got output.
+    example: >
+      User asks for weather forecast. Agent calls the correct tool, gets an error,
+      retries, and gets the correct output.
+
+  5:
+    label: "Optimal Solution"
+    description: >
+      Tool calls were fully relevant and efficient. Correct tools called with correct
+      grounded parameters. No unnecessary or excessive calls. No errors occurred.
+      The tool calls helped the agent address the user's query without issues.
+    examples:
+      - >
+        User asks for distance between two places. Agent correctly calls coordinate
+        retrieval tools then the distance calculator, passing correct arguments
+        without excess calls.
+      - >
+        User asks to summarize a SharePoint file. Agent calls sharepoint_grounding
+        to retrieve the file, enabling summarization.
+
+chain_of_thought: |
+  Structure your reasoning as follows:
+  1. **Start with the user's last query**: Understand what the last user message asks.
+  2. **Identify relevant available tools**: Analyze which tools in TOOL DEFINITIONS
+     could help answer the query.
+  3. **Analyze the actual tool calls made**: Compare what was done vs. what should
+     have been done.
+  4. **Check parameter grounding**: Ensure all parameters are grounded from the
+     conversation and not hallucinated.
+  5. **Determine the appropriate level**: Follow the level definitions precisely.
+
+output_schema:
+  chain_of_thought: "string — step-by-step reasoning"
+  tool_calls_success_level: "integer 1–5"
+  details:
+    tool_calls_made_by_agent: "integer"
+    correct_tool_calls_made_by_agent: "integer"
+    per_tool_call_details: "list of {tool_name, total_calls_required, correct_calls_made_by_agent, correct_tool_percentage, tool_call_errors, tool_success_result}"
+    excess_tool_calls: "{total, details: [{tool_name, excess_count}]}"
+    missing_tool_calls: "{total, details: [{tool_name, missing_count}]}"
