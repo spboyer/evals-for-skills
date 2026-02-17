@@ -1,6 +1,6 @@
-# Tool Call Evaluation Rubrics
+# Evaluation Rubrics
 
-Pre-built rubric configurations for evaluating how well an AI agent uses tools.
+Pre-built rubric configurations for evaluating AI agent quality.
 These are adapted from [Azure ML's built-in evaluators](https://github.com/Azure/azureml-assets/tree/main/assets/evaluators/builtin)
 for use with waza's `prompt` grader.
 
@@ -9,12 +9,23 @@ for use with waza's `prompt` grader.
 
 ## Rubrics
 
+### Tool Call Rubrics
+
 | File | What it evaluates | Scale |
 |------|-------------------|-------|
 | `tool_call_accuracy.yaml` | Overall tool call effectiveness (relevance, parameters, completeness, efficiency, execution) | 1–5 ordinal → 0.0–1.0 |
 | `tool_selection.yaml` | Whether the right tools were chosen and no essential tools were missed | Binary pass/fail → 0.0/1.0 |
 | `tool_input_accuracy.yaml` | Whether all parameters passed to tools are correct (grounded, typed, formatted) | Binary pass/fail → 0.0/1.0 |
 | `tool_output_utilization.yaml` | Whether the agent correctly uses data returned by tools in its response | Binary pass/fail → 0.0/1.0 |
+
+### Task Evaluation Rubrics
+
+| File | What it evaluates | Scale |
+|------|-------------------|-------|
+| `task_completion.yaml` | Whether the agent fully completed the user's task | Binary pass/fail → 0.0/1.0 |
+| `task_adherence.yaml` | Goal, rule, and procedural adherence (any material failure → 0.0) | Binary flag → 0.0/1.0 |
+| `intent_resolution.yaml` | How well the agent resolved the user's expressed intent | 1–5 ordinal → 0.0–1.0 |
+| `response_completeness.yaml` | How thoroughly the response covers the ground truth | 1–5 ordinal → 0.0–1.0 |
 
 ## How they work together
 

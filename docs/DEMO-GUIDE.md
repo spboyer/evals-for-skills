@@ -2,22 +2,24 @@
 
 **Comprehensive walk-through for demonstrating waza's capabilities.**
 
-This guide provides step-by-step instructions for 7 practical demonstrations covering all major waza features. Each demo is self-contained and can be run independently.
+This guide provides step-by-step instructions for 8 practical demonstrations covering all major waza features. Each demo is self-contained and can be run independently.
 
 ---
 
 ## Quick Setup
 
-Before any demo, ensure waza is built and ready:
+Before any demo, ensure waza is installed:
 
 ```bash
-cd /path/to/evals-for-skills
+# Option A: Binary install (recommended)
+curl -fsSL https://raw.githubusercontent.com/spboyer/waza/main/install.sh | bash
 
-# Build the binary
+# Option B: Build from source
+cd /path/to/evals-for-skills
 make build
 
 # Verify installation
-./waza-bin run --help
+waza run --help
 ```
 
 ---
@@ -538,6 +540,102 @@ echo "  ✅ Use Claude Sonnet in prod (best cost/quality ratio)"
 echo "  🔄 Monitor Claude Opus quarterly (check for improvements)"
 echo "  ❌ Skip GPT-4o for now (not worth 5x cost for 5% quality gain)"
 ```
+
+---
+
+## Demo 8: Azure ML Rubric Evaluation Demo (5 min)
+
+**What it shows:** Using pre-built Azure ML evaluation rubrics with the `prompt` grader for LLM-as-judge evaluation.
+
+### Setup
+
+- **Location:** `examples/rubrics/`
+- **Prerequisite:** waza binary installed, `prompt` grader available
+- **Rubrics:** 8 pre-built YAML rubrics adapted from Azure ML evaluators
+
+### Commands
+
+```bash
+# Show the available rubrics
+echo "📚 Azure ML evaluation rubrics:"
+ls -1 examples/rubrics/*.yaml
+
+# Show the rubric README for context
+echo ""
+echo "📖 Rubric documentation:"
+head -40 examples/rubrics/README.md
+
+# Examine a tool call rubric (composite evaluator)
+echo ""
+echo "🔧 Tool Call Accuracy rubric (1-5 ordinal):"
+head -30 examples/rubrics/tool_call_accuracy.yaml
+
+# Examine a task evaluation rubric (binary pass/fail)
+echo ""
+echo "✅ Task Completion rubric (binary):"
+head -25 examples/rubrics/task_completion.yaml
+
+# Show how to reference rubrics in an eval spec
+echo ""
+echo "📋 Example eval.yaml using rubrics:"
+cat << 'EOF'
+name: tool-quality-eval
+skill: my-agent-skill
+version: "1.0"
+
+config:
+  executor: copilot-sdk
+  model: gpt-4o
+
+tasks:
+  - name: "api-integration"
+    prompt: "Create a REST API client for the weather service"
+    graders:
+      # Composite tool call quality (1-5 score)
+      - type: prompt
+        name: tool_accuracy
+        config:
+          rubric: examples/rubrics/tool_call_accuracy.yaml
+
+      # Was the task fully completed? (binary)
+      - type: prompt
+        name: completion
+        config:
+          rubric: examples/rubrics/task_completion.yaml
+
+      # Did the agent follow rules and procedures? (binary flag)
+      - type: prompt
+        name: adherence
+        config:
+          rubric: examples/rubrics/task_adherence.yaml
+EOF
+
+# Show the rubric decomposition
+echo ""
+echo "🔍 Tool call rubric decomposition:"
+echo "  tool_call_accuracy (umbrella, 1-5 score)"
+echo "  ├── tool_selection        — Right tools chosen?"
+echo "  ├── tool_input_accuracy   — Correct parameters?"
+echo "  └── tool_output_utilization — Results used correctly?"
+echo ""
+echo "  Use the umbrella for a single score, or the"
+echo "  focused evaluators for granular pass/fail signals."
+```
+
+### Expected Output
+
+- List of 8 rubric YAML files covering tool call and task evaluation
+- Rubric structure showing evaluation criteria, rating levels, and scoring
+- Example eval spec demonstrating how to wire rubrics into the `prompt` grader
+- Decomposition diagram showing composite vs. focused evaluators
+
+### Talking Points
+
+1. **Standards-Based:** "These rubrics are adapted from Azure ML's production evaluators—battle-tested at scale."
+2. **Ready to Use:** "Drop rubric YAML paths into your eval spec. No custom prompts needed."
+3. **Complementary Dimensions:** "Tool call rubrics evaluate *how* the agent uses tools. Task rubrics evaluate *what* the agent delivers."
+4. **Granular or Composite:** "Use `tool_call_accuracy` for a single 1-5 score, or the three focused evaluators for pass/fail on each dimension."
+5. **Extensible:** "Write your own rubric YAMLs following the same schema—evaluation criteria, rating levels, chain-of-thought, output format."
 
 ---
 

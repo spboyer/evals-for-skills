@@ -2,9 +2,31 @@
 
 A Go CLI for evaluating AI agent skills — scaffold eval suites, run benchmarks, and compare results across models.
 
-## Installation via Azure Developer CLI (azd)
+## Installation
 
-Waza is available as an [azd extension](https://learn.microsoft.com/azure/developer/azure-developer-cli/extensions/overview). Add the custom extension source and install:
+### Binary Install (recommended)
+
+Download and install the latest pre-built binary with the install script:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/spboyer/waza/main/install.sh | bash
+```
+
+The script auto-detects your OS and architecture (linux/darwin/windows, amd64/arm64), downloads the binary, verifies the checksum, and installs to `/usr/local/bin` (or `~/bin` if not writable).
+
+Or download binaries directly from the [latest release](https://github.com/spboyer/waza/releases/latest).
+
+### Install from Source
+
+Requires Go 1.25+:
+
+```bash
+go install github.com/spboyer/waza/cmd/waza@latest
+```
+
+### Azure Developer CLI (azd) Extension
+
+Waza is also available as an [azd extension](https://learn.microsoft.com/azure/developer/azure-developer-cli/extensions/overview):
 
 ```bash
 # Add the waza extension registry
@@ -323,13 +345,18 @@ If you're contributing a skill to [microsoft/skills](https://github.com/microsof
 
 #### Installation in CI
 
-**Option 1: Install from source (recommended)**
+**Option 1: Binary install (recommended)**
+```bash
+curl -fsSL https://raw.githubusercontent.com/spboyer/waza/main/install.sh | bash
+```
+
+**Option 2: Install from source**
 ```bash
 # Requires Go 1.25+
 go install github.com/spboyer/waza/cmd/waza@latest
 ```
 
-**Option 2: Use Docker**
+**Option 3: Use Docker**
 ```bash
 docker build -t waza:local .
 docker run -v $(pwd):/workspace waza:local run eval/eval.yaml
@@ -345,10 +372,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-go@v5
-        with:
-          go-version: '1.25'
-      - run: go install github.com/spboyer/waza/cmd/waza@latest
+      - name: Install waza
+        run: curl -fsSL https://raw.githubusercontent.com/spboyer/waza/main/install.sh | bash
       - run: waza run eval/eval.yaml --verbose --output results.json
       - uses: actions/upload-artifact@v4
         with:
@@ -407,6 +432,7 @@ Waza supports multiple grader types for comprehensive evaluation:
 | `code` | Python/JavaScript assertion-based validation | [docs/GRADERS.md](docs/GRADERS.md#code---assertion-based-grader) |
 | `regex` | Pattern matching in output | [docs/GRADERS.md](docs/GRADERS.md#regex---pattern-matching-grader) |
 | `file` | File existence and content validation | [docs/GRADERS.md](docs/GRADERS.md#file---file-system-validation) |
+| `diff` | Workspace file comparison with snapshots and fragments | [docs/GRADERS.md](docs/GRADERS.md#diff---workspace-file-comparison) |
 | `behavior` | Agent behavior constraints (tool calls, tokens, duration) | [docs/GRADERS.md](docs/GRADERS.md#behavior---agent-behavior-validation) |
 | `action_sequence` | Tool call sequence validation with F1 scoring | [docs/GRADERS.md](docs/GRADERS.md#action_sequence---tool-call-sequence-validation) |
 | `skill_invocation` | Skill orchestration sequence validation | [docs/GRADERS.md](docs/GRADERS.md#skill_invocation---skill-invocation-sequence-validation) |
@@ -433,7 +459,7 @@ See [AGENTS.md](AGENTS.md) for coding guidelines.
 
 ## Legacy Python Implementation
 
-The Python implementation has been superseded by the Go CLI. The last Python release is available at [v0.3.2](https://github.com/spboyer/waza/releases/tag/v0.3.2).
+The Python implementation has been superseded by the Go CLI. The last Python release is available at [v0.3.2](https://github.com/spboyer/waza/releases/tag/v0.3.2). Starting with v0.4.0-alpha.1, waza is distributed exclusively as pre-built Go binaries.
 
 ## License
 

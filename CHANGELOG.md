@@ -7,6 +7,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.4.0-alpha.1] - 2026-02-15
+
+### Added
+
+- **Go cross-platform release pipeline** — `go-release.yml` workflow builds binaries for linux/darwin/windows on amd64 and arm64 (#155)
+- **`install.sh` installer** — one-line binary install with checksum verification: `curl -fsSL https://raw.githubusercontent.com/spboyer/waza/main/install.sh | bash`
+- **`diff` grader** — new grader type for workspace file comparison with snapshot matching and contains-line fragment checks (#156)
+- **Azure ML evaluation rubrics** — 8 pre-built rubric YAMLs in `examples/rubrics/` adapted from Azure ML evaluators (#106, #107):
+  - Tool call rubrics: `tool_call_accuracy`, `tool_selection`, `tool_input_accuracy`, `tool_output_utilization`
+  - Task evaluation rubrics: `task_completion`, `task_adherence`, `intent_resolution`, `response_completeness`
+- **MockEngine WorkspaceDir support** — test infrastructure for graders that need workspace access (#157)
+
+### Fixed
+
+- **Engine shutdown leak** — `runSingleModel()` now calls `engine.Shutdown(context.Background())` via defer after engine creation (#153)
+
+### Changed
+
+- **Python release deprecated** — the Python release workflow is no longer maintained; Go binaries are the official distribution
+- **First Go binary release** — v0.4.0-alpha.1 is the first release distributed as pre-built binaries
+
 ## [0.3.0] - 2026-02-13
 
 ### Added
@@ -158,7 +179,8 @@ pip install waza
 - YAML escaping for regex patterns with backslashes
 - Progress bar now shows 100% on completion
 
-[Unreleased]: https://github.com/spboyer/waza/compare/azd-ext-microsoft-azd-waza_0.3.0...HEAD
+[Unreleased]: https://github.com/spboyer/waza/compare/v0.4.0-alpha.1...HEAD
+[0.4.0-alpha.1]: https://github.com/spboyer/waza/compare/azd-ext-microsoft-azd-waza_0.3.0...v0.4.0-alpha.1
 [0.3.0]: https://github.com/spboyer/waza/compare/azd-ext-microsoft-azd-waza_0.2.1...azd-ext-microsoft-azd-waza_0.3.0
 [0.2.1]: https://github.com/spboyer/waza/compare/azd-ext-microsoft-azd-waza_0.2.0...azd-ext-microsoft-azd-waza_0.2.1
 [0.2.0]: https://github.com/spboyer/waza/compare/v0.1.0...v0.2.0
