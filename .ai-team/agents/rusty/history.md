@@ -124,3 +124,26 @@
 - **Deliverable:** Triage analysis written to `.ai-team/decisions/inbox/rusty-eval-backlog-triage.md`
 📌 Team update (2026-02-15): Don't take assigned work — only pick up unassigned issues — decided by Shayne Boyer
 📌 Team update (2026-02-15): Engine shutdown fix (#153) complete — merged 21 tests from Basher covering all exit paths. Critical path blocker #104 (Prompt Grader) unblocks 50% of E3 backlog. — Rusty (Lead)
+
+### 2026-02-16: Go Release Pipeline Architecture (Design Spec)
+- **Task:** Design the Go binary release pipeline to replace Python release workflow
+- **Actions taken:**
+  1. Deprecated `.github/workflows/release.yaml` → renamed to `release-python-legacy.yaml` with `if: false` and deprecation header
+  2. Designed comprehensive Go release pipeline architecture
+  3. Documented spec at `.ai-team/decisions/inbox/rusty-go-release-pipeline.md`
+- **Key architecture decisions:**
+  - Trigger: `v*` Git tags + workflow_dispatch with manual version
+  - Matrix: 6 platforms (linux/darwin/windows × amd64/arm64)
+  - Binary naming: `waza-{os}-{arch}[.exe]` (standalone CLI, not "microsoft-azd-waza" extension)
+  - Version injection: `-ldflags "-X main.version=$VERSION"`
+  - Artifacts: 6 binaries + SHA256 checksums + install.sh + release notes
+  - Release notes: Auto-generated from merged PRs since last tag
+  - Install script: Platform detection, download, verify checksum, add to PATH
+- **Why this design:**
+  - Standard Go release pattern (matrix build)
+  - User-friendly (single `curl | bash` install)
+  - Orthogonal to azd extension workflow (separate versioning concern)
+  - Cross-platform tested before release
+  - Verifiable (SHA256 checksums)
+- **Outcome:** Spec ready for Linus to implement. Acceptance criteria and next steps documented. Orthogonality to azd-ext-release.yml maintained — they share `version.txt` but operate independently.
+- **Implementation timing:** After design review, Linus will implement `go-release.yml` and `install.sh`.
