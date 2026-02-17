@@ -48,18 +48,20 @@ azd waza run examples/code-explainer/eval.yaml -v
 
 ## Quick Start
 
+📖 **New to Waza?** Start with [Getting Started Guide](docs/GETTING-STARTED.md) for a comprehensive walkthrough.
+
 ```bash
 # Build
 make build
 
+# Initialize a new project
+./waza init my-skills-project
+
+# Create a new skill evaluation suite
+./waza new my-skill
+
 # Check if a skill is ready for submission
 ./waza check skills/my-skill
-
-# Scaffold a new eval suite
-./waza init my-eval --interactive
-
-# Generate evals from a SKILL.md
-./waza generate skills/my-skill/SKILL.md
 
 # Run evaluations
 ./waza run examples/code-explainer/eval.yaml --context-dir examples/code-explainer/fixtures -v
@@ -154,6 +156,12 @@ Scaffold a new eval suite with `eval.yaml`, `tasks/`, and `fixtures/` directorie
 | Flag | Description |
 |------|-------------|
 | `--interactive` | Guided wizard that collects skill metadata and generates a SKILL.md scaffold |
+
+### `waza new <name>`
+
+Create a new skill with a complete evaluation suite (SKILL.md, eval.yaml, sample tasks, and fixtures).
+
+Use this to scaffold a new skill in a multi-skill project or start a new single-skill project.
 
 ### `waza generate <SKILL.md>`
 
@@ -442,6 +450,7 @@ See the complete [Grader Reference](docs/GRADERS.md) for detailed configuration 
 
 ## Documentation
 
+- **[Getting Started](docs/GETTING-STARTED.md)** - Comprehensive guide for new users
 - **[Demo Guide](docs/DEMO-GUIDE.md)** - 7 live demo scenarios for presentations
 - **[Grader Reference](docs/GRADERS.md)** - Complete grader types and configuration
 - **[Tutorial](docs/TUTORIAL.md)** - Getting started with writing skill evals
