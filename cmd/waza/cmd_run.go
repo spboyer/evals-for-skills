@@ -207,7 +207,11 @@ func runSingleModel(_ *cobra.Command, spec *models.BenchmarkSpec, specPath strin
 	default:
 		return nil, fmt.Errorf("unknown engine type: %s", spec.Config.EngineType)
 	}
-	defer engine.Shutdown(context.Background())
+	defer func() {
+		if err := engine.Shutdown(context.Background()); err != nil {
+			fmt.Fprintf(os.Stderr, "WARN: engine shutdown: %v\n", err)
+		}
+	}()
 
 	// Create runner with optional task filters and cache
 	runnerOpts := []orchestration.RunnerOption{
