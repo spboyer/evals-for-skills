@@ -8,7 +8,7 @@ import (
 )
 
 // setupWorkspaceResources writes resource files into workspaceDir with path-traversal protection.
-// Both CopilotEngine and MockEngine share this logic to keep sandbox behaviour consistent.
+// Both CopilotEngine and MockEngine share this logic to keep sandbox behavior consistent.
 func setupWorkspaceResources(workspaceDir string, resources []ResourceFile) error {
 	baseWorkspace := filepath.Clean(workspaceDir)
 	if baseWorkspace == "" {

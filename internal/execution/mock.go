@@ -39,7 +39,7 @@ func (m *MockEngine) Execute(ctx context.Context, req *ExecutionRequest) (*Execu
 	}
 
 	// Create a temp workspace so graders that inspect files (e.g. FileGrader) have
-	// a directory to work with, mirroring CopilotEngine behaviour.
+	// a directory to work with, mirroring CopilotEngine behavior.
 	tmpDir, err := os.MkdirTemp("", "waza-mock-*")
 	if err != nil {
 		return nil, fmt.Errorf("failed to create mock workspace: %w", err)
