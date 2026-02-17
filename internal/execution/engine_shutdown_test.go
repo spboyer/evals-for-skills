@@ -85,7 +85,7 @@ func TestMockEngine_Shutdown_WithCancelledContext(t *testing.T) {
 	cancel() // cancel immediately
 
 	err := engine.Shutdown(ctx)
-	assert.NoError(t, err, "MockEngine.Shutdown should succeed even with cancelled context")
+	assert.NoError(t, err, "MockEngine.Shutdown should succeed even with canceled context")
 }
 
 // ---------------------------------------------------------------------------
@@ -187,7 +187,7 @@ func TestCopilotEngine_Shutdown_WithCancelledContext(t *testing.T) {
 	cancel()
 
 	err := engine.Shutdown(ctx)
-	assert.NoError(t, err, "CopilotEngine.Shutdown should handle cancelled context gracefully")
+	assert.NoError(t, err, "CopilotEngine.Shutdown should handle canceled context gracefully")
 }
 
 // ---------------------------------------------------------------------------
