@@ -9,6 +9,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **`prompt` grader (LLM-as-judge)** — LLM-based evaluation with rubrics, tool-based grading, and session management modes (#177, closes #104)
+  - Two modes: `clean` (fresh context) and `continue_session` (resumes test session)
+  - Tool-based grading: `set_waza_grade_pass` and `set_waza_grade_fail` tools for LLM graders
+  - Separate judge model configuration: run evaluation with a different model than the executor
+  - Pre-built rubric templates adapted from Azure ML evaluators
+- **`trigger_tests.yaml` auto-discovery** — measure prompt trigger accuracy for skills (#166, closes #36)
+  - New `internal/trigger/` package for trigger testing
+  - Automatically discovered alongside `eval.yaml`
+  - Confidence weighting: `high` (weight 1.0) and `medium` (weight 0.5) for borderline cases
+  - `trigger_accuracy` metric with configurable cutoff threshold
+  - Metrics: accuracy, precision, recall, F1, error count
 - **`diff` grader** — new grader type for workspace file comparison with snapshot matching and contains-line fragment checks (#158)
 - **Azure ML evaluation rubrics** — 8 pre-built rubric YAMLs in `examples/rubrics/` adapted from Azure ML evaluators (#160, #161):
   - Tool call rubrics: `tool_call_accuracy`, `tool_selection`, `tool_input_accuracy`, `tool_output_utilization`
