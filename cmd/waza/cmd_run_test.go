@@ -823,3 +823,103 @@ func TestRunCommand_MultiModelComparisonTablePrinted(t *testing.T) {
 	assert.Contains(t, output, "claude-sonnet",
 		"comparison table should list claude-sonnet")
 }
+
+// ---------------------------------------------------------------------------
+// --recommend flag: heuristic recommendation (#138)
+// ---------------------------------------------------------------------------
+
+func TestRunCommand_RecommendFlagPrintsRecommendation(t *testing.T) {
+	resetRunGlobals()
+
+	specPath := createTestSpec(t, "mock")
+
+	// Capture stdout to verify RECOMMENDATION output.
+	oldStdout := os.Stdout
+	r, w, err := os.Pipe()
+	require.NoError(t, err)
+	os.Stdout = w
+
+	cmd := newRunCommand()
+	cmd.SetArgs([]string{
+		specPath,
+		"--model", "gpt-4o",
+		"--model", "claude-sonnet",
+		"--recommend",
+	})
+	cmd.SetErr(io.Discard)
+
+	execErr := cmd.Execute()
+
+	require.NoError(t, w.Close())
+	os.Stdout = oldStdout
+
+	out, readErr := io.ReadAll(r)
+	require.NoError(t, readErr)
+	require.NoError(t, execErr)
+
+	output := string(out)
+	assert.Contains(t, output, "RECOMMENDATION",
+		"--recommend flag should print RECOMMENDATION header")
+	assert.Contains(t, output, "Recommended Model:",
+		"--recommend output should identify the recommended model")
+}
+
+func TestRunCommand_RecommendSetsMetadata(t *testing.T) {
+	resetRunGlobals()
+
+	specPath := createTestSpec(t, "mock")
+	outDir := t.TempDir()
+	outFile := filepath.Join(outDir, "results.json")
+
+	cmd := newRunCommand()
+	cmd.SetArgs([]string{
+		specPath,
+		"--model", "gpt-4o",
+		"--model", "claude-sonnet",
+		"--recommend",
+		"--output", outFile,
+	})
+	cmd.SetOut(io.Discard)
+	cmd.SetErr(io.Discard)
+
+	err := cmd.Execute()
+	require.NoError(t, err)
+
+	// Verify recommendation metadata is set in per-model output files.
+	for _, model := range []string{"gpt-4o", "claude-sonnet"} {
+		perModelPath := filepath.Join(outDir, fmt.Sprintf("results_%s.json", model))
+		data, readErr := os.ReadFile(perModelPath)
+		require.NoError(t, readErr, "expected per-model output for %s", model)
+
+		var result map[string]any
+		require.NoError(t, json.Unmarshal(data, &result))
+
+		meta, ok := result["metadata"].(map[string]any)
+		require.True(t, ok, "expected metadata key in output JSON for %s", model)
+		_, hasRec := meta["recommendation"]
+		assert.True(t, hasRec, "metadata should contain recommendation key for %s", model)
+	}
+}
+
+// ---------------------------------------------------------------------------
+// Duplicate --model rejection
+// ---------------------------------------------------------------------------
+
+func TestRunCommand_DuplicateModelRejected(t *testing.T) {
+	resetRunGlobals()
+
+	specPath := createTestSpec(t, "mock")
+
+	cmd := newRunCommand()
+	cmd.SetArgs([]string{
+		specPath,
+		"--model", "gpt-4o",
+		"--model", "gpt-4o",
+	})
+	cmd.SetOut(io.Discard)
+	cmd.SetErr(io.Discard)
+
+	err := cmd.Execute()
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "duplicate --model value")
+}

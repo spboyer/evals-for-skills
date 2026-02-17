@@ -335,3 +335,34 @@ func TestRecommend_MarginZeroRunnerUp(t *testing.T) {
 		t.Errorf("margin should not be NaN or Inf, got %f", rec.WinnerMarginPct)
 	}
 }
+
+// TestRecommend_DuplicateModelIDs verifies that duplicate ModelIDs in input
+// produce distinct scores for each position rather than collapsing into one entry.
+func TestRecommend_DuplicateModelIDs(t *testing.T) {
+	engine := NewEngine()
+	// Same ModelID but different outcomes — must not collapse.
+	results := []ModelInput{
+		{ModelID: "gpt-4o", Outcome: makeOutcome(9.0, 0.95, 0.5, 1000)},
+		{ModelID: "gpt-4o", Outcome: makeOutcome(3.0, 0.40, 2.5, 5000)},
+	}
+
+	rec := engine.Recommend(results)
+	if rec == nil {
+		t.Fatal("expected recommendation, got nil")
+	}
+	if len(rec.ModelScores) != 2 {
+		t.Fatalf("expected 2 model scores, got %d", len(rec.ModelScores))
+	}
+	// Scores must differ because the outcomes differ.
+	if rec.ModelScores[0].HeuristicScore == rec.ModelScores[1].HeuristicScore {
+		t.Errorf("duplicate ModelIDs with different outcomes should produce different scores, both got %.1f",
+			rec.ModelScores[0].HeuristicScore)
+	}
+	// Winner should be the first entry (higher agg/pass/consistency/speed).
+	if rec.ModelScores[0].HeuristicScore != 10.0 {
+		t.Errorf("expected winner score 10.0 (best across all axes), got %.1f", rec.ModelScores[0].HeuristicScore)
+	}
+	if rec.ModelScores[1].HeuristicScore != 0.0 {
+		t.Errorf("expected loser score 0.0 (worst across all axes), got %.1f", rec.ModelScores[1].HeuristicScore)
+	}
+}

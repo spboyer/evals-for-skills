@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"math"
 	"sort"
+	"strings"
 
 	"github.com/spboyer/waza/internal/models"
 )
@@ -89,8 +90,8 @@ func (e *Engine) scoreModels(results []ModelInput) []models.ModelScore {
 	normalized := e.normalizeMetrics(metrics)
 
 	scores := make([]models.ModelScore, len(results))
-	for i, mr := range results {
-		norm := normalized[mr.ModelID]
+	for i := range results {
+		norm := normalized[i]
 		hScore := (norm.aggScore * e.weights.AggregateScore) +
 			(norm.passRate * e.weights.PassRate) +
 			(norm.consistency * e.weights.Consistency) +
@@ -100,7 +101,7 @@ func (e *Engine) scoreModels(results []ModelInput) []models.ModelScore {
 		hScore = math.Round(hScore*10) / 10
 
 		scores[i] = models.ModelScore{
-			ModelID:        mr.ModelID,
+			ModelID:        results[i].ModelID,
 			HeuristicScore: hScore,
 			Scores: map[string]float64{
 				"aggregate_score_normalized": math.Round(norm.aggScore*10) / 10,
@@ -122,11 +123,13 @@ func (e *Engine) scoreModels(results []ModelInput) []models.ModelScore {
 	return scores
 }
 
-func (e *Engine) extractMetrics(results []ModelInput) map[string]rawMetrics {
-	metrics := make(map[string]rawMetrics, len(results))
-	for _, mr := range results {
+// extractMetrics returns metrics keyed by array index to avoid collisions
+// when duplicate ModelIDs are present.
+func (e *Engine) extractMetrics(results []ModelInput) map[int]rawMetrics {
+	metrics := make(map[int]rawMetrics, len(results))
+	for i, mr := range results {
 		d := mr.Outcome.Digest
-		metrics[mr.ModelID] = rawMetrics{
+		metrics[i] = rawMetrics{
 			aggScore:   d.AggregateScore,
 			passRate:   d.SuccessRate * 100,
 			stdDev:     d.StdDev,
@@ -138,7 +141,8 @@ func (e *Engine) extractMetrics(results []ModelInput) map[string]rawMetrics {
 
 // normalizeMetrics scales each metric to a 0–10 range using min-max normalization.
 // When all values are equal, all models receive 5.0 for that metric.
-func (e *Engine) normalizeMetrics(metrics map[string]rawMetrics) map[string]normalizedMetrics {
+// Keyed by array index to handle duplicate ModelIDs correctly.
+func (e *Engine) normalizeMetrics(metrics map[int]rawMetrics) map[int]normalizedMetrics {
 	var aggScores, passRates, stdDevs, durations []float64
 	for _, m := range metrics {
 		aggScores = append(aggScores, m.aggScore)
@@ -147,9 +151,9 @@ func (e *Engine) normalizeMetrics(metrics map[string]rawMetrics) map[string]norm
 		durations = append(durations, float64(m.durationMs))
 	}
 
-	result := make(map[string]normalizedMetrics, len(metrics))
-	for id, m := range metrics {
-		result[id] = normalizedMetrics{
+	result := make(map[int]normalizedMetrics, len(metrics))
+	for i, m := range metrics {
+		result[i] = normalizedMetrics{
 			aggScore:    normalizeHigherBetter(m.aggScore, aggScores),
 			passRate:    normalizeHigherBetter(m.passRate, passRates),
 			consistency: normalizeLowerBetter(m.stdDev, stdDevs),
@@ -229,16 +233,5 @@ func (e *Engine) buildReason(winner, runnerUp models.ModelScore, results []Model
 	}
 
 	return fmt.Sprintf("%s (weighted score: %.1f vs %s: %.1f)",
-		joinParts(parts), winner.HeuristicScore, runnerUp.ModelID, runnerUp.HeuristicScore)
-}
-
-func joinParts(parts []string) string {
-	if len(parts) == 0 {
-		return ""
-	}
-	result := parts[0]
-	for _, p := range parts[1:] {
-		result += "; " + p
-	}
-	return result
+		strings.Join(parts, "; "), winner.HeuristicScore, runnerUp.ModelID, runnerUp.HeuristicScore)
 }

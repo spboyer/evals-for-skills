@@ -96,6 +96,18 @@ func runCommandE(cmd *cobra.Command, args []string) error {
 	if len(modelOverrides) > 0 {
 		modelsToRun = modelOverrides
 	}
+
+	// Reject duplicate model IDs early
+	if len(modelsToRun) > 1 {
+		seen := make(map[string]bool, len(modelsToRun))
+		for _, m := range modelsToRun {
+			if seen[m] {
+				return fmt.Errorf("duplicate --model value: %q (each model must be unique)", m)
+			}
+			seen[m] = true
+		}
+	}
+
 	multiModel := len(modelsToRun) > 1
 
 	// Run evaluation for each model, collecting results
