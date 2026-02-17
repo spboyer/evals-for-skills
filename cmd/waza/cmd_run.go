@@ -573,4 +573,3 @@ func printRecommendationSummary(rec *models.Recommendation, results []modelResul
 	fmt.Printf("  • Speed (inverse duration): %.0f%% weight\n", rec.Weights.Speed*100)
 	fmt.Println()
 }
-

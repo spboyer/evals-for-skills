@@ -3,10 +3,10 @@ package models
 // Recommendation represents a heuristic recommendation for the best model
 // across a multi-model evaluation run.
 type Recommendation struct {
-	RecommendedModel string               `json:"recommended_model"`
-	HeuristicScore   float64              `json:"heuristic_score"`
-	Reason           string               `json:"reason"`
-	WinnerMarginPct  float64              `json:"winner_margin_pct"`
+	RecommendedModel string                `json:"recommended_model"`
+	HeuristicScore   float64               `json:"heuristic_score"`
+	Reason           string                `json:"reason"`
+	WinnerMarginPct  float64               `json:"winner_margin_pct"`
 	Weights          RecommendationWeights `json:"weights"`
 	ModelScores      []ModelScore          `json:"all_models"`
 }
@@ -22,7 +22,7 @@ type RecommendationWeights struct {
 // ModelScore holds the heuristic score and rank for a single model.
 type ModelScore struct {
 	ModelID        string             `json:"model_id"`
-	HeuristicScore float64           `json:"heuristic_score"`
-	Rank           int               `json:"rank"`
+	HeuristicScore float64            `json:"heuristic_score"`
+	Rank           int                `json:"rank"`
 	Scores         map[string]float64 `json:"component_scores,omitempty"`
 }
