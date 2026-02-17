@@ -167,8 +167,33 @@ func Create(graderType models.GraderKind, identifier string, params map[string]a
 		}
 
 		return NewPromptGrader(identifier, v)
-	case models.GraderKindKeyword, models.GraderKindJSONSchema, models.GraderKindProgram:
-		return nil, fmt.Errorf("'%s' is not yet implemented", graderType)
+	case models.GraderKindKeyword:
+		var v KeywordGraderArgs
+
+		if err := mapstructure.Decode(params, &v); err != nil {
+			return nil, err
+		}
+
+		v.Name = identifier
+		return NewKeywordGrader(v)
+	case models.GraderKindJSONSchema:
+		var v JSONSchemaGraderArgs
+
+		if err := mapstructure.Decode(params, &v); err != nil {
+			return nil, err
+		}
+
+		v.Name = identifier
+		return NewJSONSchemaGrader(v)
+	case models.GraderKindProgram:
+		var v ProgramGraderArgs
+
+		if err := mapstructure.Decode(params, &v); err != nil {
+			return nil, err
+		}
+
+		v.Name = identifier
+		return NewProgramGrader(v)
 	default:
 		return nil, fmt.Errorf("'%s' is not a valid grader type", graderType)
 	}
