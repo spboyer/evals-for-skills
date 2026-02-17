@@ -33,11 +33,17 @@ func ParseSpec(data []byte) (*TestSpec, error) {
 		return nil, errors.New("trigger tests must define at least one prompt")
 	}
 	for _, p := range s.ShouldTriggerPrompts {
+		if p.Prompt == "" {
+			return nil, errors.New("trigger test prompt missing required 'prompt' field")
+		}
 		if !validConfidences[p.Confidence] {
 			return nil, fmt.Errorf("prompt %q has unrecognized confidence %q (valid: high, medium)", p.Prompt, p.Confidence)
 		}
 	}
 	for _, p := range s.ShouldNotTriggerPrompts {
+		if p.Prompt == "" {
+			return nil, errors.New("trigger test prompt missing required 'prompt' field")
+		}
 		if !validConfidences[p.Confidence] {
 			return nil, fmt.Errorf("prompt %q has unrecognized confidence %q (valid: high, medium)", p.Prompt, p.Confidence)
 		}

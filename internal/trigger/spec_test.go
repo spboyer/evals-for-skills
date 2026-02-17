@@ -6,7 +6,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestTriggerTestSpec_UnmarshalText(t *testing.T) {
+func TestTriggerTestSpec_ParseSpec(t *testing.T) {
 	content := `
 skill: code-explainer
 
