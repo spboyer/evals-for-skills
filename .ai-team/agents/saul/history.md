@@ -24,3 +24,12 @@
 📌 Team update (2026-02-15): Multi-model execution is sequential (not parallel). Test failures non-fatal so all models complete. — decided by Linus
 📌 Team update (2026-02-15): Microsoft/skills repo moving to plugin bundle structure. CI must support both flat and nested layouts. — decided by Shayne Boyer
 📌 Team update (2026-02-15): Don't take assigned work — only pick up unassigned issues — decided by Shayne Boyer
+
+### 2026-02-15: GETTING-STARTED.md created (Issue #168)
+- Created comprehensive getting started guide at docs/GETTING-STARTED.md
+- Covers: Quick start (init → new → edit → run → check → push), project layouts (single-skill vs multi-skill), workspace detection, commands reference, evaluation patterns (per-skill and orchestration), graders, common workflows, troubleshooting
+- Updated README.md Quick Start section with link to guide
+- Added `waza new <name>` command to commands table (was missing)
+- Added Getting Started to Documentation section in README
+- Proactive doc work before CLI retrofit lands — ready for minor adjustments after implementation
+- Branch: squad/168-getting-started-docs, Commit: e3605f5
