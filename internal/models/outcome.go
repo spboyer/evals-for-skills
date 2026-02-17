@@ -71,7 +71,7 @@ type OutcomeDigest struct {
 type MeasureResult struct {
 	Identifier string         `json:"identifier"`
 	Value      float64        `json:"value"`
-	Cutoff     float64        `json:"cutoff"`
+	Threshold  float64        `json:"threshold"`
 	Passed     bool           `json:"passed"`
 	Weight     float64        `json:"weight"`
 	Details    map[string]any `json:"details,omitempty"`

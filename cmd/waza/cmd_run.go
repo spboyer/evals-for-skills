@@ -331,8 +331,8 @@ func runSingleModel(_ *cobra.Command, spec *models.BenchmarkSpec, specPath strin
 					outcome.Measures[m.Identifier] = models.MeasureResult{
 						Identifier: m.Identifier,
 						Value:      tm.Accuracy,
-						Cutoff:     m.Cutoff,
-						Passed:     m.Cutoff <= 0 || tm.Accuracy >= m.Cutoff,
+						Threshold:  m.Threshold,
+						Passed:     m.Threshold <= 0 || tm.Accuracy >= m.Threshold,
 						Weight:     m.Weight,
 					}
 					break
@@ -369,7 +369,7 @@ func runSingleModel(_ *cobra.Command, spec *models.BenchmarkSpec, specPath strin
 		failures = append(failures, fmt.Sprintf("%d failed and %d error(s)", outcome.Digest.Failed, outcome.Digest.Errors))
 	}
 	if m, ok := outcome.Measures["trigger_accuracy"]; ok && !m.Passed {
-		failures = append(failures, fmt.Sprintf("trigger accuracy %.1f%% below threshold %.1f%%", m.Value*100, m.Cutoff*100))
+		failures = append(failures, fmt.Sprintf("trigger accuracy %.1f%% below threshold %.1f%%", m.Value*100, m.Threshold*100))
 	}
 	if len(failures) > 0 {
 		return outcome, &TestFailureError{

@@ -52,7 +52,7 @@ type GraderConfig struct {
 type MeasurementDef struct {
 	Identifier string  `yaml:"name" json:"identifier"`
 	Weight     float64 `yaml:"weight" json:"weight"`
-	Cutoff     float64 `yaml:"threshold" json:"cutoff"`
+	Threshold  float64 `yaml:"threshold" json:"threshold"`
 	Enabled    bool    `yaml:"enabled,omitempty" json:"enabled,omitempty"`
 	Desc       string  `yaml:"description,omitempty" json:"desc,omitempty"`
 }
