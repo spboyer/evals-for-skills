@@ -7,21 +7,35 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## [0.4.0-alpha.1] - 2026-02-15
+### Added
+
+- **`diff` grader** — new grader type for workspace file comparison with snapshot matching and contains-line fragment checks (#158)
+- **Azure ML evaluation rubrics** — 8 pre-built rubric YAMLs in `examples/rubrics/` adapted from Azure ML evaluators (#160, #161):
+  - Tool call rubrics: `tool_call_accuracy`, `tool_selection`, `tool_input_accuracy`, `tool_output_utilization`
+  - Task evaluation rubrics: `task_completion`, `task_adherence`, `intent_resolution`, `response_completeness`
+- **MockEngine WorkspaceDir support** — test infrastructure for graders that need workspace access (#159)
+
+### Fixed
+
+- **install.sh macOS checksum** — added `shasum -a 256` fallback for macOS (which lacks `sha256sum`) (#163)
+
+## [0.4.0-alpha.1] - 2026-02-17
 
 ### Added
 
 - **Go cross-platform release pipeline** — `go-release.yml` workflow builds binaries for linux/darwin/windows on amd64 and arm64 (#155)
 - **`install.sh` installer** — one-line binary install with checksum verification: `curl -fsSL https://raw.githubusercontent.com/spboyer/waza/main/install.sh | bash`
-- **`diff` grader** — new grader type for workspace file comparison with snapshot matching and contains-line fragment checks (#156)
-- **Azure ML evaluation rubrics** — 8 pre-built rubric YAMLs in `examples/rubrics/` adapted from Azure ML evaluators (#106, #107):
-  - Tool call rubrics: `tool_call_accuracy`, `tool_selection`, `tool_input_accuracy`, `tool_output_utilization`
-  - Task evaluation rubrics: `task_completion`, `task_adherence`, `intent_resolution`, `response_completeness`
-- **MockEngine WorkspaceDir support** — test infrastructure for graders that need workspace access (#157)
+- **`skill_invocation` grader** — validates orchestration workflows by checking which skills were invoked (#146)
+- **`required_skills` preflight validation** — verifies skill dependencies before evaluation (#147)
+- **Multi-model `--model` flag** — run evaluations across multiple models in a single command (#39)
+- **`waza check` command** — skill submission readiness checks (#151)
+- **Evaluation result caching** — incremental testing with cache invalidation (#150)
+- **GitHub PR comment reporter** — post eval results as PR comments (#140)
+- **Skills CI integration** — GitHub Actions workflow for microsoft/skills (#141)
 
 ### Fixed
 
-- **Engine shutdown leak** — `runSingleModel()` now calls `engine.Shutdown(context.Background())` via defer after engine creation (#153)
+- **Engine shutdown leak** — `runSingleModel()` now calls `engine.Shutdown(context.Background())` via defer after engine creation (#153, #154)
 
 ### Changed
 
