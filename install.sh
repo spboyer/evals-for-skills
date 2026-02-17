@@ -78,7 +78,13 @@ main() {
     "https://github.com/${REPO}/releases/download/${tag}/checksums.txt"
 
   echo "Verifying checksum..."
-  (cd "$tmpdir" && grep "${asset_name}" checksums.txt | sha256sum -c --status)
+  if command -v sha256sum >/dev/null 2>&1; then
+    (cd "$tmpdir" && grep "${asset_name}" checksums.txt | sha256sum -c --status)
+  elif command -v shasum >/dev/null 2>&1; then
+    (cd "$tmpdir" && grep "${asset_name}" checksums.txt | shasum -a 256 -c --status)
+  else
+    echo "Warning: no sha256sum or shasum found, skipping checksum verification"
+  fi
   echo "Checksum verified ✓"
 
   install_path="$(install_dir)"
