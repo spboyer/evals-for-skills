@@ -70,8 +70,14 @@ func NewInlineScriptGrader(name string, language Language, assertions []string) 
 }
 
 func resolvePythonBin() string {
-	if _, err := exec.LookPath("python3"); err == nil {
-		return "python3"
+	// Prefer python3, but verify it actually works — on Windows the
+	// Microsoft Store registers a python3.exe stub that just prints
+	// "Python was not found" and exits 9009.
+	if path, err := exec.LookPath("python3"); err == nil {
+		cmd := exec.Command(path, "--version")
+		if cmd.Run() == nil {
+			return "python3"
+		}
 	}
 	return "python"
 }
