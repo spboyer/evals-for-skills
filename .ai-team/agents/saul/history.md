@@ -24,3 +24,5 @@
 📌 Team update (2026-02-15): Multi-model execution is sequential (not parallel). Test failures non-fatal so all models complete. — decided by Linus
 📌 Team update (2026-02-15): Microsoft/skills repo moving to plugin bundle structure. CI must support both flat and nested layouts. — decided by Shayne Boyer
 📌 Team update (2026-02-15): Don't take assigned work — only pick up unassigned issues — decided by Shayne Boyer
+
+📌 Team update (2026-02-17): Diff grader context_dir parameter must be documented in GRADERS.md — snapshot paths resolve relative to it. — decided by Linus
