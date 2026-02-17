@@ -298,50 +298,50 @@
             "darwin/amd64": {
               "checksum": {
                 "algorithm": "sha256",
-                "value": "2995812ccd1aac65b3f0a8078d2ed809eaf621a0fd13c192427c64c10faf9568"
+                "value": "caf7755b1f44764c6803f07cef3236877d363d3d94da8db4eb9e1c18ef490cb0"
               },
               "entryPoint": "microsoft-azd-waza-darwin-amd64",
-              "url": "https://github.com/spboyer/waza/releases/download/azd-ext-microsoft-azd-waza_0.3.0/microsoft-azd-waza-darwin-amd64.zip"
+              "url": "https://github.com/spboyer/waza/releases/download/azd-ext-microsoft-azd-waza_0.4.0-alpha.1/microsoft-azd-waza-darwin-amd64.zip"
             },
             "darwin/arm64": {
               "checksum": {
                 "algorithm": "sha256",
-                "value": "723cdb287317936ac41063f9952da13262684effed0164a869d3f7ced08b00ef"
+                "value": "3c1e22b7d68c2eafd5be35c2f2b53d6b216a92f394076d1dac0a3e225308fc48"
               },
               "entryPoint": "microsoft-azd-waza-darwin-arm64",
-              "url": "https://github.com/spboyer/waza/releases/download/azd-ext-microsoft-azd-waza_0.3.0/microsoft-azd-waza-darwin-arm64.zip"
+              "url": "https://github.com/spboyer/waza/releases/download/azd-ext-microsoft-azd-waza_0.4.0-alpha.1/microsoft-azd-waza-darwin-arm64.zip"
             },
             "linux/amd64": {
               "checksum": {
                 "algorithm": "sha256",
-                "value": "e81d1498ef344255ad9b753288d8ce7d64e06accce2c13b61e9e7790d1b8d864"
+                "value": "3f9f2b73a2defe97c6d53b72bcbc76f3dd317e3cc21c079f74c2054bbb0a0a4f"
               },
               "entryPoint": "microsoft-azd-waza-linux-amd64",
-              "url": "https://github.com/spboyer/waza/releases/download/azd-ext-microsoft-azd-waza_0.3.0/microsoft-azd-waza-linux-amd64.tar.gz"
+              "url": "https://github.com/spboyer/waza/releases/download/azd-ext-microsoft-azd-waza_0.4.0-alpha.1/microsoft-azd-waza-linux-amd64.tar.gz"
             },
             "linux/arm64": {
               "checksum": {
                 "algorithm": "sha256",
-                "value": "efe8297e532f1b675ee9ec7144de3625c065dfba05a8ea8dbf53414adaa1f4fb"
+                "value": "d2c30f1183b7a17a4872920d9dabb7b891baea0e20da119654fda73095fccce1"
               },
               "entryPoint": "microsoft-azd-waza-linux-arm64",
-              "url": "https://github.com/spboyer/waza/releases/download/azd-ext-microsoft-azd-waza_0.3.0/microsoft-azd-waza-linux-arm64.tar.gz"
+              "url": "https://github.com/spboyer/waza/releases/download/azd-ext-microsoft-azd-waza_0.4.0-alpha.1/microsoft-azd-waza-linux-arm64.tar.gz"
             },
             "windows/amd64": {
               "checksum": {
                 "algorithm": "sha256",
-                "value": "dadb49301a04a4c50edf098583beded00576b04e2c4c748376f3e44e736a0514"
+                "value": "ff312ca29918f201d78e66c312975b572701e624a290f06cabbbc2e2a274c08a"
               },
               "entryPoint": "microsoft-azd-waza-windows-amd64.exe",
-              "url": "https://github.com/spboyer/waza/releases/download/azd-ext-microsoft-azd-waza_0.3.0/microsoft-azd-waza-windows-amd64.zip"
+              "url": "https://github.com/spboyer/waza/releases/download/azd-ext-microsoft-azd-waza_0.4.0-alpha.1/microsoft-azd-waza-windows-amd64.zip"
             },
             "windows/arm64": {
               "checksum": {
                 "algorithm": "sha256",
-                "value": "3dedce9b487eb7eb0b8fef8a6582188d92f00a778ff49df115d7c807c8643228"
+                "value": "c4d918360bcef65b82c649c06f2c6c081f8d8d514a1788848b978c10d1788bd5"
               },
               "entryPoint": "microsoft-azd-waza-windows-arm64.exe",
-              "url": "https://github.com/spboyer/waza/releases/download/azd-ext-microsoft-azd-waza_0.3.0/microsoft-azd-waza-windows-arm64.zip"
+              "url": "https://github.com/spboyer/waza/releases/download/azd-ext-microsoft-azd-waza_0.4.0-alpha.1/microsoft-azd-waza-windows-arm64.zip"
             }
           }
         }
