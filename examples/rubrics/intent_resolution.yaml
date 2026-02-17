@@ -1,0 +1,157 @@
+# Intent Resolution Rubric
+# Adapted from Azure ML IntentResolutionEvaluator
+# Source: azure-ai-evaluation/_evaluators/_intent_resolution
+#
+# Ordinal 1-5 → normalized to 0.0-1.0.
+# Evaluates how well the agent *resolved* (not just recognized) user intent.
+#
+# Use with the waza `prompt` grader:
+#   graders:
+#     - type: prompt
+#       name: intent_resolution
+#       config:
+#         rubric: examples/rubrics/intent_resolution.yaml
+#         response_format: json
+
+name: intent_resolution
+description: |
+  Evaluates how well the agent resolved the user's expressed intent. This
+  rubric assumes the agent understood the intent and judges only whether
+  the reply satisfies or completes it. Uses a 1-5 ordinal scale normalized
+  to 0.0-1.0. Adapted from Azure ML's IntentResolutionEvaluator.
+version: "1.0"
+source: Azure/azure-sdk-for-python (azure-ai-evaluation)
+
+# --- Scoring ---
+
+score_type: ordinal
+score_normalization:
+  # Raw 1-5 → 0.0-1.0 via linear mapping: (score - 1) / 4
+  method: linear
+  raw_min: 1
+  raw_max: 5
+  normalized_min: 0.0
+  normalized_max: 1.0
+  mapping:
+    1: 0.0
+    2: 0.25
+    3: 0.5
+    4: 0.75
+    5: 1.0
+
+# --- Inputs ---
+
+input_mapping:
+  query: context.prompt          # conversation history / user query
+  response: context.output       # agent's response to the latest user message
+
+# --- Evaluation criteria ---
+
+evaluation_criteria: |
+  You are an impartial grader that scores how well an AI agent *resolved*
+  the user's intent in a conversation.
+
+  You are NOT grading intent recognition. Assume the agent has understood
+  the intent that is expressed; you only judge whether the reply satisfies
+  or completes that intent.
+
+  ## Evaluation steps
+
+  A. **Identify the expressed intent** in the final user turn (use full
+     conversation history for context if necessary).
+
+  B. **Check resolution.** Does the agent's reply actually complete or
+     satisfy that intent?
+     - If a direct answer: does it fully address the user's request?
+     - If an action (scheduling, deleting, etc.): does it confirm completion?
+     - If a clarification or follow-up question: does it lead towards
+       fulfilling the intent?
+     - If the response is empty or irrelevant: it does not resolve the intent.
+
+  C. **Verify correctness and completeness** of the resolution.
+
+  D. **Weigh impact.** Minor style issues matter only for tie-breaking;
+     resolution quality dominates.
+
+# --- Rating levels ---
+
+rating_levels:
+  - value: 5
+    label: excellent
+    normalized_score: 1.0
+    description: >
+      Agent fully fulfills the intent with accurate, thorough, relevant
+      action. No gaps or imprecision.
+  - value: 4
+    label: good
+    normalized_score: 0.75
+    description: >
+      Intent mostly resolved; only minor, non-blocking gaps or imprecision.
+  - value: 3
+    label: adequate
+    normalized_score: 0.5
+    description: >
+      Core of intent addressed but notable omissions, vagueness, or slips.
+  - value: 2
+    label: poor
+    normalized_score: 0.25
+    description: >
+      Partial or incorrect resolution; answer unlikely to satisfy the intent.
+  - value: 1
+    label: very_poor
+    normalized_score: 0.0
+    description: >
+      Intent ignored or badly misunderstood; irrelevant or harmful response.
+
+# --- Chain of thought ---
+
+chain_of_thought: |
+  Follow these steps to evaluate intent resolution:
+
+  1. **Identify the expressed intent** from the final user turn. Use the
+     full conversation history for context.
+
+  2. **Check resolution.** Does the agent's reply actually complete or
+     satisfy the intent?
+     - Direct answer → does it fully address the request?
+     - Action (scheduling, deleting) → does it confirm completion?
+     - Clarification/follow-up → does it progress towards fulfillment?
+     - Empty/irrelevant → does not resolve the intent.
+
+  3. **Verify correctness and completeness.** Are the facts accurate?
+     Is anything important missing?
+
+  4. **Weigh impact.** Minor style issues matter only for tie-breaking;
+     resolution quality dominates.
+
+  5. **Write a concise explanation** (15-60 words) summarizing:
+     - What the user wanted
+     - How well the agent addressed it
+     - Any notable gaps or strengths
+
+  6. **Choose the closest integer score** (1-5) from the rating levels.
+
+  7. **Return JSON output:**
+     ```json
+     {
+       "explanation": "<15-60 words>",
+       "score": <1-5>
+     }
+     ```
+
+# --- Output format ---
+
+output_format:
+  type: json
+  schema:
+    explanation:
+      type: string
+      description: >
+        15-60 word summary of the agent's performance in resolving
+        the user's intent.
+    score:
+      type: integer
+      minimum: 1
+      maximum: 5
+      description: >
+        Integer score from 1 (very poor) to 5 (excellent).

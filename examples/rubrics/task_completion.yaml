@@ -1,0 +1,157 @@
+# Task Completion Rubric
+# Adapted from Azure ML TaskCompletionEvaluator
+# Source: azure-ai-evaluation/_evaluators/_task_completion
+#
+# Binary evaluation: was the task fully completed? (0.0 or 1.0)
+#
+# Use with the waza `prompt` grader:
+#   graders:
+#     - type: prompt
+#       name: task_completion
+#       config:
+#         rubric: examples/rubrics/task_completion.yaml
+#         response_format: json
+
+name: task_completion
+description: |
+  Evaluates whether the agent successfully and completely accomplished the
+  user's task based on the final outcome. Focuses exclusively on the
+  deliverable — not on process, style, or intent recognition. Returns a
+  binary pass/fail (1.0 or 0.0). Adapted from Azure ML's
+  TaskCompletionEvaluator.
+version: "1.0"
+source: Azure/azure-sdk-for-python (azure-ai-evaluation)
+
+# --- Scoring ---
+
+score_type: binary
+score_normalization:
+  mapping:
+    "true": 1.0
+    "false": 0.0
+
+# --- Inputs ---
+
+input_mapping:
+  query: context.prompt          # user query / conversation history
+  response: context.output       # agent's final response
+
+# --- Evaluation criteria ---
+
+evaluation_criteria: |
+  You are a judge assessing the final outcome of a user–agent interaction.
+  Your single focus is: **Was the user's task successfully and completely
+  accomplished?**
+
+  You are NOT evaluating:
+  - How well the agent followed instructions
+  - How well the agent understood the user's intent
+
+  You ARE evaluating:
+  - Whether the task is actually completed in the final outcome
+  - Whether the deliverable meets the user's requirements
+  - Whether the end result is actionable and usable
+
+  ## Framework
+
+  **A. Identify the Task Requirements**
+  - What specific outcome did the user request?
+  - What deliverables were expected?
+  - What criteria define "completion" for this task?
+
+  **B. Analyze the Final Outcome**
+  - What did the agent actually deliver?
+  - Is the deliverable complete and usable?
+  - Does it meet the user's specified requirements?
+
+  **C. Assess Task Completion**
+  - **Fully Complete**: All requirements met, deliverable is ready for use.
+  - **Partially Complete**: Some requirements met, but missing key components.
+  - **Incomplete**: No usable deliverable or major requirements unmet.
+
+  ## Key Principles
+
+  1. **Outcome Focus**: Judge only the final deliverable, not the process.
+  2. **User Readiness**: Can the user proceed with what was delivered?
+  3. **Requirement Matching**: Does the outcome match what was specifically
+     requested?
+  4. **Completeness**: Are all components of the task addressed?
+  5. **Actionability**: Is the deliverable usable in its current form?
+
+# --- Rating levels ---
+
+rating_levels:
+  - value: "true"
+    label: complete
+    normalized_score: 1.0
+    description: >
+      The agent delivered a complete and correct solution that accomplishes
+      the user's entire goal. The user does not need to take further action
+      or ask follow-up questions to get what they originally asked for.
+  - value: "false"
+    label: incomplete
+    normalized_score: 0.0
+    description: >
+      The agent failed to complete one or more parts of the task, provided
+      an incorrect or incomplete result, or left the user's goal unresolved.
+
+# --- Chain of thought ---
+
+chain_of_thought: |
+  Follow these steps to evaluate task completion:
+
+  1. **Identify the task requirements.** What specific outcome did the user
+     request? What deliverables were expected? What criteria define
+     "completion" for this task?
+
+  2. **Analyze the final outcome.** What did the agent actually deliver?
+     Is the deliverable complete and usable? Does it meet the user's
+     specified requirements?
+
+  3. **Assess completion.** Determine whether the task is fully complete,
+     partially complete, or incomplete. Remember: a task can be understood
+     correctly and approached properly but still fail if the final outcome
+     doesn't meet requirements.
+
+  4. **Assign a score.**
+     - TRUE if the agent delivered a complete solution that accomplishes
+       the user's entire goal.
+     - FALSE if any part of the task remains incomplete, incorrect, or
+       unresolved.
+
+  5. **Return JSON output:**
+     ```json
+     {
+       "explanation": "<15-60 words explaining the completion status>",
+       "details": {
+         "task_requirements": "<15-60 words on what the user requested>",
+         "delivered_outcome": "<15-60 words on what the agent provided>",
+         "completion_gaps": "<15-60 words on missing elements, or 'None'>"
+       },
+       "success": <true or false>
+     }
+     ```
+
+# --- Output format ---
+
+output_format:
+  type: json
+  schema:
+    explanation:
+      type: string
+      description: 15-60 word summary of the completion status.
+    details:
+      type: object
+      properties:
+        task_requirements:
+          type: string
+          description: What the user specifically requested.
+        delivered_outcome:
+          type: string
+          description: What the agent actually provided.
+        completion_gaps:
+          type: string
+          description: Missing elements, or "None" if fully complete.
+    success:
+      type: boolean
+      description: true if fully complete, false otherwise.

@@ -1,0 +1,152 @@
+# Response Completeness Rubric
+# Adapted from Azure ML ResponseCompletenessEvaluator
+# Source: azure-ai-evaluation/_evaluators/_response_completeness
+#
+# Ordinal 1-5 → normalized to 0.0-1.0.
+# Measures how thoroughly the response covers the ground truth.
+#
+# Use with the waza `prompt` grader:
+#   graders:
+#     - type: prompt
+#       name: response_completeness
+#       config:
+#         rubric: examples/rubrics/response_completeness.yaml
+#         response_format: json
+
+name: response_completeness
+description: |
+  Evaluates how accurately and thoroughly a response represents the
+  information provided in the ground truth. Each statement in the ground
+  truth is evaluated individually to determine if it is accurately
+  reflected in the response. Uses a 1-5 ordinal scale normalized to
+  0.0-1.0. Adapted from Azure ML's ResponseCompletenessEvaluator.
+version: "1.0"
+source: Azure/azure-sdk-for-python (azure-ai-evaluation)
+
+# --- Scoring ---
+
+score_type: ordinal
+score_normalization:
+  method: linear
+  raw_min: 1
+  raw_max: 5
+  normalized_min: 0.0
+  normalized_max: 1.0
+  mapping:
+    1: 0.0
+    2: 0.25
+    3: 0.5
+    4: 0.75
+    5: 1.0
+
+# --- Inputs ---
+
+input_mapping:
+  response: context.output              # agent's response
+  ground_truth: context.expected_output # reference / expected answer
+
+# --- Evaluation criteria ---
+
+evaluation_criteria: |
+  **Completeness** refers to how accurately and thoroughly a response
+  represents the information provided in the ground truth. It considers
+  both the inclusion of all relevant statements and the correctness of
+  those statements. Each statement in the ground truth should be evaluated
+  individually to determine if it is accurately reflected in the response
+  without missing any key information.
+
+  The scale ranges from 1 to 5, with higher numbers indicating greater
+  completeness.
+
+# --- Rating levels ---
+
+rating_levels:
+  - value: 1
+    label: fully_incomplete
+    normalized_score: 0.0
+    description: >
+      The response does not contain any of the necessary and relevant
+      information with respect to the ground truth. It completely misses
+      all the information, especially claims and statements, established
+      in the ground truth.
+  - value: 2
+    label: barely_complete
+    normalized_score: 0.25
+    description: >
+      The response contains only a small percentage of the necessary and
+      relevant information. It misses almost all the claims and statements
+      established in the ground truth.
+  - value: 3
+    label: moderately_complete
+    normalized_score: 0.5
+    description: >
+      The response contains about half of the necessary and relevant
+      information. It misses roughly half of the claims and statements
+      established in the ground truth.
+  - value: 4
+    label: mostly_complete
+    normalized_score: 0.75
+    description: >
+      The response contains most of the necessary and relevant information.
+      It misses only some minor claims and statements from the ground truth.
+  - value: 5
+    label: fully_complete
+    normalized_score: 1.0
+    description: >
+      The response perfectly contains all the necessary and relevant
+      information. It does not miss any information from statements and
+      claims in the ground truth.
+
+# --- Chain of thought ---
+
+chain_of_thought: |
+  Follow these steps to evaluate response completeness:
+
+  1. **Decompose the ground truth** into individual claims and statements.
+     List each distinct piece of information.
+
+  2. **Check each claim against the response.** For every statement in the
+     ground truth, determine whether it is:
+     - Accurately reflected in the response
+     - Partially reflected (some detail missing or altered)
+     - Completely missing from the response
+
+  3. **Assess correctness.** Are the statements in the response factually
+     consistent with the ground truth? Note any contradictions or
+     inaccuracies.
+
+  4. **Calculate coverage.** What fraction of the ground truth statements
+     are accurately represented in the response?
+     - 0% → score 1
+     - ~25% → score 2
+     - ~50% → score 3
+     - ~75% → score 4
+     - 100% → score 5
+
+  5. **Write a brief explanation** of why the response received this score.
+
+  6. **Return structured output:**
+     Think step-by-step, then provide:
+     - ThoughtChain: step-by-step analysis
+     - Explanation: short justification
+     - Score: integer 1-5
+
+# --- Output format ---
+
+output_format:
+  type: structured_text
+  schema:
+    thought_chain:
+      type: string
+      description: >
+        Step-by-step reasoning about how the response covers the
+        ground truth. Start with "Let's think step by step:".
+    explanation:
+      type: string
+      description: Short explanation of the assigned score.
+    score:
+      type: integer
+      minimum: 1
+      maximum: 5
+      description: >
+        Integer score from 1 (fully incomplete) to 5 (fully complete).
