@@ -474,7 +474,7 @@ tasks:
 	// Verify it's a TestFailureError
 	var testFailureErr *TestFailureError
 	assert.True(t, errors.As(err, &testFailureErr), "expected TestFailureError type")
-	assert.Contains(t, err.Error(), "benchmark completed with")
+	assert.Contains(t, err.Error(), "benchmark completed:")
 }
 
 func TestRunCommand_ReturnsRegularErrorOnConfigFailure(t *testing.T) {

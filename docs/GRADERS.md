@@ -950,6 +950,94 @@ graders:
 
 ---
 
+## Trigger Tests
+
+Trigger tests measure whether a skill activates for the right prompts and stays
+silent for the wrong ones. They run automatically when a `trigger_tests.yaml`
+file exists alongside `eval.yaml`.
+
+### File Format
+
+```yaml
+skill: code-explainer
+
+should_trigger_prompts:
+  - prompt: "Explain this code to me"
+    reason: "Direct explanation request"        # optional, for documentation
+    confidence: high                            # high (default) or medium
+
+  - prompt: "I don't understand what this code is doing"
+    confidence: medium
+
+should_not_trigger_prompts:
+  - prompt: "Write me a function to sort a list"
+    reason: "Code writing request, not explanation"
+    confidence: high
+
+  - prompt: "Fix the bug in my code"
+    confidence: medium
+```
+
+**Fields:**
+
+| Field | Required | Description |
+|-------|----------|-------------|
+| `skill` | yes | Skill name to check for invocation |
+| `should_trigger_prompts` | at least one of the two prompt lists | Prompts where the skill should activate |
+| `should_not_trigger_prompts` | at least one of the two prompt lists | Prompts where the skill should stay silent |
+| `prompt` | yes | The test prompt text |
+| `reason` | no | Human-readable explanation (not used in scoring) |
+| `confidence` | no | `high` (default) or `medium` — controls scoring weight |
+
+### Confidence Weighting
+
+Each prompt's result is weighted by its confidence level:
+
+- **`high`** (or omitted): weight **1.0** — a clear-cut case where the expected
+  behavior is unambiguous.
+- **`medium`**: weight **0.5** — an edge case or borderline prompt where the
+  expected behavior is less certain.
+
+This lets you include borderline prompts without letting them dominate the score.
+For example a "medium" false positive penalizes accuracy half as much as a "high"
+one.
+
+### Metrics
+
+Trigger tests produce standard classification metrics:
+
+| Metric | Description |
+|--------|-------------|
+| **Accuracy** | (TP + TN) / total |
+| **Precision** | TP / (TP + FP) — how often activation was correct |
+| **Recall** | TP / (TP + FN) — how often it activated when it should have |
+| **F1** | Harmonic mean of precision and recall |
+| **Errors** | Prompts that failed to execute (counted as incorrect) |
+
+### Using `trigger_accuracy` as a Metric
+
+Add `trigger_accuracy` to the `metrics` section of your `eval.yaml` to set a
+pass/fail threshold:
+
+```yaml
+metrics:
+  - name: trigger_accuracy
+    cutoff: 0.9
+    weight: 30
+```
+
+When configured, trigger accuracy is included in the benchmark outcome and the
+run fails if accuracy falls below the cutoff.
+
+### Error Handling
+
+When a prompt fails to execute (engine error), it counts as an incorrect
+classification — a false negative for should-trigger prompts or a false positive
+for should-not-trigger prompts. The error count is reported separately so you can
+distinguish engine failures from genuine misclassifications.
+
+---
+
 ## Creating Custom Graders
 
 Extend the `Grader` base class:

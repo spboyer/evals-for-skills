@@ -79,7 +79,7 @@ tasks:
 	err := cmd.Execute()
 	// The error is expected (test failure), but Shutdown must still have run.
 	require.Error(t, err, "benchmark with failing tests should return error")
-	assert.Contains(t, err.Error(), "benchmark completed with")
+	assert.Contains(t, err.Error(), "benchmark completed:")
 }
 
 func TestRunSingleModel_ShutdownOnInvalidFormat(t *testing.T) {

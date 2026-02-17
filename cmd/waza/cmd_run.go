@@ -17,6 +17,7 @@ import (
 	"github.com/spboyer/waza/internal/orchestration"
 	"github.com/spboyer/waza/internal/recommend"
 	"github.com/spboyer/waza/internal/reporting"
+	"github.com/spboyer/waza/internal/trigger"
 	"github.com/spboyer/waza/internal/utils"
 	"github.com/spf13/cobra"
 )
@@ -289,13 +290,67 @@ func runSingleModel(_ *cobra.Command, spec *models.BenchmarkSpec, specPath strin
 		return nil, fmt.Errorf("benchmark failed: %w", err)
 	}
 
+	// Discover and run trigger tests if present alongside the eval spec
+	if triggerSpec, err := trigger.Discover(specDir); err != nil {
+		return outcome, fmt.Errorf("loading trigger tests: %w", err)
+	} else if triggerSpec != nil {
+		var tm *models.TriggerMetrics
+		if spec.Config.EngineType == "mock" {
+			// return perfect results
+			var results []models.TriggerResult
+			for _, p := range triggerSpec.ShouldTriggerPrompts {
+				results = append(results, models.TriggerResult{
+					Prompt:        p.Prompt,
+					Confidence:    p.Confidence,
+					ShouldTrigger: true,
+					DidTrigger:    true,
+				})
+			}
+			for _, p := range triggerSpec.ShouldNotTriggerPrompts {
+				results = append(results, models.TriggerResult{
+					Prompt:        p.Prompt,
+					Confidence:    p.Confidence,
+					ShouldTrigger: false,
+					DidTrigger:    false,
+				})
+			}
+			tm = models.ComputeTriggerMetrics(results)
+		} else {
+			w := spec.Config.Workers
+			if w <= 0 {
+				w = 4
+			}
+			tr := trigger.NewRunner(triggerSpec, engine, verbose, os.Stdout, w)
+			if verbose {
+				fmt.Println("Running trigger tests...")
+			}
+			if tm, err = tr.Run(ctx); err != nil {
+				fmt.Fprintf(os.Stderr, "Warning: trigger tests failed: %v\n", err)
+			}
+		}
+		if tm != nil {
+			outcome.TriggerMetrics = tm
+			for _, m := range spec.Metrics {
+				if m.Identifier == "trigger_accuracy" {
+					outcome.Measures[m.Identifier] = models.MeasureResult{
+						Identifier: m.Identifier,
+						Value:      tm.Accuracy,
+						Cutoff:     m.Cutoff,
+						Passed:     m.Cutoff <= 0 || tm.Accuracy >= m.Cutoff,
+						Weight:     m.Weight,
+					}
+					break
+				}
+			}
+		}
+	}
+
 	// Print results based on format
 	switch format {
 	case "github-comment":
 		fmt.Print(FormatGitHubComment(outcome))
 	case "default":
 		printSummary(outcome)
-
 		if interpret {
 			fmt.Println()
 			fmt.Print(reporting.FormatSummaryReport(outcome))
@@ -313,9 +368,16 @@ func runSingleModel(_ *cobra.Command, spec *models.BenchmarkSpec, specPath strin
 	}
 
 	// Return test failure as error so caller can decide how to handle it
+	var failures []string
 	if outcome.Digest.Failed > 0 || outcome.Digest.Errors > 0 {
+		failures = append(failures, fmt.Sprintf("%d failed and %d error(s)", outcome.Digest.Failed, outcome.Digest.Errors))
+	}
+	if m, ok := outcome.Measures["trigger_accuracy"]; ok && !m.Passed {
+		failures = append(failures, fmt.Sprintf("trigger accuracy %.1f%% below threshold %.1f%%", m.Value*100, m.Cutoff*100))
+	}
+	if len(failures) > 0 {
 		return outcome, &TestFailureError{
-			Message: fmt.Sprintf("benchmark completed with %d failed and %d error(s)", outcome.Digest.Failed, outcome.Digest.Errors),
+			Message: fmt.Sprintf("benchmark completed: %s", strings.Join(failures, "; ")),
 		}
 	}
 
@@ -513,6 +575,21 @@ func printSummary(outcome *models.EvaluationOutcome) {
 				to.Stats.CI95Hi,
 			)
 		}
+		fmt.Println()
+	}
+
+	// Show trigger accuracy if trigger tests were run
+	if outcome.TriggerMetrics != nil {
+		m := outcome.TriggerMetrics
+		fmt.Println("-" + strings.Repeat("-", 50))
+		fmt.Println(" TRIGGER ACCURACY")
+		fmt.Println("-" + strings.Repeat("-", 50))
+		fmt.Printf("  Accuracy:  %.1f%%\n", m.Accuracy*100)
+		if m.Errors > 0 {
+			fmt.Printf("  Errors:    %d prompt(s) returned errors\n", m.Errors)
+		}
+		fmt.Printf("  Precision: %.1f%%  Recall: %.1f%%  F1: %.1f%%\n", m.Precision*100, m.Recall*100, m.F1*100)
+		fmt.Printf("  TP: %d  FP: %d  FN: %d  TN: %d\n", m.TP, m.FP, m.FN, m.TN)
 		fmt.Println()
 	}
 }

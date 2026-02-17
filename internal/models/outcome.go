@@ -35,15 +35,16 @@ const (
 
 // EvaluationOutcome represents the complete result of an evaluation run
 type EvaluationOutcome struct {
-	RunID        string                   `json:"eval_id"`
-	SkillTested  string                   `json:"skill"`
-	BenchName    string                   `json:"eval_name"`
-	Timestamp    time.Time                `json:"timestamp"`
-	Setup        OutcomeSetup             `json:"config"`
-	Digest       OutcomeDigest            `json:"summary"`
-	Measures     map[string]MeasureResult `json:"metrics"`
-	TestOutcomes []TestOutcome            `json:"tasks"`
-	Metadata     map[string]any           `json:"metadata,omitempty"`
+	RunID          string                   `json:"eval_id"`
+	SkillTested    string                   `json:"skill"`
+	BenchName      string                   `json:"eval_name"`
+	Timestamp      time.Time                `json:"timestamp"`
+	Setup          OutcomeSetup             `json:"config"`
+	Digest         OutcomeDigest            `json:"summary"`
+	Measures       map[string]MeasureResult `json:"metrics"`
+	TestOutcomes   []TestOutcome            `json:"tasks"`
+	TriggerMetrics *TriggerMetrics          `json:"trigger_metrics,omitempty"`
+	Metadata       map[string]any           `json:"metadata,omitempty"`
 }
 
 type OutcomeSetup struct {

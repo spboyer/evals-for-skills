@@ -1,4 +1,4 @@
-package metrics
+package models
 
 import (
 	"math"
@@ -107,6 +107,46 @@ func TestComputeTriggerMetrics(t *testing.T) {
 			want: &TriggerMetrics{
 				TP: 3, FP: 1, TN: 3, FN: 1,
 				Precision: 0.75, Recall: 0.75, F1: 0.75, Accuracy: 0.75,
+			},
+		},
+		{
+			name: "medium confidence weights half",
+			results: []TriggerResult{
+				{ShouldTrigger: true, DidTrigger: true, Confidence: "high"},     // TP weight 1.0
+				{ShouldTrigger: false, DidTrigger: true, Confidence: "medium"},  // FP weight 0.5
+				{ShouldTrigger: false, DidTrigger: false, Confidence: "medium"}, // TN weight 0.5
+			},
+			// tp=1.0, fp=0.5, tn=0.5, fn=0
+			// precision = 1.0/1.5 = 0.6667, recall = 1.0/1.0 = 1.0
+			// f1 = 2*0.6667*1.0/1.6667 = 0.8
+			// accuracy = 1.5/2.0 = 0.75
+			want: &TriggerMetrics{
+				TP: 1, FP: 1, TN: 1, FN: 0,
+				Precision: 0.6667, Recall: 1.0, F1: 0.8, Accuracy: 0.75,
+			},
+		},
+		{
+			name: "empty confidence defaults to high",
+			results: []TriggerResult{
+				{ShouldTrigger: true, DidTrigger: true, Confidence: ""},
+				{ShouldTrigger: false, DidTrigger: false, Confidence: ""},
+			},
+			want: &TriggerMetrics{
+				TP: 1, FP: 0, TN: 1, FN: 0,
+				Precision: 1.0, Recall: 1.0, F1: 1.0, Accuracy: 1.0,
+			},
+		},
+		{
+			name: "all medium confidence",
+			results: []TriggerResult{
+				{ShouldTrigger: true, DidTrigger: true, Confidence: "medium"},  // TP 0.5
+				{ShouldTrigger: true, DidTrigger: false, Confidence: "medium"}, // FN 0.5
+			},
+			// tp=0.5, fn=0.5; precision=1.0, recall=0.5, f1=0.6667, accuracy=0.5
+			// TP rounds to 1, FN rounds to 1 (int display)
+			want: &TriggerMetrics{
+				TP: 1, FP: 0, TN: 0, FN: 1,
+				Precision: 1.0, Recall: 0.5, F1: 0.6667, Accuracy: 0.5,
 			},
 		},
 	}

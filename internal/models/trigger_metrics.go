@@ -1,4 +1,4 @@
-package metrics
+package models
 
 import "math"
 
@@ -8,6 +8,7 @@ type TriggerMetrics struct {
 	FP        int     `json:"false_positives"`
 	TN        int     `json:"true_negatives"`
 	FN        int     `json:"false_negatives"`
+	Errors    int     `json:"errors,omitempty"`
 	Precision float64 `json:"precision"`
 	Recall    float64 `json:"recall"`
 	F1        float64 `json:"f1"`
@@ -16,63 +17,76 @@ type TriggerMetrics struct {
 
 // TriggerResult pairs an expected trigger label with the actual outcome.
 type TriggerResult struct {
-	ShouldTrigger bool // expected: true = should activate
-	DidTrigger    bool // actual: true = skill activated
+	Prompt        string
+	Confidence    string
+	ShouldTrigger bool
+	DidTrigger    bool
 }
 
 // ComputeTriggerMetrics calculates precision, recall, F1, and accuracy
-// from a set of trigger classification results.
+// from a set of trigger classification results. Results are weighted by
+// confidence: "high" (or empty) counts as 1.0, "medium" as 0.5.
 // Returns nil when results is empty.
 func ComputeTriggerMetrics(results []TriggerResult) *TriggerMetrics {
 	if len(results) == 0 {
 		return nil
 	}
 
-	var tp, fp, tn, fn int
+	var tp, fp, tn, fn float64
 	for _, r := range results {
+		w := triggerConfidenceWeight(r.Confidence)
 		switch {
 		case r.ShouldTrigger && r.DidTrigger:
-			tp++
+			tp += w
 		case !r.ShouldTrigger && r.DidTrigger:
-			fp++
+			fp += w
 		case !r.ShouldTrigger && !r.DidTrigger:
-			tn++
+			tn += w
 		case r.ShouldTrigger && !r.DidTrigger:
-			fn++
+			fn += w
 		}
 	}
 
 	total := tp + fp + tn + fn
 
-	precision := safeDivide(float64(tp), float64(tp+fp))
-	recall := safeDivide(float64(tp), float64(tp+fn))
+	precision := triggerSafeDivide(tp, tp+fp)
+	recall := triggerSafeDivide(tp, tp+fn)
 
 	var f1 float64
 	if precision+recall > 0 {
 		f1 = 2 * precision * recall / (precision + recall)
 	}
 
-	accuracy := safeDivide(float64(tp+tn), float64(total))
+	accuracy := triggerSafeDivide(tp+tn, total)
 
 	return &TriggerMetrics{
-		TP:        tp,
-		FP:        fp,
-		TN:        tn,
-		FN:        fn,
-		Precision: roundTo4(precision),
-		Recall:    roundTo4(recall),
-		F1:        roundTo4(f1),
-		Accuracy:  roundTo4(accuracy),
+		TP:        int(math.Round(tp)),
+		FP:        int(math.Round(fp)),
+		TN:        int(math.Round(tn)),
+		FN:        int(math.Round(fn)),
+		Precision: triggerRoundTo4(precision),
+		Recall:    triggerRoundTo4(recall),
+		F1:        triggerRoundTo4(f1),
+		Accuracy:  triggerRoundTo4(accuracy),
 	}
 }
 
-func safeDivide(num, den float64) float64 {
+func triggerConfidenceWeight(c string) float64 {
+	switch c {
+	case "medium":
+		return 0.5
+	default:
+		return 1.0
+	}
+}
+
+func triggerSafeDivide(num, den float64) float64 {
 	if den == 0 {
 		return 0.0
 	}
 	return num / den
 }
 
-func roundTo4(v float64) float64 {
+func triggerRoundTo4(v float64) float64 {
 	return math.Round(v*10000) / 10000
 }
