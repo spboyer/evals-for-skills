@@ -15,6 +15,7 @@ import (
 	"github.com/spboyer/waza/internal/execution"
 	"github.com/spboyer/waza/internal/models"
 	"github.com/spboyer/waza/internal/orchestration"
+	"github.com/spboyer/waza/internal/recommend"
 	"github.com/spboyer/waza/internal/reporting"
 	"github.com/spboyer/waza/internal/utils"
 	"github.com/spf13/cobra"
@@ -34,6 +35,7 @@ var (
 	disableCache   bool
 	runCacheDir    string
 	modelOverrides []string
+	recommendFlag  bool
 )
 
 // modelResult pairs a model identifier with its evaluation outcome.
@@ -67,6 +69,7 @@ Resources are loaded from the context directory (defaults to ./fixtures).`,
 	cmd.Flags().BoolVar(&disableCache, "no-cache", false, "Disable result caching (default)")
 	cmd.Flags().StringVar(&runCacheDir, "cache-dir", ".waza-cache", "Cache directory for storing results")
 	cmd.Flags().StringArrayVar(&modelOverrides, "model", nil, "Model to use (overrides spec config, can be repeated for comparison)")
+	cmd.Flags().BoolVar(&recommendFlag, "recommend", false, "Generate heuristic recommendation after multi-model run")
 
 	return cmd
 }
@@ -120,6 +123,21 @@ func runCommandE(cmd *cobra.Command, args []string) error {
 	// Print comparison table when multiple models were evaluated
 	if multiModel && len(allResults) > 0 {
 		printModelComparison(allResults)
+	}
+
+	// Compute and print heuristic recommendation for multi-model runs
+	if multiModel && recommendFlag && len(allResults) > 0 {
+		rec := computeAndPrintRecommendation(allResults)
+		if rec != nil {
+			for i := range allResults {
+				if allResults[i].outcome != nil {
+					if allResults[i].outcome.Metadata == nil {
+						allResults[i].outcome.Metadata = make(map[string]any)
+					}
+					allResults[i].outcome.Metadata["recommendation"] = rec
+				}
+			}
+		}
 	}
 
 	// Save per-model results when --output is specified with multiple models
@@ -495,3 +513,64 @@ func saveOutcome(outcome *models.EvaluationOutcome, path string) error {
 
 	return os.WriteFile(path, data, 0644)
 }
+
+// computeAndPrintRecommendation runs the heuristic engine and prints results.
+func computeAndPrintRecommendation(results []modelResult) *models.Recommendation {
+	inputs := make([]recommend.ModelInput, len(results))
+	for i, mr := range results {
+		inputs[i] = recommend.ModelInput{
+			ModelID: mr.modelID,
+			Outcome: mr.outcome,
+		}
+	}
+
+	engine := recommend.NewEngine()
+	rec := engine.Recommend(inputs)
+	if rec == nil {
+		return nil
+	}
+
+	printRecommendationSummary(rec, results)
+	return rec
+}
+
+func printRecommendationSummary(rec *models.Recommendation, results []modelResult) {
+	fmt.Println()
+	fmt.Println("═" + strings.Repeat("═", 54))
+	fmt.Println(" RECOMMENDATION (HEURISTIC)")
+	fmt.Println("═" + strings.Repeat("═", 54))
+	fmt.Println()
+
+	fmt.Printf("Recommended Model: %s (weighted score: %.1f/10)\n",
+		rec.RecommendedModel, rec.HeuristicScore)
+	fmt.Println()
+
+	fmt.Println("Reasoning:")
+	fmt.Printf("  • %s\n", rec.Reason)
+	if rec.WinnerMarginPct != 0 {
+		fmt.Printf("  • Margin of victory: %.1f%% ahead of runner-up\n", rec.WinnerMarginPct)
+	}
+	fmt.Println()
+
+	fmt.Println("Component Scores (normalized 0–10):")
+	fmt.Printf("%-20s %-12s %-12s %-12s %-12s\n", "Model", "Aggregate", "PassRate", "Consistency", "Speed")
+	fmt.Println("─" + strings.Repeat("─", 54))
+	for _, ms := range rec.ModelScores {
+		fmt.Printf("%-20s %-12.1f %-12.1f %-12.1f %-12.1f\n",
+			ms.ModelID,
+			ms.Scores["aggregate_score_normalized"],
+			ms.Scores["pass_rate_normalized"],
+			ms.Scores["consistency_normalized"],
+			ms.Scores["speed_normalized"],
+		)
+	}
+	fmt.Println()
+
+	fmt.Println("Methodology: Weighted average of normalized scores (0–10):")
+	fmt.Printf("  • Aggregate score: %.0f%% weight\n", rec.Weights.AggregateScore*100)
+	fmt.Printf("  • Pass rate: %.0f%% weight\n", rec.Weights.PassRate*100)
+	fmt.Printf("  • Consistency (inverse stddev): %.0f%% weight\n", rec.Weights.Consistency*100)
+	fmt.Printf("  • Speed (inverse duration): %.0f%% weight\n", rec.Weights.Speed*100)
+	fmt.Println()
+}
+

@@ -24,6 +24,7 @@ func resetRunGlobals() {
 	interpret = false
 	format = "default"
 	modelOverrides = nil
+	recommendFlag = false
 }
 
 // helper creates a valid minimal eval spec YAML in a temp dir,
