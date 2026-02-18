@@ -26,3 +26,10 @@
 📌 Team update (2026-02-15): Don't take assigned work — only pick up unassigned issues — decided by Shayne Boyer
 
 📌 Team update (2026-02-17): Diff grader context_dir parameter must be documented in GRADERS.md — snapshot paths resolve relative to it. — decided by Linus
+
+### 2026-02-18: SkillsBench Competitive Analysis
+- Created `docs/research/` directory and published `skillsbench-competitive-analysis.md`
+- Document covers: executive summary, product overview, feature comparison matrix, community insights (HN discussion), gap analysis (A/B impact P0, multi-agent P1, no Docker), positioning strategy
+- Key findings: Skills as reasoning cache, post-failure generation > pre-task generation, quality > quantity, composability matters
+- Strategic recommendations: P0 A/B impact (#194), P1 multi-agent decoupling (#195), defer Docker, P2 domain examples
+- Positioning: Waza is developer tool ("does MY skill work?"), SkillsBench is research benchmark ("do skills help in general?") — complementary, not competitive

@@ -233,3 +233,29 @@ Approved: PR #154 (shutdown), #160 (tool_call rubrics), #161 (task rubrics).
 **Related:** E7 (#62)
 **What:** Go CLI release (separate from azd extension). Trigger: `v*` tags or `workflow_dispatch`. Matrix: 6 platforms (linux/darwin/windows × amd64/arm64). Binaries: `waza-{os}-{arch}[.exe]`. Version injection: `-ldflags "-X main.version=$VERSION"`. Artifacts: 6 binaries + `waza-{VERSION}.sha256` + auto-generated release notes (from merged PRs). install.sh: platform detection + download + SHA256 verification. New files: `.github/workflows/go-release.yml` (250-300L), `install.sh` (50-70L). Existing: `release-python-legacy.yaml` renamed/disabled.
 **Why:** Standard Go patterns. User-friendly install. Cross-platform tested. Verifiable checksums. Clear separation from Python legacy.
+
+### 2026-02-17: Grader registry near-complete — only prompt grader remains
+**By:** Linus (Backend Dev)
+**Related:** #28, PR #179
+**What:** Implemented keyword, json_schema, and program graders. The `Create()` factory now handles 10 of 11 grader kinds. Only `GraderKindPrompt` remains unimplemented. The json_schema grader uses `santhosh-tekuri/jsonschema/v6` which was already an indirect dependency. The program grader passes agent output via stdin and workspace dir via `WAZA_WORKSPACE_DIR` env var — any future graders that shell out should follow this convention.
+**Why:** Completing the grader registry unblocks eval authors who need keyword matching, schema validation, or custom external grading scripts.
+
+### 2026-02-18: User directives — model selection, issue assignment, docs
+**By:** Shayne Boyer (via Copilot)
+**What:**
+1. All coders should use Opus 4.6 (premium tier) for implementation work
+2. Ensure all squad members are properly assigned to their issues
+3. Keep docs and READMEs up to date with all changes
+**Why:** User request — captured for team memory
+
+### 2026-02-18: Lifecycle hooks implementation (#185)
+**By:** Linus (Backend Dev)
+**Related:** #185
+**What:** Lifecycle hooks execute shell commands at four points: before_run, after_run, before_task, after_task. The `internal/hooks` package owns execution logic. `HooksConfig` is embedded in `BenchmarkSpec` via yaml tag `hooks`. Runner orchestration calls hooks with these semantics: before_run failure aborts the run; before_task failure skips that task (marks failed); after_run always fires (defer); after_task failures are warnings only. No hooks = no-op, fully backward compatible.
+**Why:** Enables eval authors to run setup/teardown scripts (e.g. starting services, cleaning state, collecting metrics) without modifying the waza codebase. Error semantics follow the principle that pre-hooks gate execution while post-hooks are observational.
+
+### 2026-02-18: Retry/attempts mechanism — design decisions
+**By:** Linus (Backend Dev)
+**Related:** #184
+**What:** `max_attempts` config field (YAML: `max_attempts`, default: 1) adds an inner retry loop inside each trial. On grader failure (`StatusFailed`), the runner re-executes the task up to `max_attempts` times before recording the final result. Infrastructure errors (`StatusError`) are never retried. `RunResult.Attempts` tracks the attempt count in JSON output.
+**Why:** Flaky agent responses shouldn't fail an entire trial on first attempt. Retrying grader failures within a trial gives non-deterministic agents a fair shot while keeping infrastructure errors fatal. The retry loop is inside `runTestUncached()` (not `executeRun()`) to maintain single-responsibility — `executeRun()` stays a pure single-execution function.
