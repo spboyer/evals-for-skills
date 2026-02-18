@@ -64,7 +64,7 @@ func countLines(path string) (int, error) {
 	if err != nil {
 		return 0, err
 	}
-	defer f.Close()
+	defer func() { _ = f.Close() }()
 	n := 0
 	scanner := bufio.NewScanner(f)
 	for scanner.Scan() {
@@ -79,7 +79,7 @@ func ReadEvents(path string) ([]Event, error) {
 	if err != nil {
 		return nil, fmt.Errorf("opening session file: %w", err)
 	}
-	defer f.Close()
+	defer func() { _ = f.Close() }()
 
 	var events []Event
 	scanner := bufio.NewScanner(f)
@@ -101,14 +101,14 @@ func ReadEvents(path string) ([]Event, error) {
 // RenderTimeline writes a human-readable session timeline to w.
 func RenderTimeline(w io.Writer, events []Event) {
 	if len(events) == 0 {
-		fmt.Fprintln(w, "No events found.")
+		_, _ = fmt.Fprintln(w, "No events found.")
 		return
 	}
 
-	fmt.Fprintln(w, "═══════════════════════════════════════════════════════")
-	fmt.Fprintln(w, " SESSION TIMELINE")
-	fmt.Fprintln(w, "═══════════════════════════════════════════════════════")
-	fmt.Fprintln(w)
+	_, _ = fmt.Fprintln(w, "═══════════════════════════════════════════════════════")
+	_, _ = fmt.Fprintln(w, " SESSION TIMELINE")
+	_, _ = fmt.Fprintln(w, "═══════════════════════════════════════════════════════")
+	_, _ = fmt.Fprintln(w)
 
 	start := events[0].Timestamp
 	for _, ev := range events {
@@ -117,54 +117,54 @@ func RenderTimeline(w io.Writer, events []Event) {
 
 		switch ev.Type {
 		case EventSessionStart:
-			model, _ := ev.Data["model"].(string)
-			engine, _ := ev.Data["engine"].(string)
+			model, _ := ev.Data["model"].(string) //nolint:errcheck // zero-value on failure is fine
+			engine, _ := ev.Data["engine"].(string) //nolint:errcheck // zero-value on failure is fine
 			taskCount := jsonNumber(ev.Data["task_count"])
-			fmt.Fprintf(w, "[%s] 🚀 Session started  model=%s  engine=%s  tasks=%d\n", ts, model, engine, taskCount)
+			_, _ = fmt.Fprintf(w, "[%s] 🚀 Session started  model=%s  engine=%s  tasks=%d\n", ts, model, engine, taskCount)
 
 		case EventTaskStart:
-			name, _ := ev.Data["task_name"].(string)
+			name, _ := ev.Data["task_name"].(string) //nolint:errcheck // zero-value on failure is fine
 			num := jsonNumber(ev.Data["task_num"])
 			total := jsonNumber(ev.Data["total_tasks"])
-			fmt.Fprintf(w, "[%s] ▶  Task %d/%d: %s\n", ts, num, total, name)
+			_, _ = fmt.Fprintf(w, "[%s] ▶  Task %d/%d: %s\n", ts, num, total, name)
 
 		case EventGraderResult:
-			grader, _ := ev.Data["grader_name"].(string)
-			passed, _ := ev.Data["passed"].(bool)
+			grader, _ := ev.Data["grader_name"].(string) //nolint:errcheck // zero-value on failure is fine
+			passed, _ := ev.Data["passed"].(bool) //nolint:errcheck // zero-value on failure is fine
 			score := jsonFloat(ev.Data["score"])
 			icon := "✗"
 			if passed {
 				icon = "✓"
 			}
-			fmt.Fprintf(w, "[%s]    %s Grader %s  score=%.2f\n", ts, icon, grader, score)
+			_, _ = fmt.Fprintf(w, "[%s]    %s Grader %s  score=%.2f\n", ts, icon, grader, score)
 
 		case EventTaskComplete:
-			name, _ := ev.Data["task_name"].(string)
-			status, _ := ev.Data["status"].(string)
+			name, _ := ev.Data["task_name"].(string) //nolint:errcheck // zero-value on failure is fine
+			status, _ := ev.Data["status"].(string) //nolint:errcheck // zero-value on failure is fine
 			dur := jsonNumber(ev.Data["duration_ms"])
 			icon := "✓"
 			if status != "passed" {
 				icon = "✗"
 			}
-			fmt.Fprintf(w, "[%s] %s  Task complete: %s [%s] (%dms)\n", ts, icon, name, status, dur)
+			_, _ = fmt.Fprintf(w, "[%s] %s  Task complete: %s [%s] (%dms)\n", ts, icon, name, status, dur)
 
 		case EventError:
-			msg, _ := ev.Data["message"].(string)
-			fmt.Fprintf(w, "[%s] ❌ Error: %s\n", ts, msg)
+			msg, _ := ev.Data["message"].(string) //nolint:errcheck // zero-value on failure is fine
+			_, _ = fmt.Fprintf(w, "[%s] ❌ Error: %s\n", ts, msg)
 
 		case EventSessionEnd:
 			total := jsonNumber(ev.Data["total_tests"])
 			passed := jsonNumber(ev.Data["passed"])
 			failed := jsonNumber(ev.Data["failed"])
 			dur := jsonNumber(ev.Data["duration_ms"])
-			fmt.Fprintf(w, "[%s] 🏁 Session complete  %d/%d passed  %d failed  (%dms)\n",
+			_, _ = fmt.Fprintf(w, "[%s] 🏁 Session complete  %d/%d passed  %d failed  (%dms)\n",
 				ts, passed, total, failed, dur)
 
 		default:
-			fmt.Fprintf(w, "[%s] %s %v\n", ts, ev.Type, ev.Data)
+			_, _ = fmt.Fprintf(w, "[%s] %s %v\n", ts, ev.Type, ev.Data)
 		}
 	}
-	fmt.Fprintln(w)
+	_, _ = fmt.Fprintln(w)
 }
 
 func formatDuration(d time.Duration) string {
@@ -182,7 +182,7 @@ func jsonNumber(v any) int {
 	case int:
 		return n
 	case json.Number:
-		i, _ := n.Int64()
+		i, _ := n.Int64() //nolint:errcheck // fallback to zero is acceptable
 		return int(i)
 	}
 	return 0
@@ -195,7 +195,7 @@ func jsonFloat(v any) float64 {
 	case int:
 		return float64(n)
 	case json.Number:
-		f, _ := n.Float64()
+		f, _ := n.Float64() //nolint:errcheck // fallback to zero is acceptable
 		return f
 	}
 	return 0
