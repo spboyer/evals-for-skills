@@ -420,11 +420,11 @@ func runSingleModel(_ *cobra.Command, spec *models.BenchmarkSpec, specPath strin
 			ev = session.NewEvent(session.EventTaskComplete,
 				session.TaskCompleteData(event.TestName, string(event.Status), score, durationMs))
 		case orchestration.EventGraderResult:
-			grader, _ := event.Details["grader"].(string)
-			graderType, _ := event.Details["grader_type"].(string)
-			passed, _ := event.Details["passed"].(bool)
-			score, _ := event.Details["score"].(float64)
-			feedback, _ := event.Details["feedback"].(string)
+			grader, _ := event.Details["grader"].(string)          //nolint:errcheck
+			graderType, _ := event.Details["grader_type"].(string) //nolint:errcheck
+			passed, _ := event.Details["passed"].(bool)            //nolint:errcheck
+			score, _ := event.Details["score"].(float64)           //nolint:errcheck
+			feedback, _ := event.Details["feedback"].(string)      //nolint:errcheck
 			ev = session.NewEvent(session.EventGraderResult,
 				session.GraderResultData(grader, graderType, passed, score, feedback))
 		default:
