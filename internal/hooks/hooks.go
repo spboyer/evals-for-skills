@@ -2,6 +2,7 @@ package hooks
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os/exec"
 	"strings"
@@ -44,7 +45,7 @@ func (r *Runner) Execute(ctx context.Context, name string, hooks []HookConfig) e
 }
 
 func (r *Runner) runHook(ctx context.Context, name string, index int, h HookConfig) error {
-	if h.Command == "" {
+	if strings.TrimSpace(h.Command) == "" {
 		return fmt.Errorf("hook %s[%d]: empty command", name, index)
 	}
 
@@ -65,7 +66,7 @@ func (r *Runner) runHook(ctx context.Context, name string, index int, h HookConf
 	if err != nil {
 		exitCode := -1
 		var exitErr *exec.ExitError
-		if ok := isExitError(err, &exitErr); ok {
+		if ok := errors.As(err, &exitErr); ok {
 			exitCode = exitErr.ExitCode()
 		} else {
 			// Non-exit error (e.g. command not found)
@@ -110,11 +111,4 @@ func isAcceptableExit(exitCode int, allowedCodes []int) bool {
 	return false
 }
 
-// isExitError unwraps err into an *exec.ExitError if possible.
-func isExitError(err error, target **exec.ExitError) bool {
-	if ee, ok := err.(*exec.ExitError); ok { //nolint:errorlint // exec.ExitError is always the direct type
-		*target = ee
-		return true
-	}
-	return false
-}
+

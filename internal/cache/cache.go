@@ -55,6 +55,9 @@ func CacheKey(spec *models.BenchmarkSpec, task *models.TestCase, fixtureDir stri
 	if err := writeInt(h, spec.Config.RunsPerTest); err != nil {
 		return "", err
 	}
+	if err := writeInt(h, spec.Config.MaxAttempts); err != nil {
+		return "", err
+	}
 
 	// Include graders configuration
 	gradersJSON, err := json.Marshal(spec.Graders)
