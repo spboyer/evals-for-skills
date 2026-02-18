@@ -403,6 +403,7 @@ config:
   parallel: false
   executor: mock          # or copilot-sdk
   model: claude-sonnet-4-20250514
+  group_by: model          # Group results by model (or other dimension)
 
 hooks:
   before_run:
@@ -464,6 +465,29 @@ When a grader fails, waza will retry the task execution up to `max_attempts` tim
 
 **Output:** JSON results include `attempts` per task showing the number of executions performed.
 
+### Grouping Results
+
+Use `group_by` to organize results by a dimension (e.g., model, environment). Results are grouped in CLI output and JSON results include group statistics:
+
+```yaml
+config:
+  group_by: model
+```
+
+Grouped results in JSON output include `GroupStats`:
+```json
+{
+  "group_stats": [
+    {
+      "name": "claude-sonnet-4-20250514",
+      "passed": 8,
+      "total": 10,
+      "avg_score": 0.85
+    }
+  ]
+}
+```
+
 ### Lifecycle Hooks
 
 Use `hooks` to run commands before/after evaluations and tasks:
@@ -507,8 +531,30 @@ hooks:
 - `before_task` — Execute before each task
 - `after_task` — Execute after each task
 
-**Template Variables:**
+**Template Variables in Hooks and Commands:**
+
+Available variables in hook commands and task execution contexts:
+- `{{.JobID}}` — Unique evaluation run identifier
 - `{{.TaskName}}` — Name/ID of the current task (available in `before_task`/`after_task` only)
+- `{{.Iteration}}` — Current trial number (1-indexed)
+- `{{.Attempt}}` — Current attempt number (1-indexed, used for retries)
+- `{{.Timestamp}}` — ISO 8601 timestamp of execution
+- `{{.Vars.key}}` — User-defined variables from the `vars` section
+
+Custom variables can be defined in the spec and referenced in hooks:
+
+```yaml
+vars:
+  environment: production
+  api_version: v2
+
+hooks:
+  before_run:
+    - command: "echo 'Starting eval {{.JobID}} in {{.Vars.environment}}'"
+      working_directory: "."
+      exit_codes: [0]
+      error_on_fail: false
+```
 
 ## CI/CD Integration
 

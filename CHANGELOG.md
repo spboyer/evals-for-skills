@@ -9,6 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Template Variables** — New `internal/template` package with `Render()` for Go text/template syntax in hooks and commands. System variables: `JobID`, `TaskName`, `Iteration`, `Attempt`, `Timestamp`. User variables via `vars` map (#186)
+- **GroupBy Results** — New `group_by` config field to organize results by dimension (e.g., model). CLI shows grouped output, JSON includes `GroupStats` with name/passed/total/avg_score (#188)
 - **Retry/Attempts** — Add `max_attempts` config field for retrying failed task executions within each trial (#191)
 - **Lifecycle Hooks** — Add `hooks` section with `before_run`/`after_run`/`before_task`/`after_task` lifecycle points (#191)
 - **`prompt` grader (LLM-as-judge)** — LLM-based evaluation with rubrics, tool-based grading, and session management modes (#177, closes #104)
