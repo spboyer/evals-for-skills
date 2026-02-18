@@ -95,6 +95,76 @@ func TestServer_MultipleRequests(t *testing.T) {
 	}
 }
 
+func TestServer_Notification_NoResponse(t *testing.T) {
+	registry := NewMethodRegistry()
+	called := false
+	registry.Register("notify.test", func(_ context.Context, _ json.RawMessage) (any, *Error) {
+		called = true
+		return map[string]string{"ok": "true"}, nil
+	})
+	server := NewServer(registry, nil)
+
+	// Notification: no "id" field at all
+	notif := `{"jsonrpc":"2.0","method":"notify.test","params":{}}` + "\n"
+	var out bytes.Buffer
+	server.ServeStdio(strings.NewReader(notif), &out)
+
+	assert.True(t, called, "handler should be invoked for notifications")
+	assert.Empty(t, out.String(), "no response should be written for notifications")
+}
+
+func TestServer_Notification_WithNullID_GetsResponse(t *testing.T) {
+	registry := NewMethodRegistry()
+	registry.Register("echo", func(_ context.Context, params json.RawMessage) (any, *Error) {
+		return json.RawMessage(params), nil
+	})
+	server := NewServer(registry, nil)
+
+	// Explicit "id": null is a request, not a notification — should get a response.
+	req := `{"jsonrpc":"2.0","method":"echo","params":{"x":1},"id":null}` + "\n"
+	var out bytes.Buffer
+	server.ServeStdio(strings.NewReader(req), &out)
+
+	assert.NotEmpty(t, out.String(), "request with explicit id:null should get a response")
+	var resp Response
+	require.NoError(t, json.Unmarshal(out.Bytes(), &resp))
+	assert.Nil(t, resp.Error)
+}
+
+func TestServer_Notification_MethodNotFound_NoResponse(t *testing.T) {
+	registry := NewMethodRegistry()
+	server := NewServer(registry, nil)
+
+	// Notification to nonexistent method: no response per spec
+	notif := `{"jsonrpc":"2.0","method":"nonexistent"}` + "\n"
+	var out bytes.Buffer
+	server.ServeStdio(strings.NewReader(notif), &out)
+
+	assert.Empty(t, out.String(), "no response for notification even if method not found")
+}
+
+func TestServer_MixedRequestsAndNotifications(t *testing.T) {
+	registry := NewMethodRegistry()
+	callCount := 0
+	registry.Register("ping", func(_ context.Context, _ json.RawMessage) (any, *Error) {
+		callCount++
+		return map[string]string{"pong": "ok"}, nil
+	})
+	server := NewServer(registry, nil)
+
+	// Mix of request (has id) and notification (no id)
+	input := `{"jsonrpc":"2.0","method":"ping","id":1}` + "\n" +
+		`{"jsonrpc":"2.0","method":"ping"}` + "\n" +
+		`{"jsonrpc":"2.0","method":"ping","id":2}` + "\n"
+	var out bytes.Buffer
+	server.ServeStdio(strings.NewReader(input), &out)
+
+	assert.Equal(t, 3, callCount, "all three calls should be invoked")
+
+	lines := strings.Split(strings.TrimSpace(out.String()), "\n")
+	assert.Equal(t, 2, len(lines), "only 2 responses for 2 requests (notification gets none)")
+}
+
 func TestServer_ErrorFromHandler(t *testing.T) {
 	registry := NewMethodRegistry()
 	registry.Register("fail", func(_ context.Context, _ json.RawMessage) (any, *Error) {

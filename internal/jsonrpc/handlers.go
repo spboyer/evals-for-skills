@@ -261,6 +261,11 @@ func (h *HandlerContext) handleEvalRun(_ context.Context, params json.RawMessage
 		h.mu.Lock()
 		defer h.mu.Unlock()
 		state.Status = "completed"
+		// Clean up cancel func to avoid leaking entries for completed runs.
+		if cancel, exists := h.cancelFuncs[runID]; exists {
+			cancel()
+			delete(h.cancelFuncs, runID)
+		}
 	}()
 
 	return &EvalRunResult{RunID: runID}, nil

@@ -266,6 +266,44 @@ func TestHandler_TaskGet_MissingParams(t *testing.T) {
 	assert.Equal(t, CodeInvalidParams, resp.Error.Code)
 }
 
+func TestHandler_CancelFuncCleanup(t *testing.T) {
+	dir := t.TempDir()
+	evalContent := `name: cleanup-eval
+config:
+  trials_per_task: 1
+  timeout_seconds: 30
+  executor: mock
+  model: test
+tasks:
+  - "tasks/*.yaml"
+`
+	evalPath := filepath.Join(dir, "eval.yaml")
+	require.NoError(t, os.WriteFile(evalPath, []byte(evalContent), 0644))
+
+	registry := NewMethodRegistry()
+	hctx := NewHandlerContext()
+	RegisterHandlers(registry, hctx)
+	server := NewServer(registry, nil)
+
+	// Start a run
+	resp := rpcCall(t, server, "eval.run", map[string]string{"path": evalPath})
+	require.Nil(t, resp.Error)
+
+	data, _ := json.Marshal(resp.Result)
+	var runResult EvalRunResult
+	require.NoError(t, json.Unmarshal(data, &runResult))
+
+	// Wait for the goroutine to complete and clean up
+	time.Sleep(50 * time.Millisecond)
+
+	// Verify cancelFunc was cleaned up
+	hctx.mu.Lock()
+	_, exists := hctx.cancelFuncs[runResult.RunID]
+	hctx.mu.Unlock()
+
+	assert.False(t, exists, "cancelFunc should be cleaned up after run completes")
+}
+
 func TestAllMethodsRegistered(t *testing.T) {
 	registry := NewMethodRegistry()
 	hctx := NewHandlerContext()

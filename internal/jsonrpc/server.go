@@ -27,7 +27,7 @@ func (s *Server) ServeTransport(t *Transport) {
 	ctx := context.Background()
 
 	for {
-		req, err := t.ReadRequest()
+		req, rawJSON, err := t.ReadRequest()
 		if err != nil {
 			if err == io.EOF {
 				return
@@ -44,8 +44,15 @@ func (s *Server) ServeTransport(t *Transport) {
 			return
 		}
 
+		// Detect notifications: requests where the "id" key is absent from JSON.
+		// Per JSON-RPC 2.0, notifications MUST NOT receive a response.
+		isNotification := !hasIDField(rawJSON)
+
 		// Validate JSON-RPC version
 		if req.JSONRPC != "2.0" {
+			if isNotification {
+				continue
+			}
 			resp := &Response{
 				JSONRPC: "2.0",
 				Error:   ErrInvalidRequest("jsonrpc field must be \"2.0\""),
@@ -61,6 +68,9 @@ func (s *Server) ServeTransport(t *Transport) {
 		// Look up method
 		handler := s.registry.Lookup(req.Method)
 		if handler == nil {
+			if isNotification {
+				continue
+			}
 			resp := &Response{
 				JSONRPC: "2.0",
 				Error:   ErrMethodNotFound(req.Method),
@@ -75,6 +85,12 @@ func (s *Server) ServeTransport(t *Transport) {
 
 		// Execute handler
 		result, rpcErr := handler(ctx, req.Params)
+
+		// Skip response for notifications per JSON-RPC 2.0 spec.
+		if isNotification {
+			continue
+		}
+
 		resp := &Response{
 			JSONRPC: "2.0",
 			ID:      req.ID,
@@ -90,6 +106,16 @@ func (s *Server) ServeTransport(t *Transport) {
 			return
 		}
 	}
+}
+
+// hasIDField checks whether the raw JSON contains an "id" key at the top level.
+func hasIDField(raw []byte) bool {
+	var obj map[string]json.RawMessage
+	if err := json.Unmarshal(raw, &obj); err != nil {
+		return false
+	}
+	_, exists := obj["id"]
+	return exists
 }
 
 // ServeStdio runs the server on stdin/stdout.

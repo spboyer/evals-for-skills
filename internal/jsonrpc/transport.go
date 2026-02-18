@@ -26,17 +26,18 @@ func NewTransport(r io.Reader, w io.Writer) *Transport {
 }
 
 // ReadRequest reads one JSON-RPC request (newline-delimited JSON).
-func (t *Transport) ReadRequest() (*Request, error) {
+// It also returns the raw JSON bytes so callers can inspect the original payload.
+func (t *Transport) ReadRequest() (*Request, []byte, error) {
 	line, err := t.reader.ReadBytes('\n')
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	var req Request
 	if err := json.Unmarshal(line, &req); err != nil {
-		return nil, fmt.Errorf("invalid JSON: %w", err)
+		return nil, nil, fmt.Errorf("invalid JSON: %w", err)
 	}
-	return &req, nil
+	return &req, line, nil
 }
 
 // WriteResponse sends a JSON-RPC response (newline-delimited).
