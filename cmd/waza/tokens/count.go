@@ -11,18 +11,23 @@ import (
 	"strings"
 
 	"github.com/spboyer/waza/internal/tokens"
+	"github.com/spboyer/waza/internal/workspace"
 	"github.com/spf13/cobra"
 )
 
 func newCountCmd() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "count [paths...]",
+		Use:   "count [skill-name | paths...]",
 		Short: "Count tokens in markdown files",
 		Long: `Count tokens in markdown files.
 
 Paths may be files or directories (scanned recursively for .md/.mdx files).
 A relative path is resolved from the working directory; an absolute path is
-used as-is. When no path is given, the working directory is scanned.`,
+used as-is. When no path is given, the working directory is scanned.
+
+If the first argument looks like a skill name (no path separators or file
+extension), it is resolved via workspace detection to scope counting to that
+skill's directory.`,
 		Args: cobra.ArbitraryArgs,
 		RunE: runCount,
 	}
@@ -76,6 +81,21 @@ func runCount(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return fmt.Errorf("getting current directory: %w", err)
 	}
+
+	// If the first arg looks like a skill name (not a path), resolve via workspace
+	if len(args) > 0 && !workspace.LooksLikePath(args[0]) {
+		ctx, ctxErr := workspace.DetectContext(rootDir)
+		if ctxErr != nil {
+			return fmt.Errorf("detecting workspace: %w", ctxErr)
+		}
+		si, findErr := workspace.FindSkill(ctx, args[0])
+		if findErr != nil {
+			return findErr
+		}
+		rootDir = si.Dir
+		args = nil
+	}
+
 	files, err := findMarkdownFiles(args, rootDir)
 	if err != nil {
 		return err

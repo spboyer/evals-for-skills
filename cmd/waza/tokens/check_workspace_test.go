@@ -27,7 +27,7 @@ func TestCheck_SkillFlag(t *testing.T) {
 	out := new(bytes.Buffer)
 	cmd := newCheckCmd()
 	cmd.SetOut(out)
-	cmd.SetArgs([]string{"--skill", "skill-x"})
+	cmd.SetArgs([]string{"skill-x"})
 	require.NoError(t, cmd.Execute())
 
 	result := out.String()
@@ -42,16 +42,7 @@ func TestCheck_SkillFlagNotFound(t *testing.T) {
 
 	cmd := newCheckCmd()
 	cmd.SetOut(new(bytes.Buffer))
-	cmd.SetArgs([]string{"--skill", "nonexistent"})
+	cmd.SetArgs([]string{"nonexistent"})
 	err := cmd.Execute()
 	require.Error(t, err)
-}
-
-func TestCheck_SkillFlagParsed(t *testing.T) {
-	cmd := newCheckCmd()
-	require.NoError(t, cmd.ParseFlags([]string{"--skill", "my-skill"}))
-
-	val, err := cmd.Flags().GetString("skill")
-	require.NoError(t, err)
-	assert.Equal(t, "my-skill", val)
 }

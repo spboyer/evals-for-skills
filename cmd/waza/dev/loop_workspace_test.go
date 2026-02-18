@@ -1,6 +1,7 @@
 package dev
 
 import (
+	"bytes"
 	"os"
 	"path/filepath"
 	"testing"
@@ -9,18 +10,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestTryResolveSkillDir_SingleSkillWorkspace(t *testing.T) {
-	dir := t.TempDir()
-	skillContent := "---\nname: ws-dev-skill\ndescription: \"A test skill.\"\n---\n# Body\n"
-	require.NoError(t, os.WriteFile(filepath.Join(dir, "SKILL.md"), []byte(skillContent), 0o644))
-	t.Chdir(dir)
-
-	result := tryResolveSkillDir("")
-	assert.NotEmpty(t, result)
-	assert.Equal(t, dir, result)
-}
-
-func TestTryResolveSkillDir_ByName(t *testing.T) {
+func TestRunDev_SkillNameArg(t *testing.T) {
 	dir := t.TempDir()
 	skillsDir := filepath.Join(dir, "skills")
 
@@ -32,24 +22,25 @@ func TestTryResolveSkillDir_ByName(t *testing.T) {
 	}
 	t.Chdir(dir)
 
-	result := tryResolveSkillDir("two")
-	assert.Equal(t, filepath.Join(skillsDir, "two"), result)
+	out := new(bytes.Buffer)
+	cmd := NewCommand()
+	cmd.SetOut(out)
+	cmd.SetErr(new(bytes.Buffer))
+	cmd.SetArgs([]string{"two"})
+	err := cmd.Execute()
+	// Should resolve skill name "two" and find SKILL.md
+	// The command will run the dev loop (or fail for other reasons), but should not
+	// fail with "skill not found"
+	if err != nil {
+		assert.NotContains(t, err.Error(), "not found in workspace")
+	}
 }
 
-func TestTryResolveSkillDir_NoWorkspace(t *testing.T) {
-	dir := t.TempDir()
-	t.Chdir(dir)
-
-	result := tryResolveSkillDir("")
-	assert.Empty(t, result)
-}
-
-func TestTryResolveSkillDir_NameNotFound(t *testing.T) {
-	dir := t.TempDir()
-	skillContent := "---\nname: existing\ndescription: \"desc\"\n---\n# Body\n"
-	require.NoError(t, os.WriteFile(filepath.Join(dir, "SKILL.md"), []byte(skillContent), 0o644))
-	t.Chdir(dir)
-
-	result := tryResolveSkillDir("nonexistent")
-	assert.Empty(t, result)
+func TestRunDev_RequiresArg(t *testing.T) {
+	cmd := NewCommand()
+	cmd.SetOut(new(bytes.Buffer))
+	cmd.SetErr(new(bytes.Buffer))
+	cmd.SetArgs([]string{})
+	err := cmd.Execute()
+	require.Error(t, err)
 }

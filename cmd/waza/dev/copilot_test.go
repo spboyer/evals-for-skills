@@ -29,22 +29,26 @@ func TestNewCommand_CopilotFlags(t *testing.T) {
 }
 
 func TestRunDev_ModelWithoutCopilot(t *testing.T) {
+	dir := writeSkillFixture(t, "model-test", "---\nname: model-test\ndescription: \"desc\"\n---\n# Body\n")
+
 	cmd := NewCommand()
-	cmd.SetArgs([]string{"--model", "custom-model"})
+	cmd.SetArgs([]string{dir, "--model", "custom-model"})
 
 	err := cmd.Execute()
 	require.ErrorContains(t, err, "--model is valid only with --copilot")
 }
 
 func TestRunDev_CopilotRejectsIterativeFlags(t *testing.T) {
+	dir := writeSkillFixture(t, "reject-flags", "---\nname: reject-flags\ndescription: \"desc\"\n---\n# Body\n")
+
 	tests := []struct {
 		name    string
 		args    []string
 		errLike string
 	}{
-		{name: "target", args: []string{"--copilot", "--target", "high"}, errLike: "--target is not valid with --copilot"},
-		{name: "max-iterations", args: []string{"--copilot", "--max-iterations", "2"}, errLike: "--max-iterations is not valid with --copilot"},
-		{name: "auto", args: []string{"--copilot", "--auto"}, errLike: "--auto is not valid with --copilot"},
+		{name: "target", args: []string{dir, "--copilot", "--target", "high"}, errLike: "--target is not valid with --copilot"},
+		{name: "max-iterations", args: []string{dir, "--copilot", "--max-iterations", "2"}, errLike: "--max-iterations is not valid with --copilot"},
+		{name: "auto", args: []string{dir, "--copilot", "--auto"}, errLike: "--auto is not valid with --copilot"},
 	}
 
 	for _, tt := range tests {
@@ -257,7 +261,7 @@ should_not_trigger_prompts:
 	cmd := NewCommand()
 	cmd.SetOut(&out)
 	cmd.SetErr(&out)
-	cmd.SetArgs([]string{"--copilot"})
+	cmd.SetArgs([]string{"code-explainer", "--copilot"})
 
 	require.NoError(t, cmd.Execute())
 
