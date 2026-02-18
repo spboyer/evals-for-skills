@@ -43,8 +43,6 @@ const evalContext = {
   undefined,
   NaN,
   Infinity,
-  True: true,
-  False: false,
 };
 
 vm.createContext(evalContext);
@@ -54,6 +52,8 @@ const results = [];
 
 for (const assertion of assertions) {
   try {
+    // note the timeout - these should be quick checks. If they want to run longer or more complex checks
+    // it's better to just move into a script file, which doesn't have these restrictions.
     const result = vm.runInContext(assertion, evalContext, { timeout: 5000 });
     results.push(!!result ? "" : "fail");
   } catch (err) {

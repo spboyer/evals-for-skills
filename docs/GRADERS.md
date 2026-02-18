@@ -16,17 +16,27 @@ Graders can be defined in two ways:
 
 ### Inline Graders (in eval.yaml or task files)
 
-Best for simple validation logic that fits in YAML:
+Best for simple validation logic that fits in YAML. Inline graders support both **Python** and **JavaScript** assertion expressions:
 
 ```yaml
 graders:
+  # Python (default)
   - type: code
     name: basic_check
     config:
       assertions:
         - "len(output) > 10"
         - "'success' in output.lower()"
-
+  
+  # JavaScript
+  - type: code
+    name: js_check
+    config:
+      language: javascript
+      assertions:
+        - "output.length > 10"
+        - "output.toLowerCase().includes('success')"
+  
   - type: regex
     name: format_check
     config:
@@ -36,14 +46,15 @@ graders:
 
 ### Script Graders (in graders/ directory)
 
-Best for complex, multi-criteria evaluation logic:
+Best for complex, multi-criteria evaluation logic. Supports both `.py` and `.js` scripts:
 
 ```
 my-waza/
 ├── eval.yaml
 ├── tasks/
 └── graders/
-    └── quality_checker.py    # Complex custom logic
+    ├── quality_checker.py    # Python custom logic
+    └── perf_checker.js       # JavaScript custom logic
 ```
 
 Reference in eval.yaml:
@@ -52,7 +63,12 @@ graders:
   - type: script
     name: quality_checker
     config:
-      script: graders/quality_checker.py
+      path: graders/quality_checker.py
+
+  - type: script
+    name: perf_checker
+    config:
+      path: graders/perf_checker.js
 ```
 
 **When to use script graders:**
@@ -68,39 +84,106 @@ See the [code-explainer example](../examples/code-explainer/graders/explanation_
 
 ## Code Graders
 
-### `code` - Assertion-Based Grader
+### `code` - Inline Script Assertion Grader
 
-Evaluates Python expressions against the execution context.
+Evaluates assertion expressions against the execution context using an external script runner. Supports both **Python** (default) and **JavaScript**.
+
+Each assertion expression is evaluated in an environment with access to the grading context variables. The grader calculates a score based on how many assertions pass.
+
+**Basic Example (Python, default):**
 
 ```yaml
 - type: code
   name: my_grader
   config:
+    language: python
     assertions:
       - "len(output) > 0"
       - "'success' in output.lower()"
       - "len(errors) == 0"
 ```
 
-**Available Context Variables:**
-| Variable | Type | Description |
-|----------|------|-------------|
-| `output` | str | Final skill output |
-| `outcome` | dict | Outcome state |
-| `transcript` | list | Full execution transcript |
-| `tool_calls` | list | Tool calls from transcript |
-| `errors` | list | Errors from transcript |
-| `duration_ms` | int | Execution duration |
-
-**Available Functions:**
-`len`, `any`, `all`, `str`, `int`, `float`, `bool`, `list`, `dict`, `re` (regex module)
-
-**Scoring:** `passed_assertions / total_assertions`
-
-**⚠️ Important:** Do NOT use generator expressions in assertions. They don't work with Python's `eval()` in restricted scope.
+**JavaScript Example:**
 
 ```yaml
-# ❌ WRONG - generator expressions fail
+- type: code
+  name: my_js_grader
+  config:
+    language: javascript
+    assertions:
+      - "output.length > 0"
+      - "output.toLowerCase().includes('success')"
+      - "errors.length === 0"
+```
+
+**Options:**
+| Option | Type | Default | Description |
+|--------|------|---------|-------------|
+| `assertions` | list[str] | *required* | Assertion expressions to evaluate |
+| `language` | string | `python` | Language for assertions: `python` or `javascript` |
+
+#### Context Variables
+
+Both Python and JavaScript assertions have access to the same context variables:
+
+| Variable | Python Type | JS Type | Description |
+|----------|------------|---------|-------------|
+| `output` | `str` | `string` | Final skill output |
+| `outcome` | `dict` | `object` | Outcome state |
+| `transcript` | `list` | `array` | Full execution transcript (session events) |
+| `tool_calls` | `list` | `array` | Tool calls extracted from transcript |
+| `errors` | `list` | `array` | Transcript entries containing errors |
+| `duration_ms` | `int` | `number` | Execution duration in milliseconds |
+
+The `errors` list is derived from transcript events where the type contains "error" or the content contains "error".
+
+The `tool_calls` list contains objects with `name`, `arguments`, and `result` fields extracted from the transcript.
+
+#### Available Builtins
+
+**Python:** `len`, `any`, `all`, `str`, `int`, `float`, `bool`, `list`, `dict`, `re` (regex module), `True`, `False`
+
+**JavaScript:** `Array`, `Object`, `String`, `Number`, `Boolean`, `Math`, `JSON`, `RegExp`, `parseInt`, `parseFloat`, `isNaN`, `isFinite`, `undefined`, `NaN`, `Infinity`
+
+#### Scoring
+
+`passed_assertions / total_assertions`
+
+If no assertions are configured, the grader returns a score of `1.0` with a "No assertions configured" message.
+
+If an assertion has a syntax error or references a non-existent variable, it counts as failed and the error message is included in the feedback.
+
+#### Examples
+
+**Checking tool calls (Python):**
+```yaml
+- type: code
+  name: tool_usage
+  config:
+    assertions:
+      - "len(tool_calls) == 1"
+      - "len(tool_calls[0]['result']['content']) > 0"
+      - "outcome['hello'] == 'world'"
+      - "duration_ms < 5000"
+```
+
+**Checking tool calls (JavaScript):**
+```yaml
+- type: code
+  name: tool_usage_js
+  config:
+    language: javascript
+    assertions:
+      - "tool_calls.length === 1"
+      - "tool_calls[0].result.content.length > 0"
+      - "outcome['hello'] === 'world'"
+      - "duration_ms < 5000"
+```
+
+**⚠️ Important (Python):** Do NOT use generator expressions in assertions. They don't work with Python's `eval()` in restricted scope.
+
+```yaml
+# ❌ WRONG - generator expressions fail in Python
 assertions:
   - "any(kw in output for kw in ['azure', 'deploy'])"
 
@@ -108,6 +191,8 @@ assertions:
 assertions:
   - "'azure' in output.lower() or 'deploy' in output.lower()"
 ```
+
+**⚠️ Important (JavaScript):** Assertions run in a V8 sandbox with a 5-second timeout per assertion. Only the builtins listed above are available — no `require()`, `fetch()`, `setTimeout()`, etc.
 
 ---
 
@@ -165,16 +250,48 @@ Validates which tools were called and how.
 
 ### `script` - External Script Grader
 
-Runs a custom Python script for complex validation.
+Runs a custom external script (`.py` or `.js`) for complex, multi-criteria validation. The script receives the grading context as JSON on **stdin** and must write a JSON result to **stdout**.
 
 ```yaml
 - type: script
   name: custom_logic
   config:
-    script: graders/my_grader.py
+    path: graders/my_grader.py
 ```
 
-**Script Format:**
+**Options:**
+| Option | Type | Description |
+|--------|------|-------------|
+| `path` | string | **Required.** Path to the script file, relative to the eval spec directory. Must end in `.py` or `.js`. |
+
+#### Stdin (Grading Context)
+
+The script receives a JSON object on stdin with the following fields:
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `output` | string | Final skill output text |
+| `outcome` | object | Outcome state (key-value pairs) |
+| `transcript` | array | Full execution transcript (session events) |
+| `tool_calls` | array | Tool calls extracted from the transcript |
+| `duration_ms` | number | Execution duration in milliseconds |
+| `debug` | boolean | Whether debug logging is enabled |
+
+#### Stdout (Expected Output)
+
+The script must print a single JSON object to stdout with this structure:
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `score` | float | Score from 0.0 to 1.0 |
+| `passed` | boolean | Whether the grading check passed |
+| `message` | string | Human-readable result summary |
+| `details` | object | *(optional)* Additional metadata |
+
+> **Important:** Do not print anything else to stdout — only the result, serialized as JSON text. Use stderr for debug output.
+
+#### Python Script Example
+
 ```python
 #!/usr/bin/env python3
 import json
@@ -182,21 +299,94 @@ import sys
 
 def grade(context: dict) -> dict:
     output = context.get("output", "")
-
-    # Your custom logic here
-    score = 1.0 if "success" in output else 0.0
-
+    tool_calls = context.get("tool_calls", [])
+    
+    checks_passed = 0
+    total_checks = 3
+    messages = []
+    
+    # Check 1: Output length
+    if len(output) >= 200:
+        checks_passed += 1
+        messages.append("✓ Sufficient output length")
+    else:
+        messages.append(f"✗ Output too short ({len(output)} chars)")
+    
+    # Check 2: Tool calls made
+    if len(tool_calls) > 0:
+        checks_passed += 1
+        messages.append(f"✓ Made {len(tool_calls)} tool calls")
+    else:
+        messages.append("✗ No tool calls made")
+    
+    # Check 3: No errors in output
+    if "error" not in output.lower():
+        checks_passed += 1
+        messages.append("✓ No error indicators")
+    else:
+        messages.append("✗ Output contains error indicators")
+    
+    score = checks_passed / total_checks
     return {
         "score": score,
-        "passed": score >= 0.5,
-        "message": "Custom grading complete",
-        "details": {"custom_field": "value"}
+        "passed": score >= 0.6,
+        "message": f"Quality: {score:.0%} ({checks_passed}/{total_checks} checks)",
+        "details": {"checks": messages}
     }
 
 if __name__ == "__main__":
     context = json.load(sys.stdin)
     print(json.dumps(grade(context)))
 ```
+
+#### JavaScript Script Example
+
+```javascript
+const fs = require("node:fs");
+
+const context = JSON.parse(fs.readFileSync("/dev/stdin", "utf-8"));
+
+const output = context.output || "";
+const toolCalls = context.tool_calls || [];
+
+let checksPassed = 0;
+const totalChecks = 3;
+const messages = [];
+
+// Check 1: Output length
+if (output.length >= 200) {
+  checksPassed++;
+  messages.push("✓ Sufficient output length");
+} else {
+  messages.push(`✗ Output too short (${output.length} chars)`);
+}
+
+// Check 2: Tool calls made
+if (toolCalls.length > 0) {
+  checksPassed++;
+  messages.push(`✓ Made ${toolCalls.length} tool calls`);
+} else {
+  messages.push("✗ No tool calls made");
+}
+
+// Check 3: No errors in output
+if (!output.toLowerCase().includes("error")) {
+  checksPassed++;
+  messages.push("✓ No error indicators");
+} else {
+  messages.push("✗ Output contains error indicators");
+}
+
+const score = checksPassed / totalChecks;
+process.stdout.write(JSON.stringify({
+  score,
+  passed: score >= 0.6,
+  message: `Quality: ${Math.round(score * 100)}% (${checksPassed}/${totalChecks} checks)`,
+  details: { checks: messages }
+}));
+```
+
+See the [code-explainer example](../examples/code-explainer/graders/explanation_quality.py) for a complete real-world script grader.
 
 ---
 

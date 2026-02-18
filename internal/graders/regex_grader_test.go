@@ -171,9 +171,13 @@ func TestRegexGrader_Grade(t *testing.T) {
 
 func TestRegexGrader_ViaCreate(t *testing.T) {
 	t.Run("Create with GraderKindRegex works", func(t *testing.T) {
-		g, err := Create(models.GraderKindRegex, "from-create", map[string]any{
-			"must_match":     []string{`hello`},
-			"must_not_match": []string{`bye`},
+		g, err := Create(CreateArgs{
+			GraderKind: models.GraderKindRegex,
+			Identifier: "from-create",
+			Config: map[string]any{
+				"must_match":     []string{`hello`},
+				"must_not_match": []string{`bye`},
+			},
 		})
 		require.NoError(t, err)
 		require.Equal(t, "from-create", g.Name())

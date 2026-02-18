@@ -534,9 +534,13 @@ func TestActionSequenceGrader_EdgeCases(t *testing.T) {
 
 func TestActionSequenceGrader_ViaCreate(t *testing.T) {
 	t.Run("Create with GraderKindActionSequence works", func(t *testing.T) {
-		g, err := Create(models.GraderKindActionSequence, "from-create", map[string]any{
-			"matching_mode":    "exact_match",
-			"expected_actions": []string{"read_file", "write_file"},
+		g, err := Create(CreateArgs{
+			GraderKind: models.GraderKindActionSequence,
+			Identifier: "from-create",
+			Config: map[string]any{
+				"matching_mode":    "exact_match",
+				"expected_actions": []string{"read_file", "write_file"},
+			},
 		})
 		require.NoError(t, err)
 		require.Equal(t, "from-create", g.Name())
@@ -553,9 +557,13 @@ func TestActionSequenceGrader_ViaCreate(t *testing.T) {
 	})
 
 	t.Run("Create with invalid params returns error", func(t *testing.T) {
-		_, err := Create(models.GraderKindActionSequence, "bad", map[string]any{
-			"matching_mode":    "invalid",
-			"expected_actions": []string{"a"},
+		_, err := Create(CreateArgs{
+			GraderKind: models.GraderKindActionSequence,
+			Identifier: "bad",
+			Config: map[string]any{
+				"matching_mode":    "invalid",
+				"expected_actions": []string{"a"},
+			},
 		})
 		require.Error(t, err)
 	})

@@ -26,7 +26,7 @@ const (
 	GraderKindFile            GraderKind = "file"
 	GraderKindKeyword         GraderKind = "keyword"
 	GraderKindJSONSchema      GraderKind = "json_schema"
-	GraderKindProgram         GraderKind = "program"
+	GraderKindScript          GraderKind = "script"
 	GraderKindBehavior        GraderKind = "behavior"
 	GraderKindActionSequence  GraderKind = "action_sequence"
 	GraderKindSkillInvocation GraderKind = "skill_invocation"

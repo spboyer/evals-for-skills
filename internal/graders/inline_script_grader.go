@@ -70,19 +70,6 @@ func NewInlineScriptGrader(name string, language Language, assertions []string) 
 	return g, nil
 }
 
-func resolvePythonBin() string {
-	// Prefer python3, but verify it actually works — on Windows the
-	// Microsoft Store registers a python3.exe stub that just prints
-	// "Python was not found" and exits 9009.
-	if path, err := exec.LookPath("python3"); err == nil {
-		cmd := exec.Command(path, "--version")
-		if cmd.Run() == nil {
-			return "python3"
-		}
-	}
-	return "python"
-}
-
 func (isg *InlineScriptGrader) Name() string            { return isg.name }
 func (isg *InlineScriptGrader) Kind() models.GraderKind { return models.GraderKindInlineScript }
 
@@ -221,7 +208,7 @@ func getStdinTextForScript(gradingContext *Context, assertions []string) ([]byte
 		Transcript []models.TranscriptEvent `json:"transcript"`
 		ToolCalls  []models.ToolCall        `json:"tool_calls"`
 		DurationMS int64                    `json:"duration_ms"`
-		Assertions []string                 `json:"assertions"`
+		Assertions []string                 `json:"assertions,omitempty"`
 
 		// Debug causes the underlying scripts to print, to stderr, their stdin contents.
 		Debug bool `json:"debug"`
@@ -242,4 +229,22 @@ func getStdinTextForScript(gradingContext *Context, assertions []string) ([]byte
 	}
 
 	return scriptJSON, nil
+}
+
+func resolvePythonBin() string {
+	// Prefer python3, but verify it actually works — on Windows the
+	// Microsoft Store registers a python3.exe stub that just prints
+	// "Python was not found" and exits 9009.
+	if path, err := exec.LookPath("python3"); err == nil {
+		cmd := exec.Command(path, "--version")
+		if cmd.Run() == nil {
+			return "python3"
+		}
+	}
+
+	if _, err := exec.LookPath("python"); err == nil {
+		return "python"
+	}
+
+	return ""
 }

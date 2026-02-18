@@ -48,16 +48,27 @@ type Context struct {
 	SessionID string
 }
 
+type CreateArgs struct {
+	GraderKind models.GraderKind
+	Identifier string
+
+	// Config corresponds to the 'config' section for this grader in
+	// the eval.yaml.
+	Config map[string]any
+
+	SpecDir string
+}
+
 // Create creates a validator from the global registry
-func Create(graderType models.GraderKind, identifier string, params map[string]any) (Grader, error) {
-	switch graderType {
+func Create(args CreateArgs) (Grader, error) {
+	switch args.GraderKind {
 	case models.GraderKindInlineScript:
-		var v *struct {
+		var v struct {
 			Assertions []string
 			Language   Language
 		}
 
-		if err := mapstructure.Decode(params, &v); err != nil {
+		if err := mapstructure.Decode(args.Config, &v); err != nil {
 			return nil, err
 		}
 
@@ -65,18 +76,18 @@ func Create(graderType models.GraderKind, identifier string, params map[string]a
 			v.Language = LanguagePython
 		}
 
-		return NewInlineScriptGrader(identifier, v.Language, v.Assertions)
+		return NewInlineScriptGrader(args.Identifier, v.Language, v.Assertions)
 	case models.GraderKindRegex:
 		var v *struct {
 			MustMatch    []string `mapstructure:"must_match"`
 			MustNotMatch []string `mapstructure:"must_not_match"`
 		}
 
-		if err := mapstructure.Decode(params, &v); err != nil {
+		if err := mapstructure.Decode(args.Config, &v); err != nil {
 			return nil, err
 		}
 
-		return NewRegexGrader(identifier, v.MustMatch, v.MustNotMatch)
+		return NewRegexGrader(args.Identifier, v.MustMatch, v.MustNotMatch)
 	case models.GraderKindFile:
 		var v *struct {
 			MustExist       []string `mapstructure:"must_exist"`
@@ -88,7 +99,7 @@ func Create(graderType models.GraderKind, identifier string, params map[string]a
 			} `mapstructure:"content_patterns"`
 		}
 
-		if err := mapstructure.Decode(params, &v); err != nil {
+		if err := mapstructure.Decode(args.Config, &v); err != nil {
 			return nil, err
 		}
 
@@ -102,7 +113,7 @@ func Create(graderType models.GraderKind, identifier string, params map[string]a
 		}
 
 		return NewFileGrader(FileGraderArgs{
-			Name:            identifier,
+			Name:            args.Identifier,
 			MustExist:       v.MustExist,
 			MustNotExist:    v.MustNotExist,
 			ContentPatterns: contentPatterns,
@@ -110,27 +121,27 @@ func Create(graderType models.GraderKind, identifier string, params map[string]a
 	case models.GraderKindBehavior:
 		var v BehaviorGraderParams
 
-		if err := mapstructure.Decode(params, &v); err != nil {
+		if err := mapstructure.Decode(args.Config, &v); err != nil {
 			return nil, err
 		}
 
-		return NewBehaviorGrader(identifier, v)
+		return NewBehaviorGrader(args.Identifier, v)
 	case models.GraderKindActionSequence:
 		var v ActionSequenceGraderParams
 
-		if err := mapstructure.Decode(params, &v); err != nil {
+		if err := mapstructure.Decode(args.Config, &v); err != nil {
 			return nil, err
 		}
 
-		return NewActionSequenceGrader(identifier, v)
+		return NewActionSequenceGrader(args.Identifier, v)
 	case models.GraderKindSkillInvocation:
 		var v SkillInvocationGraderParams
 
-		if err := mapstructure.Decode(params, &v); err != nil {
+		if err := mapstructure.Decode(args.Config, &v); err != nil {
 			return nil, err
 		}
 
-		return NewSkillInvocationGrader(identifier, v)
+		return NewSkillInvocationGrader(args.Identifier, v)
 	case models.GraderKindDiff:
 		var v *struct {
 			ExpectedFiles []struct {
@@ -141,7 +152,7 @@ func Create(graderType models.GraderKind, identifier string, params map[string]a
 			ContextDir string `mapstructure:"context_dir"`
 		}
 
-		if err := mapstructure.Decode(params, &v); err != nil {
+		if err := mapstructure.Decode(args.Config, &v); err != nil {
 			return nil, err
 		}
 
@@ -155,22 +166,30 @@ func Create(graderType models.GraderKind, identifier string, params map[string]a
 		}
 
 		return NewDiffGrader(DiffGraderArgs{
-			Name:          identifier,
+			Name:          args.Identifier,
 			ExpectedFiles: expectedFiles,
 			ContextDir:    v.ContextDir,
 		})
 	case models.GraderKindPrompt:
 		var v PromptGraderArgs
 
-		if err := mapstructure.Decode(params, &v); err != nil {
+		if err := mapstructure.Decode(args.Config, &v); err != nil {
 			return nil, err
 		}
 
-		return NewPromptGrader(identifier, v)
-	case models.GraderKindKeyword, models.GraderKindJSONSchema, models.GraderKindProgram:
-		return nil, fmt.Errorf("'%s' is not yet implemented", graderType)
+		return NewPromptGrader(args.Identifier, v)
+	case models.GraderKindScript:
+		var v ScriptGraderArgs
+
+		if err := mapstructure.Decode(args.Config, &v); err != nil {
+			return nil, err
+		}
+
+		return NewScriptGrader(args.Identifier, v)
+	case models.GraderKindKeyword, models.GraderKindJSONSchema:
+		return nil, fmt.Errorf("'%s' is not yet implemented", args.GraderKind)
 	default:
-		return nil, fmt.Errorf("'%s' is not a valid grader type", graderType)
+		return nil, fmt.Errorf("'%s' is not a valid grader type", args.GraderKind)
 	}
 }
 

@@ -401,7 +401,11 @@ content_patterns:
 		var config map[string]any
 		require.NoError(t, yaml.Unmarshal([]byte(yamlConfig), &config))
 
-		g, err := Create(models.GraderKindFile, "from-create", config)
+		g, err := Create(CreateArgs{
+			GraderKind: models.GraderKindFile,
+			Identifier: "from-create",
+			Config:     config,
+		})
 		require.NoError(t, err)
 		require.Equal(t, "from-create", g.Name())
 		require.Equal(t, models.GraderKindFile, g.Kind())

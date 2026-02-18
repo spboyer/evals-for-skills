@@ -611,6 +611,7 @@ func (r *TestRunner) loadResources(tc *models.TestCase) []execution.ResourceFile
 
 	// Determine fixture directory (for loading resource files)
 	fixtureDir := r.cfg.FixtureDir()
+
 	if tc.ContextRoot != "" {
 		fixtureDir = tc.ContextRoot
 	}
@@ -698,7 +699,12 @@ func (r *TestRunner) runGraders(ctx context.Context, tc *models.TestCase, grader
 	// Run global validators
 	spec := r.cfg.Spec()
 	for _, vCfg := range spec.Graders {
-		grader, err := graders.Create(vCfg.Kind, vCfg.Identifier, vCfg.Parameters)
+		grader, err := graders.Create(graders.CreateArgs{
+			GraderKind: vCfg.Kind,
+			Identifier: vCfg.Identifier,
+			Config:     vCfg.Parameters,
+			SpecDir:    r.cfg.SpecDir(),
+		})
 
 		if err != nil {
 			return nil, err
@@ -728,7 +734,12 @@ func (r *TestRunner) runGraders(ctx context.Context, tc *models.TestCase, grader
 			params["assertions"] = vCfg.Checks
 		}
 
-		grader, err := graders.Create(kind, vCfg.Identifier, params)
+		grader, err := graders.Create(graders.CreateArgs{
+			GraderKind: kind,
+			Identifier: vCfg.Identifier,
+			Config:     params,
+			SpecDir:    r.cfg.SpecDir(),
+		})
 
 		if err != nil {
 			return nil, fmt.Errorf("failed to create grader %s: %w", vCfg.Identifier, err)
