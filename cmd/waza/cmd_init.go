@@ -82,6 +82,7 @@ func initCommandE(cmd *cobra.Command, args []string, interactive bool, noSkill b
 		path    string
 		content string
 	}{
+		{filepath.Join(dir, ".waza.yaml"), initWazaConfig()},
 		{filepath.Join(dir, ".github", "workflows", "eval.yml"), initCIWorkflow()},
 		{filepath.Join(dir, ".gitignore"), initGitignore()},
 		{filepath.Join(dir, "README.md"), initReadme(projectName)},
@@ -195,6 +196,17 @@ func absOrDefault(path string) string {
 }
 
 // --- Init template content ---
+
+func initWazaConfig() string {
+	return `# yaml-language-server: $schema=https://raw.githubusercontent.com/spboyer/waza/main/schemas/waza-config.schema.json
+# Waza project configuration
+# These defaults are used by 'waza new' when generating eval.yaml files
+# and by 'waza run' as fallback values when not specified in eval.yaml.
+defaults:
+  engine: copilot-sdk
+  model: gpt-4o
+`
+}
 
 func initCIWorkflow() string {
 	return `name: Run Skill Evaluations

@@ -229,13 +229,44 @@ func TestNewCommand_EvalYAMLContent(t *testing.T) {
 	assert.Contains(t, content, "name: code-analyzer-eval")
 	assert.Contains(t, content, "skill: code-analyzer")
 
-	// Verify 3 grader types
+	// Verify 2 grader types (no behavior — requires real sessions)
 	assert.Contains(t, content, "type: code")
 	assert.Contains(t, content, "type: regex")
-	assert.Contains(t, content, "type: behavior")
+	assert.NotContains(t, content, "type: behavior")
+
+	// Verify default engine is copilot-sdk (not mock)
+	assert.Contains(t, content, "executor: copilot-sdk")
+	assert.NotContains(t, content, "executor: mock")
 
 	// Verify task glob
 	assert.Contains(t, content, `"tasks/*.yaml"`)
+}
+
+func TestNewCommand_WazaYAMLDefaults(t *testing.T) {
+	dir := t.TempDir()
+	require.NoError(t, os.MkdirAll(filepath.Join(dir, "skills"), 0o755))
+
+	// Write .waza.yaml with custom defaults
+	wazaConfig := "defaults:\n  engine: mock\n  model: claude-sonnet\n"
+	require.NoError(t, os.WriteFile(filepath.Join(dir, ".waza.yaml"), []byte(wazaConfig), 0o644))
+
+	origDir, err := os.Getwd()
+	require.NoError(t, err)
+	require.NoError(t, os.Chdir(dir)) //nolint:errcheck
+	defer os.Chdir(origDir)           //nolint:errcheck // best-effort cleanup
+
+	cmd := newNewCommand()
+	cmd.SetOut(&bytes.Buffer{})
+	cmd.SetArgs([]string{"my-skill"})
+	require.NoError(t, cmd.Execute())
+
+	data, err := os.ReadFile(filepath.Join(dir, "evals", "my-skill", "eval.yaml"))
+	require.NoError(t, err)
+	content := string(data)
+
+	// Verify .waza.yaml defaults were applied
+	assert.Contains(t, content, "executor: mock")
+	assert.Contains(t, content, "model: claude-sonnet")
 }
 
 func TestNewCommand_SkillMDContent(t *testing.T) {

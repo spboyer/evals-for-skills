@@ -27,6 +27,7 @@ func TestInitCommand_CreatesProjectStructure(t *testing.T) {
 	assert.DirExists(t, filepath.Join(target, "evals"))
 
 	// Verify files created
+	assert.FileExists(t, filepath.Join(target, ".waza.yaml"))
 	assert.FileExists(t, filepath.Join(target, ".github", "workflows", "eval.yml"))
 	assert.FileExists(t, filepath.Join(target, ".gitignore"))
 	assert.FileExists(t, filepath.Join(target, "README.md"))
@@ -36,6 +37,7 @@ func TestInitCommand_CreatesProjectStructure(t *testing.T) {
 	assert.Contains(t, output, "created")
 	assert.Contains(t, output, "skills")
 	assert.Contains(t, output, "evals")
+	assert.Contains(t, output, ".waza.yaml")
 	assert.Contains(t, output, "eval.yml")
 	assert.Contains(t, output, ".gitignore")
 	assert.Contains(t, output, "README.md")
@@ -214,6 +216,24 @@ func TestInitCommand_ReadmeContent(t *testing.T) {
 	assert.Contains(t, content, "waza run")
 	assert.Contains(t, content, "waza check")
 	assert.Contains(t, content, "git push")
+}
+
+func TestInitCommand_WazaYAMLContent(t *testing.T) {
+	dir := t.TempDir()
+	target := filepath.Join(dir, "my-project")
+
+	cmd := newInitCommand()
+	cmd.SetOut(&bytes.Buffer{})
+	cmd.SetIn(strings.NewReader("skip\n"))
+	cmd.SetArgs([]string{target, "--no-skill"})
+	require.NoError(t, cmd.Execute())
+
+	data, err := os.ReadFile(filepath.Join(target, ".waza.yaml"))
+	require.NoError(t, err)
+	content := string(data)
+	assert.Contains(t, content, "engine: copilot-sdk")
+	assert.Contains(t, content, "model: gpt-4o")
+	assert.Contains(t, content, "defaults:")
 }
 
 func TestRootCommand_HasInitSubcommand(t *testing.T) {

@@ -240,6 +240,7 @@ List any reference documents or APIs this skill depends on.
 }
 
 func defaultEvalYAML(name string) string {
+	engine, model := readProjectDefaults()
 	return fmt.Sprintf(`name: %s-eval
 description: Evaluation suite for %s.
 skill: %s
@@ -248,8 +249,8 @@ config:
   trials_per_task: 1
   timeout_seconds: 300
   parallel: false
-  executor: mock
-  model: gpt-4o
+  executor: %s
+  model: %s
 graders:
   - type: code
     name: has_output
@@ -260,14 +261,48 @@ graders:
     name: relevant_content
     config:
       pattern: "(?i)(explain|describe|analyze|implement)"
-  - type: behavior
-    name: reasonable_behavior
-    config:
-      max_tool_calls: 10
-      max_response_time_ms: 30000
 tasks:
   - "tasks/*.yaml"
-`, name, name, name)
+`, name, name, name, engine, model)
+}
+
+// readProjectDefaults reads engine and model from .waza.yaml if it exists.
+// Falls back to copilot-sdk and gpt-4o.
+func readProjectDefaults() (engine, model string) {
+	engine = "copilot-sdk"
+	model = "gpt-4o"
+
+	// Walk up from CWD looking for .waza.yaml
+	dir, err := os.Getwd()
+	if err != nil {
+		return
+	}
+	for i := 0; i < 10; i++ {
+		configPath := filepath.Join(dir, ".waza.yaml")
+		data, err := os.ReadFile(configPath)
+		if err == nil {
+			for _, line := range strings.Split(string(data), "\n") {
+				line = strings.TrimSpace(line)
+				if strings.HasPrefix(line, "engine:") {
+					if v := strings.TrimSpace(strings.TrimPrefix(line, "engine:")); v != "" {
+						engine = v
+					}
+				}
+				if strings.HasPrefix(line, "model:") {
+					if v := strings.TrimSpace(strings.TrimPrefix(line, "model:")); v != "" {
+						model = v
+					}
+				}
+			}
+			return
+		}
+		parent := filepath.Dir(dir)
+		if parent == dir {
+			break
+		}
+		dir = parent
+	}
+	return
 }
 
 func defaultBasicUsageTask() string {
@@ -287,9 +322,6 @@ expected:
     - "function"
   outcomes:
     - type: task_completed
-  behavior:
-    max_tool_calls: 5
-    max_response_time_ms: 30000
 `
 }
 
@@ -305,9 +337,6 @@ inputs:
 expected:
   outcomes:
     - type: task_completed
-  behavior:
-    max_tool_calls: 3
-    max_response_time_ms: 15000
 `
 }
 
@@ -325,9 +354,6 @@ inputs:
 expected:
   output_not_contains:
     - "skill activated"
-  behavior:
-    max_tool_calls: 2
-    max_response_time_ms: 10000
 `
 }
 
