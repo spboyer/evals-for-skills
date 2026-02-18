@@ -6,7 +6,7 @@ import { Activity, CheckCircle, Coins, Timer } from "lucide-react";
 export function KPICards() {
   const { data, isLoading, isError, error } = useSummary();
 
-  if (isError) {
+  if (!data && isError) {
     return (
       <div className="rounded-lg border border-red-500/30 bg-red-500/10 p-4 text-red-400">
         <p>Failed to load data: {error?.message || 'Unknown error'}</p>

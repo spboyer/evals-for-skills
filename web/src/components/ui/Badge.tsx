@@ -1,19 +1,20 @@
 interface BadgeProps {
-  variant: "success" | "danger" | "warning" | "neutral";
+  variant?: "success" | "error" | "warning" | "info" | "default";
   children: string;
 }
 
-const variants: Record<BadgeProps["variant"], string> = {
+const variants: Record<NonNullable<BadgeProps["variant"]>, string> = {
   success:
     "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300",
-  danger: "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300",
+  error: "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300",
   warning:
     "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300",
-  neutral:
+  info: "bg-cyan-100 text-cyan-800 dark:bg-cyan-900 dark:text-cyan-300",
+  default:
     "bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300",
 };
 
-export function Badge({ variant, children }: BadgeProps) {
+export function Badge({ variant = "default", children }: BadgeProps) {
   return (
     <span
       className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${variants[variant]}`}

@@ -1,4 +1,4 @@
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { useRuns } from "@/hooks/useRuns";
 import { Badge } from "@/components/ui/Badge";
 import { formatDuration, formatCost } from "@/lib/format";
@@ -8,22 +8,15 @@ const outcomeBadge = (outcome: string) => {
     case "passed":
       return <Badge variant="success">Passed</Badge>;
     case "failed":
-      return <Badge variant="danger">Failed</Badge>;
+      return <Badge variant="error">Failed</Badge>;
     default:
       return <Badge variant="warning">Error</Badge>;
   }
 };
 
 export function RunsTable() {
-  const { data: runs, isLoading, isError, error } = useRuns();
-
-  if (isError) {
-    return (
-      <div className="rounded-lg border border-red-500/30 bg-red-500/10 p-4 text-red-400">
-        <p>Failed to load data: {error?.message || 'Unknown error'}</p>
-      </div>
-    );
-  }
+  const navigate = useNavigate();
+  const { data: runs, isLoading } = useRuns();
 
   if (isLoading) {
     return <p className="py-4 text-gray-500">Loading runs…</p>;
@@ -49,7 +42,16 @@ export function RunsTable() {
         {runs.map((run) => (
           <tr
             key={run.id}
-            className="border-b border-gray-100 dark:border-gray-800/50"
+            tabIndex={0}
+            role="link"
+            className="border-b border-gray-100 cursor-pointer hover:bg-gray-50 dark:border-gray-800/50 dark:hover:bg-gray-800/30"
+            onClick={() => navigate(`/runs/${run.id}`)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" || e.key === " ") {
+                e.preventDefault();
+                navigate(`/runs/${run.id}`);
+              }
+            }}
           >
             <td className="py-2">
               <Link

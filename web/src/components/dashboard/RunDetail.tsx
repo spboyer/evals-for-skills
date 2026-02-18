@@ -38,7 +38,7 @@ export function RunDetail() {
           <p className="text-lg font-semibold">{run.model}</p>
         </Card>
         <Card title="Outcome">
-          <Badge variant={run.outcome === "passed" ? "success" : "danger"}>
+          <Badge variant={run.outcome === "passed" ? "success" : "error"}>
             {run.outcome}
           </Badge>
         </Card>
@@ -60,7 +60,7 @@ export function RunDetail() {
                 className="flex items-center justify-between border-b border-gray-100 py-2 dark:border-gray-800/50"
               >
                 <span>{task.name}</span>
-                <Badge variant={task.outcome === "passed" ? "success" : "danger"}>
+                <Badge variant={task.outcome === "passed" ? "success" : "error"}>
                   {task.outcome}
                 </Badge>
               </li>
