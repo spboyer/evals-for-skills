@@ -15,7 +15,15 @@ const outcomeBadge = (outcome: string) => {
 };
 
 export function RunsTable() {
-  const { data: runs, isLoading } = useRuns();
+  const { data: runs, isLoading, isError, error } = useRuns();
+
+  if (isError) {
+    return (
+      <div className="rounded-lg border border-red-500/30 bg-red-500/10 p-4 text-red-400">
+        <p>Failed to load data: {error?.message || 'Unknown error'}</p>
+      </div>
+    );
+  }
 
   if (isLoading) {
     return <p className="py-4 text-gray-500">Loading runs…</p>;
