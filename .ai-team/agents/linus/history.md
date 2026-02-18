@@ -43,3 +43,14 @@
 - The retry loop lives inside the existing trial loop in `runTestUncached()`, not in `executeRun()`. This keeps `executeRun()` as a pure single-execution function and makes the retry boundary explicit.
 - Retry logging (`[RETRY]` prefix) only emits in verbose mode to keep non-verbose output clean.
 - The `Attempts` field on `RunResult` records the attempt that produced the final result (1 = first try succeeded, N = took N attempts).
+
+### 2026-02-18: CSV dataset support (#187)
+**What:** Created `internal/dataset/` package with `LoadCSV()` and `LoadCSVRange()` functions. Added `TasksFrom` and `Range` fields to `BenchmarkSpec`. Modified `loadTestCases()` in runner.go to branch: if `spec.TasksFrom` is set, load CSV rows and generate in-memory `TestCase` objects with template-resolved prompts; otherwise fall through to existing file-based task loading.
+
+**Key design decisions:**
+- `loadTestCases()` delegates to `loadTestCasesFromCSV()` or `loadTestCasesFromFiles()` — clean separation keeps the original file-loading path completely untouched for backward compatibility.
+- CSV row data merges into `template.Context.Vars` with CSV values overriding `spec.Inputs` on conflict. This lets global inputs provide defaults while per-row CSV columns specialize.
+- `TestID` resolution: prefers "id" column, then "name" column, then "row-N". `DisplayName` prefers "name" column, then "row-N". This gives CSV authors control over test identity without requiring specific columns.
+- `Range` is `[2]int` with 1-based inclusive bounds. Zero values mean "no range filtering" — the zero value of `[2]int` is `[0, 0]`, which naturally means "load all rows".
+- Go's `csv.Reader.ReadAll()` enforces consistent field count natively, so our manual column count check is a belt-and-suspenders safety net that only fires if `FieldsPerRecord` is set to -1.
+- Model template resolution happens per-row via `resolveModelForRow()` — enables `model: "{{.Vars.model}}"` in eval YAML where each CSV row specifies its own model.
