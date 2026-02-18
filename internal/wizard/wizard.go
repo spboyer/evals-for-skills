@@ -29,12 +29,6 @@ type SkillSpec struct {
 	Type         SkillType
 }
 
-var validSkillTypes = map[string]SkillType{
-	"workflow": SkillTypeWorkflow,
-	"utility":  SkillTypeUtility,
-	"analysis": SkillTypeAnalysis,
-}
-
 const skillMDTemplate = `---
 name: {{ .Name }}
 type: {{ .Type }}

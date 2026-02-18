@@ -101,9 +101,9 @@ func pipeInput(t *testing.T, lines ...string) io.Reader {
 	t.Helper()
 	r, w := io.Pipe()
 	go func() {
-		defer w.Close()
+		defer w.Close() //nolint:errcheck
 		for _, line := range lines {
-			_, _ = w.Write([]byte(line + "\n"))
+			w.Write([]byte(line + "\n")) //nolint:errcheck
 			time.Sleep(50 * time.Millisecond)
 		}
 	}()
