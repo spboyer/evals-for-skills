@@ -239,7 +239,7 @@ func (r *TestRunner) runBaselineComparison(ctx context.Context) (*models.Evaluat
 	// PASS 1: Skills-Enabled
 	fmt.Println("\n════════════════════════════════════════════════════════════════")
 	fmt.Println("PASS 1: Skills-Enabled Run")
-	fmt.Println("════════════════════════════════════════════════════════════════\n")
+	fmt.Println("════════════════════════════════════════════════════════════════")
 	outcomesWithSkills, err := r.runNormalBenchmark(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("skills-enabled run failed: %w", err)
@@ -257,7 +257,7 @@ func (r *TestRunner) runBaselineComparison(ctx context.Context) (*models.Evaluat
 	
 	fmt.Println("\n════════════════════════════════════════════════════════════════")
 	fmt.Println("PASS 2: Skills Baseline (skills stripped)")
-	fmt.Println("════════════════════════════════════════════════════════════════\n")
+	fmt.Println("════════════════════════════════════════════════════════════════")
 	outcomesWithoutSkills, err := r.runNormalBenchmark(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("baseline run (skills disabled) failed: %w", err)
@@ -333,17 +333,27 @@ func computeSkillImpact(withSkills, without *models.TestOutcome) *models.SkillIm
 }
 
 func computePassRate(outcome *models.TestOutcome) float64 {
-	if outcome.Stats == nil {
+	if outcome.Stats != nil {
+		return outcome.Stats.PassRate
+	}
+	// Fallback: compute from runs when stats haven't been populated yet
+	if len(outcome.Runs) == 0 {
 		return 0.0
 	}
-	return outcome.Stats.PassRate
+	passed := 0
+	for _, r := range outcome.Runs {
+		if r.Status == models.StatusPassed {
+			passed++
+		}
+	}
+	return float64(passed) / float64(len(outcome.Runs))
 }
 
 // printSkillImpactReport prints the A/B comparison summary
 func (r *TestRunner) printSkillImpactReport(withSkills, withoutSkills *models.EvaluationOutcome) {
 	fmt.Println("\n════════════════════════════════════════════════════════════════")
 	fmt.Println("SKILL IMPACT ANALYSIS")
-	fmt.Println("════════════════════════════════════════════════════════════════\n")
+	fmt.Println("════════════════════════════════════════════════════════════════")
 	
 	withPassRate := withSkills.Digest.SuccessRate
 	withoutPassRate := withoutSkills.Digest.SuccessRate
@@ -403,7 +413,7 @@ func (r *TestRunner) printSkillImpactReport(withSkills, withoutSkills *models.Ev
 	} else {
 		fmt.Printf("Verdict: Skills have NEUTRAL IMPACT (no net change)\n")
 	}
-	fmt.Println("════════════════════════════════════════════════════════════════\n")
+	fmt.Println("════════════════════════════════════════════════════════════════")
 }
 
 func (r *TestRunner) loadTestCases() ([]*models.TestCase, error) {

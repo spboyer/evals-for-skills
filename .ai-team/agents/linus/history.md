@@ -2,6 +2,18 @@
 
 ## Learnings
 
+### 2026-02-18: Baseline A/B comparison implementation (#194)
+**What:** Implemented `--baseline` flag for A/B skill impact measurement. Refactored `RunBenchmark()` into `runNormalBenchmark()` + `runBaselineComparison()`. When baseline is enabled, runs two sequential passes: Pass 1 with skills, Pass 2 with skills stripped (clear `SkillPaths`/`RequiredSkills`). After both passes, computes per-task `SkillImpactMetric` (pass rates, delta, percent change) and prints comparison report. Exit code: 0 if skills improve, 1 if regress/neutral.
+
+**Key design decisions:**
+- Sequential execution (not parallel) — simpler state management, cleaner output, each pass gets fresh engine/workspace.
+- Config mutation pattern for Pass 2: save skill config, clear it, restore after — proven pattern used elsewhere.
+- `computePassRate()` uses `outcome.Stats.PassRate` (not raw run counting) — relies on existing stats computation.
+- Division guard: `max(passRateWithout, 0.01)` prevents infinity when baseline is 0%.
+- No skills configured: warn but don't fail — execute single-pass normal evaluation (meaningless to A/B without skills).
+- Task mismatch error: if Pass 2 produces different test IDs, return error (shouldn't happen with deterministic loading).
+- Exit code in `cmd_run.go`: baseline mode branches early, compares `outcome.Digest.SuccessRate` vs `outcome.BaselineOutcome.Digest.SuccessRate`.
+
 ### 2026-02-18: Result groupBy categorization (#188)
 **What:** Added `GroupBy` field to `Config`, `Group` field to `TestOutcome`, `GroupStats` struct, and grouped CLI output. The runner resolves groups via `resolveGroup()` — currently only `"model"` is supported (uses `spec.Config.ModelID`). Group stats are computed in `computeGroupStats()` using insertion-order-preserving accumulation and attached to `OutcomeDigest.Groups`. CLI prints a "RESULTS BY GROUP" section when groups are present. No GroupBy = unchanged flat output (backward compatible).
 
