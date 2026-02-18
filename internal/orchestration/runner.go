@@ -232,18 +232,36 @@ func (r *TestRunner) loadTestCasesFromCSV() ([]*models.TestCase, error) {
 
 	// Resolve CSV path relative to spec directory
 	csvPath := spec.TasksFrom
+	baseDir := r.cfg.SpecDir()
+	if baseDir == "" {
+		baseDir = "."
+	}
 	if !filepath.IsAbs(csvPath) {
-		baseDir := r.cfg.SpecDir()
-		if baseDir == "" {
-			baseDir = "."
-		}
 		csvPath = filepath.Join(baseDir, csvPath)
 	}
 
-	// Load CSV with optional range filtering
+	// Path containment: CSV must resolve within spec directory
+	absBaseDir, err := filepath.Abs(baseDir)
+	if err != nil {
+		return nil, fmt.Errorf("resolving spec directory: %w", err)
+	}
+	absCSVPath, err := filepath.Abs(csvPath)
+	if err != nil {
+		return nil, fmt.Errorf("resolving CSV path: %w", err)
+	}
+	if !strings.HasPrefix(absCSVPath, absBaseDir+string(filepath.Separator)) {
+		return nil, fmt.Errorf("tasks_from path %q escapes spec directory", spec.TasksFrom)
+	}
+
+	// Validate and load CSV with optional range filtering
 	var rows []dataset.Row
-	var err error
-	if spec.Range[0] > 0 && spec.Range[1] > 0 {
+	if spec.Range != [2]int{} {
+		if spec.Range[0] <= 0 || spec.Range[1] <= 0 {
+			return nil, fmt.Errorf("invalid range: both values must be > 0, got [%d, %d]", spec.Range[0], spec.Range[1])
+		}
+		if spec.Range[0] > spec.Range[1] {
+			return nil, fmt.Errorf("invalid range: start (%d) must be <= end (%d)", spec.Range[0], spec.Range[1])
+		}
 		rows, err = dataset.LoadCSVRange(csvPath, spec.Range[0], spec.Range[1])
 	} else {
 		rows, err = dataset.LoadCSV(csvPath)
@@ -265,28 +283,6 @@ func (r *TestRunner) loadTestCasesFromCSV() ([]*models.TestCase, error) {
 	// Merge spec.Inputs as base variables
 	for k, v := range spec.Inputs {
 		baseCtx.Vars[k] = v
-	}
-
-	// Resolve model template if it contains template delimiters
-	resolveModelForRow := func(row dataset.Row) (string, error) {
-		if !strings.Contains(spec.Config.ModelID, "{{") {
-			return spec.Config.ModelID, nil
-		}
-		// Build a context with CSV row data overriding inputs
-		ctx := &template.Context{
-			JobID:     baseCtx.JobID,
-			Iteration: 0,
-			Attempt:   0,
-			Timestamp: baseCtx.Timestamp,
-			Vars:      make(map[string]string),
-		}
-		for k, v := range spec.Inputs {
-			ctx.Vars[k] = v
-		}
-		for k, v := range row {
-			ctx.Vars[k] = v
-		}
-		return template.Render(spec.Config.ModelID, ctx)
 	}
 
 	testCases := make([]*models.TestCase, 0, len(rows))
@@ -330,12 +326,6 @@ func (r *TestRunner) loadTestCasesFromCSV() ([]*models.TestCase, error) {
 			if err != nil {
 				return nil, fmt.Errorf("resolving prompt template for row %d: %w", rowNum, err)
 			}
-		}
-
-		// Resolve model template for this row
-		_, err = resolveModelForRow(row)
-		if err != nil {
-			return nil, fmt.Errorf("resolving model template for row %d: %w", rowNum, err)
 		}
 
 		tc := &models.TestCase{
