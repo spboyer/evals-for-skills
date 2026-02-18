@@ -273,11 +273,21 @@ Clear all cached evaluation results to force re-execution on the next run.
 
 Iteratively score and improve skill frontmatter in a SKILL.md file.
 
+Use `--copilot` for a non-interactive, single-pass markdown report that:
+1. Summarizes current skill details and token usage
+2. Loads trigger test prompts as examples (when `trigger_tests.yaml` exists)
+3. Requests Copilot suggestions for improving skill selection
+4. Prints the report to stdout without applying any changes
+
+When `--copilot` is set, iterative mode flags (`--target`, `--max-iterations`, `--auto`) are invalid.
+
 | Flag | Description |
 |------|-------------|
-| `--target <level>` | Target adherence level: `low`, `medium`, `medium-high`, `high` (default: `medium-high`) |
-| `--max-iterations <n>` | Maximum improvement iterations (default: 5) |
-| `--auto` | Apply improvements without prompting |
+| `--target <level>` | Target adherence level for iterative mode: `low`, `medium`, `medium-high`, `high` (default: `medium-high`) |
+| `--max-iterations <n>` | Maximum improvement iterations for iterative mode (default: 5) |
+| `--auto` | Apply improvements without prompting in iterative mode |
+| `--copilot` | Generate a non-interactive markdown report with Copilot suggestions |
+| `--model <id>` | Model to use with `--copilot` |
 
 ### `waza check [skill-path]`
 

@@ -2,6 +2,7 @@ package dev
 
 import (
 	"bufio"
+	"context"
 	"errors"
 	"fmt"
 	"io"
@@ -17,10 +18,14 @@ import (
 
 type devConfig struct {
 	SkillDir      string
+	ModelID       string
+	Copilot       bool
+	Context       context.Context
 	Target        AdherenceLevel
 	MaxIterations int
 	Auto          bool
 	Out           io.Writer
+	Err           io.Writer
 	In            io.Reader
 	Scorer        Scorer
 	scan          *bufio.Scanner
@@ -34,24 +39,52 @@ func (c *devConfig) Scanner() *bufio.Scanner {
 }
 
 func runDev(cmd *cobra.Command, args []string) error {
-	targetStr, err := cmd.Flags().GetString("target")
+	copilotMode, err := cmd.Flags().GetBool("copilot")
 	if err != nil {
 		return err
 	}
-	target, err := ParseAdherenceLevel(targetStr)
+	modelID, err := cmd.Flags().GetString("model")
 	if err != nil {
 		return err
 	}
-	maxIter, err := cmd.Flags().GetInt("max-iterations")
-	if err != nil {
-		return err
+	if copilotMode {
+		if cmd.Flags().Changed("target") {
+			return errors.New("--target is not valid with --copilot")
+		}
+		if cmd.Flags().Changed("max-iterations") {
+			return errors.New("--max-iterations is not valid with --copilot")
+		}
+		if cmd.Flags().Changed("auto") {
+			return errors.New("--auto is not valid with --copilot")
+		}
+	} else if cmd.Flags().Changed("model") {
+		return errors.New("--model is valid only with --copilot")
 	}
-	if maxIter < 1 {
-		return errors.New("max-iterations must be at least 1")
-	}
-	auto, err := cmd.Flags().GetBool("auto")
-	if err != nil {
-		return err
+
+	target := AdherenceMediumHigh
+	maxIter := 5
+	auto := false
+	if !copilotMode {
+		targetStr, targetErr := cmd.Flags().GetString("target")
+		if targetErr != nil {
+			return targetErr
+		}
+		target, targetErr = ParseAdherenceLevel(targetStr)
+		if targetErr != nil {
+			return targetErr
+		}
+
+		maxIter, err = cmd.Flags().GetInt("max-iterations")
+		if err != nil {
+			return err
+		}
+		if maxIter < 1 {
+			return errors.New("max-iterations must be at least 1")
+		}
+		auto, err = cmd.Flags().GetBool("auto")
+		if err != nil {
+			return err
+		}
 	}
 
 	skillDir := ""
@@ -79,15 +112,23 @@ func runDev(cmd *cobra.Command, args []string) error {
 
 	cfg := &devConfig{
 		SkillDir:      skillDir,
+		ModelID:       modelID,
+		Copilot:       copilotMode,
+		Context:       cmd.Context(),
 		Target:        target,
 		MaxIterations: maxIter,
 		Auto:          auto,
 		Out:           cmd.OutOrStdout(),
+		Err:           cmd.ErrOrStderr(),
 		In:            cmd.InOrStdin(),
 		Scorer:        &HeuristicScorer{},
 	}
 
-	return runDevLoop(cfg)
+	if cfg.Copilot {
+		return runDevCopilot(cfg)
+	} else {
+		return runDevLoop(cfg)
+	}
 }
 
 func runDevLoop(cfg *devConfig) error {
@@ -178,52 +219,21 @@ func runDevLoop(cfg *devConfig) error {
 }
 
 func improve(cfg *devConfig, skill *skill.Skill, score *ScoreResult) (bool, error) {
-	type step struct {
-		section    string
-		applicable bool
-		suggest    func() string
-		apply      func(string)
-	}
-
-	steps := []step{
-		{
-			section:    "description-length",
-			applicable: score.DescriptionLen < 150,
-			suggest:    func() string { return suggestExpandedDescription(skill) },
-			apply:      func(s string) { skill.Frontmatter.Description = s },
-		},
-		{
-			section:    "triggers",
-			applicable: !score.HasTriggers,
-			suggest:    func() string { return suggestTriggers(skill) },
-			apply:      func(s string) { skill.Frontmatter.Description = appendSection(skill.Frontmatter.Description, s) },
-		},
-		{
-			section:    "anti-triggers",
-			applicable: !score.HasAntiTriggers && score.HasTriggers,
-			suggest:    func() string { return suggestAntiTriggers(skill) },
-			apply:      func(s string) { skill.Frontmatter.Description = appendSection(skill.Frontmatter.Description, s) },
-		},
-		{
-			section:    "routing-clarity",
-			applicable: !score.HasRoutingClarity && score.HasAntiTriggers,
-			suggest:    func() string { return suggestRoutingClarity(skill) },
-			apply:      func(s string) { skill.Frontmatter.Description = appendSection(skill.Frontmatter.Description, s) },
-		},
-	}
-
-	for _, s := range steps {
-		if !s.applicable {
-			continue
-		}
-		suggestion := s.suggest()
-		DisplayImprovement(cfg.Out, s.section, suggestion)
+	for _, s := range collectFrontmatterSuggestions(skill, score) {
+		DisplayImprovement(cfg.Out, s.Section, s.Suggestion)
 		if !cfg.Auto && !confirmApply(cfg) {
 			continue
 		}
-		s.apply(suggestion)
+
+		switch s.Section {
+		case "description-length":
+			skill.Frontmatter.Description = s.Suggestion
+		default:
+			skill.Frontmatter.Description = appendSection(skill.Frontmatter.Description, s.Suggestion)
+		}
+
 		if err := writeSkillFile(skill); err != nil {
-			return false, fmt.Errorf("applying %s: %w", s.section, err)
+			return false, fmt.Errorf("applying %s: %w", s.Section, err)
 		}
 		return true, nil
 	}
@@ -233,6 +243,40 @@ func improve(cfg *devConfig, skill *skill.Skill, score *ScoreResult) (bool, erro
 
 func confirmApply(cfg *devConfig) bool {
 	return PromptConfirm(cfg.Scanner(), cfg.Out, "Apply this improvement?")
+}
+
+type frontmatterSuggestion struct {
+	Section    string
+	Suggestion string
+}
+
+func collectFrontmatterSuggestions(skill *skill.Skill, score *ScoreResult) []frontmatterSuggestion {
+	var suggestions []frontmatterSuggestion
+	if score.DescriptionLen < 150 {
+		suggestions = append(suggestions, frontmatterSuggestion{
+			Section:    "description-length",
+			Suggestion: suggestExpandedDescription(skill),
+		})
+	}
+	if !score.HasTriggers {
+		suggestions = append(suggestions, frontmatterSuggestion{
+			Section:    "triggers",
+			Suggestion: suggestTriggers(skill),
+		})
+	}
+	if !score.HasAntiTriggers && score.HasTriggers {
+		suggestions = append(suggestions, frontmatterSuggestion{
+			Section:    "anti-triggers",
+			Suggestion: suggestAntiTriggers(skill),
+		})
+	}
+	if !score.HasRoutingClarity && score.HasAntiTriggers {
+		suggestions = append(suggestions, frontmatterSuggestion{
+			Section:    "routing-clarity",
+			Suggestion: suggestRoutingClarity(skill),
+		})
+	}
+	return suggestions
 }
 
 // suggestExpandedDescription builds a longer description from the skill body.
