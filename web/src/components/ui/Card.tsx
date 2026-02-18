@@ -4,15 +4,20 @@ interface CardProps {
   title?: string;
   children: ReactNode;
   className?: string;
+  hover?: boolean;
 }
 
-export function Card({ title, children, className = "" }: CardProps) {
+export function Card({ title, children, className = "", hover = false }: CardProps) {
   return (
     <div
-      className={`rounded-lg border border-gray-200 bg-white p-4 shadow-sm dark:border-gray-800 dark:bg-gray-900 ${className}`}
+      className={`rounded-lg border p-4 ${hover ? "transition-colors hover:border-[var(--accent-primary)]/40" : ""} ${className}`}
+      style={{
+        backgroundColor: "var(--bg-surface)",
+        borderColor: "var(--border-default)",
+      }}
     >
       {title && (
-        <h3 className="mb-2 text-sm font-medium text-gray-500 dark:text-gray-400">
+        <h3 className="mb-2 text-sm font-medium" style={{ color: "var(--text-secondary)" }}>
           {title}
         </h3>
       )}
