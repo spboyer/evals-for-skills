@@ -568,6 +568,7 @@ func (r *TestRunner) runTestUncached(ctx context.Context, tc *models.TestCase, t
 	return models.TestOutcome{
 		TestID:      tc.TestID,
 		DisplayName: tc.DisplayName,
+		Group:       r.resolveGroup(),
 		Status:      status,
 		Runs:        runs,
 		Stats:       stats,

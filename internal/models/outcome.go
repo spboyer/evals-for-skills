@@ -55,17 +55,18 @@ type OutcomeSetup struct {
 }
 
 type OutcomeDigest struct {
-	TotalTests     int     `json:"total_tests"`
-	Succeeded      int     `json:"succeeded"`
-	Failed         int     `json:"failed"`
-	Errors         int     `json:"errors"`
-	Skipped        int     `json:"skipped"`
-	SuccessRate    float64 `json:"success_rate"`
-	AggregateScore float64 `json:"aggregate_score"`
-	MinScore       float64 `json:"min_score"`
-	MaxScore       float64 `json:"max_score"`
-	StdDev         float64 `json:"std_dev"`
-	DurationMs     int64   `json:"duration_ms"`
+	TotalTests     int          `json:"total_tests"`
+	Succeeded      int          `json:"succeeded"`
+	Failed         int          `json:"failed"`
+	Errors         int          `json:"errors"`
+	Skipped        int          `json:"skipped"`
+	SuccessRate    float64      `json:"success_rate"`
+	AggregateScore float64      `json:"aggregate_score"`
+	MinScore       float64      `json:"min_score"`
+	MaxScore       float64      `json:"max_score"`
+	StdDev         float64      `json:"std_dev"`
+	DurationMs     int64        `json:"duration_ms"`
+	Groups         []GroupStats `json:"groups,omitempty"`
 }
 
 type MeasureResult struct {
@@ -81,9 +82,18 @@ type MeasureResult struct {
 type TestOutcome struct {
 	TestID      string      `json:"test_id"`
 	DisplayName string      `json:"display_name"`
+	Group       string      `json:"group,omitempty"`
 	Status      Status      `json:"status"`
 	Runs        []RunResult `json:"runs"`
 	Stats       *TestStats  `json:"stats,omitempty"`
+}
+
+// GroupStats holds aggregate statistics for a group of test outcomes.
+type GroupStats struct {
+	Name     string  `json:"name"`
+	Passed   int     `json:"passed"`
+	Total    int     `json:"total"`
+	AvgScore float64 `json:"avg_score"`
 }
 
 // RunResult is the result of a single run/trial

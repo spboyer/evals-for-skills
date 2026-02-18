@@ -39,6 +39,7 @@ type Config struct {
 	RequiredSkills []string       `yaml:"required_skills,omitempty" json:"required_skills,omitempty"`
 	ServerConfigs  map[string]any `yaml:"mcp_servers,omitempty" json:"server_configs,omitempty"`
 	MaxAttempts    int            `yaml:"max_attempts,omitempty" json:"max_attempts,omitempty"`
+	GroupBy        string         `yaml:"group_by,omitempty" json:"group_by,omitempty"`
 }
 
 // GraderConfig defines a validator/grader
