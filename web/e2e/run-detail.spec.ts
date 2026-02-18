@@ -15,8 +15,8 @@ test.describe('Run Detail', () => {
     await mockAPI(page);
     await page.goto('/runs/run-001');
     await expect(page.getByText('gpt-4o')).toBeVisible();
-    await expect(page.getByText('passed').first()).toBeVisible();
-    await expect(page.getByText('4/4')).toBeVisible();
+    await expect(page.getByText('failed').first()).toBeVisible();
+    await expect(page.getByText('3/4')).toBeVisible();
   });
 
   test('lists all tasks', async ({ page }) => {

@@ -65,7 +65,7 @@ test.describe('Dashboard', () => {
     await mockAPI(page);
     await page.goto('/');
 
-    await expect(page.getByText('4/4')).toBeVisible();
+    await expect(page.getByText('3/4')).toBeVisible();
     await expect(page.getByText('2/4')).toBeVisible();
   });
 
