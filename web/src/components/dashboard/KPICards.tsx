@@ -1,42 +1,96 @@
-import { Card } from "@/components/ui/Card";
+import { type LucideIcon } from "lucide-react";
+import {
+  Activity,
+  ListChecks,
+  CheckCircle2,
+  Zap,
+  DollarSign,
+  Clock,
+} from "lucide-react";
+import { Skeleton } from "@/components/ui/Skeleton";
 import { useSummary } from "@/hooks/useSummary";
-import { formatPercent, formatNumber, formatCost, formatDuration } from "@/lib/format";
-import { Activity, CheckCircle, Coins, Timer } from "lucide-react";
+import {
+  formatPercent,
+  formatNumber,
+  formatCost,
+  formatDuration,
+} from "@/lib/format";
+
+interface KPIItem {
+  label: string;
+  value: string;
+  icon: LucideIcon;
+  color?: string;
+}
+
+function passRateColor(rate: number): string {
+  const pct = rate * 100;
+  if (pct >= 70) return "text-emerald-400";
+  if (pct >= 50) return "text-yellow-400";
+  return "text-red-400";
+}
+
+function KPICard({ label, value, icon: Icon, color }: KPIItem) {
+  return (
+    <div className="rounded-lg border border-white/10 bg-[#111118] p-4">
+      <Icon className="mb-2 h-5 w-5 text-cyan-400" />
+      <p className={`text-2xl font-bold tracking-tight ${color ?? "text-white"}`}>
+        {value}
+      </p>
+      <p className="mt-1 text-xs text-gray-400">{label}</p>
+    </div>
+  );
+}
+
+function KPICardSkeleton() {
+  return (
+    <div className="rounded-lg border border-white/10 bg-[#111118] p-4">
+      <Skeleton className="mb-2 h-5 w-5 rounded-full" />
+      <Skeleton className="h-7 w-20" />
+      <Skeleton className="mt-1 h-3 w-16" />
+    </div>
+  );
+}
 
 export function KPICards() {
-  const { data, isLoading } = useSummary();
+  const { data, isLoading, error } = useSummary();
+
+  if (error) {
+    return (
+      <div className="rounded-lg border border-red-500/30 bg-red-500/10 p-4 text-sm text-red-400">
+        Failed to load summary data.
+      </div>
+    );
+  }
 
   if (isLoading || !data) {
     return (
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        {Array.from({ length: 4 }).map((_, i) => (
-          <Card key={i}>
-            <div className="h-12 animate-pulse rounded bg-gray-200 dark:bg-gray-800" />
-          </Card>
+      <div className="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-6">
+        {Array.from({ length: 6 }).map((_, i) => (
+          <KPICardSkeleton key={i} />
         ))}
       </div>
     );
   }
 
-  const kpis = [
+  const kpis: KPIItem[] = [
     { label: "Total Runs", value: formatNumber(data.totalRuns), icon: Activity },
-    { label: "Pass Rate", value: formatPercent(data.passRate), icon: CheckCircle },
-    { label: "Avg Cost", value: formatCost(data.avgCost), icon: Coins },
-    { label: "Avg Duration", value: formatDuration(data.avgDuration), icon: Timer },
+    { label: "Tasks", value: formatNumber(data.totalTasks), icon: ListChecks },
+    {
+      label: "Pass Rate",
+      value: formatPercent(data.passRate),
+      icon: CheckCircle2,
+      color: passRateColor(data.passRate),
+    },
+    { label: "Avg Tokens", value: formatNumber(data.avgTokens), icon: Zap },
+    { label: "Avg Cost", value: formatCost(data.avgCost), icon: DollarSign },
+    { label: "Avg Duration", value: formatDuration(data.avgDuration), icon: Clock },
   ];
 
   return (
-    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+    <div className="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-6">
       {kpis.map((kpi) => (
-        <Card key={kpi.label}>
-          <div className="flex items-center gap-3">
-            <kpi.icon className="h-5 w-5 text-waza-500" />
-            <div>
-              <p className="text-sm text-gray-500 dark:text-gray-400">{kpi.label}</p>
-              <p className="text-xl font-semibold">{kpi.value}</p>
-            </div>
-          </div>
-        </Card>
+        <KPICard key={kpi.label} {...kpi} />
       ))}
     </div>
   );
