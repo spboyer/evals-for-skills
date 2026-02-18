@@ -79,6 +79,69 @@ enabled: true
 	}
 }
 
+func TestBenchmarkSpec_InputsDeserialization(t *testing.T) {
+	tempDir := t.TempDir()
+	yamlContent := `name: inputs-test
+skill: test-skill
+config:
+  trials_per_task: 1
+  timeout_seconds: 60
+  executor: mock
+inputs:
+  workspace_root: ./workspaces
+  default_branch: main
+  org: myorg
+`
+	specPath := filepath.Join(tempDir, "inputs.yaml")
+	if err := os.WriteFile(specPath, []byte(yamlContent), 0644); err != nil {
+		t.Fatalf("Failed to write spec file: %v", err)
+	}
+
+	spec, err := LoadBenchmarkSpec(specPath)
+	if err != nil {
+		t.Fatalf("Failed to load spec: %v", err)
+	}
+
+	if len(spec.Inputs) != 3 {
+		t.Fatalf("Expected 3 inputs, got %d", len(spec.Inputs))
+	}
+
+	expected := map[string]string{
+		"workspace_root": "./workspaces",
+		"default_branch": "main",
+		"org":            "myorg",
+	}
+	for k, want := range expected {
+		if got := spec.Inputs[k]; got != want {
+			t.Errorf("Inputs[%q] = %q, want %q", k, got, want)
+		}
+	}
+}
+
+func TestBenchmarkSpec_InputsOmittedWhenEmpty(t *testing.T) {
+	tempDir := t.TempDir()
+	yamlContent := `name: no-inputs
+skill: test-skill
+config:
+  trials_per_task: 1
+  timeout_seconds: 60
+  executor: mock
+`
+	specPath := filepath.Join(tempDir, "no-inputs.yaml")
+	if err := os.WriteFile(specPath, []byte(yamlContent), 0644); err != nil {
+		t.Fatalf("Failed to write spec file: %v", err)
+	}
+
+	spec, err := LoadBenchmarkSpec(specPath)
+	if err != nil {
+		t.Fatalf("Failed to load spec: %v", err)
+	}
+
+	if spec.Inputs != nil {
+		t.Errorf("Expected nil Inputs when omitted, got %v", spec.Inputs)
+	}
+}
+
 func TestBenchmarkSpec_DefaultValues(t *testing.T) {
 	tempDir := t.TempDir()
 	// Minimal YAML - defaults need to be set by loader
