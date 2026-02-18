@@ -959,28 +959,26 @@ func (r *TestRunner) executeRun(ctx context.Context, tc *models.TestCase, runNum
 		}
 	}
 
-	// Emit grader result events for verbose mode (sorted for stable output)
-	if r.verbose {
-		graderNames := make([]string, 0, len(gradersResults))
-		for name := range gradersResults {
-			graderNames = append(graderNames, name)
-		}
-		sort.Strings(graderNames)
-		for _, name := range graderNames {
-			gr := gradersResults[name]
-			r.notifyProgress(ProgressEvent{
-				EventType:  EventGraderResult,
-				TestName:   tc.DisplayName,
-				DurationMs: gr.DurationMs,
-				Details: map[string]any{
-					"grader":   name,
-					"type":     gr.Type,
-					"passed":   gr.Passed,
-					"score":    gr.Score,
-					"feedback": gr.Feedback,
-				},
-			})
-		}
+	// Emit grader result events (sorted for stable output)
+	graderNames := make([]string, 0, len(gradersResults))
+	for name := range gradersResults {
+		graderNames = append(graderNames, name)
+	}
+	sort.Strings(graderNames)
+	for _, name := range graderNames {
+		gr := gradersResults[name]
+		r.notifyProgress(ProgressEvent{
+			EventType:  EventGraderResult,
+			TestName:   tc.DisplayName,
+			DurationMs: gr.DurationMs,
+			Details: map[string]any{
+				"grader":      name,
+				"grader_type": gr.Type,
+				"passed":      gr.Passed,
+				"score":       gr.Score,
+				"feedback":    gr.Feedback,
+			},
+		})
 	}
 
 	// Determine status
