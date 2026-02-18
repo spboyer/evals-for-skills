@@ -274,8 +274,6 @@ func (r *TestRunner) loadTestCasesFromCSV() ([]*models.TestCase, error) {
 	now := time.Now()
 	baseCtx := &template.Context{
 		JobID:     fmt.Sprintf("run-%d", now.Unix()),
-		Iteration: 0,
-		Attempt:   0,
 		Timestamp: now.Format(time.RFC3339),
 		Vars:      make(map[string]string),
 	}

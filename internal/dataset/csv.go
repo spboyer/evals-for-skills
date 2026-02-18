@@ -16,7 +16,7 @@ func LoadCSV(path string) ([]Row, error) {
 	if err != nil {
 		return nil, fmt.Errorf("csv: open %s: %w", path, err)
 	}
-	defer f.Close()
+	defer f.Close() //nolint:errcheck
 
 	reader := csv.NewReader(f)
 	records, err := reader.ReadAll()
