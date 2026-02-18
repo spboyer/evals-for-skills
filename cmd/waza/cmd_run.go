@@ -17,6 +17,7 @@ import (
 	"github.com/spboyer/waza/internal/orchestration"
 	"github.com/spboyer/waza/internal/recommend"
 	"github.com/spboyer/waza/internal/reporting"
+	"github.com/spboyer/waza/internal/session"
 	"github.com/spboyer/waza/internal/trigger"
 	"github.com/spboyer/waza/internal/utils"
 	"github.com/spboyer/waza/internal/workspace"
@@ -39,6 +40,8 @@ var (
 	modelOverrides []string
 	recommendFlag  bool
 	baselineFlag   bool
+	sessionLog     bool
+	sessionDir     string
 )
 
 // modelResult pairs a model identifier with its evaluation outcome.
@@ -81,6 +84,8 @@ You can also specify a skill name to run its eval:
 	cmd.Flags().StringArrayVar(&modelOverrides, "model", nil, "Model to use (overrides spec config, can be repeated for comparison)")
 	cmd.Flags().BoolVar(&recommendFlag, "recommend", false, "Generate heuristic recommendation after multi-model run")
 	cmd.Flags().BoolVar(&baselineFlag, "baseline", false, "Run A/B comparison: with skills vs without skills")
+	cmd.Flags().BoolVar(&sessionLog, "session-log", false, "Enable session event logging (NDJSON)")
+	cmd.Flags().StringVar(&sessionDir, "session-dir", "", "Directory for session log files (default: current directory)")
 
 	return cmd
 }
@@ -379,6 +384,64 @@ func runSingleModel(_ *cobra.Command, spec *models.BenchmarkSpec, specPath strin
 		runnerOpts = append(runnerOpts, orchestration.WithCache(resultCache))
 	}
 	runner := orchestration.NewTestRunner(cfg, engine, runnerOpts...)
+
+	// Setup session logger if enabled
+	var sessLogger session.Logger = session.NopLogger{}
+	if sessionLog {
+		logDir := sessionDir
+		if logDir == "" {
+			logDir = "."
+		}
+		logPath := session.DefaultLogPath(logDir)
+		jl, err := session.NewJSONLogger(logPath)
+		if err != nil {
+			return nil, fmt.Errorf("creating session logger: %w", err)
+		}
+		defer jl.Close()
+		sessLogger = jl
+		if verbose {
+			fmt.Printf("Session log: %s\n", jl.Path())
+		}
+	}
+
+	// Wire session logger as a progress listener
+	runner.OnProgress(func(event orchestration.ProgressEvent) {
+		var ev session.Event
+		switch event.EventType {
+		case orchestration.EventBenchmarkStart:
+			ev = session.NewEvent(session.EventSessionStart,
+				session.SessionStartData(specPath, spec.Config.ModelID, spec.Config.EngineType, event.TotalTests))
+		case orchestration.EventBenchmarkComplete:
+			d := event.Details
+			total, _ := d["total_tests"].(int)
+			passed, _ := d["passed"].(int)
+			failed, _ := d["failed"].(int)
+			errs, _ := d["errors"].(int)
+			ev = session.NewEvent(session.EventSessionEnd,
+				session.SessionCompleteData(total, passed, failed, errs, event.DurationMs))
+		case orchestration.EventTestStart:
+			ev = session.NewEvent(session.EventTaskStart,
+				session.TaskStartData(event.TestName, event.TestNum, event.TotalTests))
+		case orchestration.EventTestComplete:
+			score := 0.0
+			if s, ok := event.Details["score"].(float64); ok {
+				score = s
+			}
+			ev = session.NewEvent(session.EventTaskComplete,
+				session.TaskCompleteData(event.TestName, string(event.Status), score, event.DurationMs))
+		case orchestration.EventGraderResult:
+			grader, _ := event.Details["grader"].(string)
+			graderType, _ := event.Details["grader_type"].(string)
+			passed, _ := event.Details["passed"].(bool)
+			score, _ := event.Details["score"].(float64)
+			feedback, _ := event.Details["feedback"].(string)
+			ev = session.NewEvent(session.EventGraderResult,
+				session.GraderResultData(grader, graderType, passed, score, feedback))
+		default:
+			return
+		}
+		sessLogger.Log(ev) //nolint:errcheck
+	})
 
 	// Add progress listener
 	if verbose {

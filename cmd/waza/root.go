@@ -46,6 +46,7 @@ performance against predefined test cases.`,
 	cmd.AddCommand(newCheckCommand())
 	cmd.AddCommand(newCacheCommand())
 	cmd.AddCommand(newNewCommand())
+	cmd.AddCommand(newSessionCommand())
 
 	return cmd
 }
