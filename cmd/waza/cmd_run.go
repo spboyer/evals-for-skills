@@ -397,7 +397,7 @@ func runSingleModel(_ *cobra.Command, spec *models.BenchmarkSpec, specPath strin
 		if err != nil {
 			return nil, fmt.Errorf("creating session logger: %w", err)
 		}
-		defer jl.Close()
+		defer jl.Close() //nolint:errcheck
 		sessLogger = jl
 		if verbose {
 			fmt.Printf("Session log: %s\n", jl.Path())
@@ -415,8 +415,8 @@ func runSingleModel(_ *cobra.Command, spec *models.BenchmarkSpec, specPath strin
 			ev = session.NewEvent(session.EventTaskStart,
 				session.TaskStartData(event.TestName, event.TestNum, event.TotalTests))
 		case orchestration.EventTestComplete:
-			score, _ := event.Details["score"].(float64)
-			durationMs, _ := event.Details["duration_ms"].(int64)
+			score, _ := event.Details["score"].(float64)          //nolint:errcheck
+			durationMs, _ := event.Details["duration_ms"].(int64) //nolint:errcheck
 			ev = session.NewEvent(session.EventTaskComplete,
 				session.TaskCompleteData(event.TestName, string(event.Status), score, durationMs))
 		case orchestration.EventGraderResult:

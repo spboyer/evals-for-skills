@@ -1,0 +1,10 @@
+{"timestamp":"2026-02-18T17:49:17.701448Z","type":"session_start","data":{"engine":"mock","model":"claude-sonnet-4-20250514","spec_path":"examples/code-explainer/eval.yaml","task_count":4}}
+{"timestamp":"2026-02-18T17:49:17.701491Z","type":"task_start","data":{"task_name":"Explain JavaScript Async/Await","task_num":1,"total_tasks":4}}
+{"timestamp":"2026-02-18T17:49:17.938879Z","type":"task_complete","data":{"duration_ms":0,"score":0,"status":"passed","task_name":"Explain JavaScript Async/Await"}}
+{"timestamp":"2026-02-18T17:49:17.938923Z","type":"task_start","data":{"task_name":"Explain List Comprehension","task_num":2,"total_tasks":4}}
+{"timestamp":"2026-02-18T17:49:18.127405Z","type":"task_complete","data":{"duration_ms":0,"score":0,"status":"passed","task_name":"Explain List Comprehension"}}
+{"timestamp":"2026-02-18T17:49:18.127438Z","type":"task_start","data":{"task_name":"Explain Python Recursion","task_num":3,"total_tasks":4}}
+{"timestamp":"2026-02-18T17:49:18.313309Z","type":"task_complete","data":{"duration_ms":0,"score":0,"status":"passed","task_name":"Explain Python Recursion"}}
+{"timestamp":"2026-02-18T17:49:18.313342Z","type":"task_start","data":{"task_name":"Explain SQL JOIN Query","task_num":4,"total_tasks":4}}
+{"timestamp":"2026-02-18T17:49:18.501541Z","type":"task_complete","data":{"duration_ms":0,"score":0,"status":"passed","task_name":"Explain SQL JOIN Query"}}
+{"timestamp":"2026-02-18T17:49:18.501584Z","type":"session_complete","data":{"duration_ms":809,"errors":0,"failed":0,"passed":0,"total_tests":0}}

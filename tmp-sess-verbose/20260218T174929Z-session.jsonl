@@ -1,0 +1,46 @@
+{"timestamp":"2026-02-18T17:49:29.843182Z","type":"session_start","data":{"engine":"mock","model":"claude-sonnet-4-20250514","spec_path":"examples/code-explainer/eval.yaml","task_count":4}}
+{"timestamp":"2026-02-18T17:49:29.843224Z","type":"task_start","data":{"task_name":"Explain JavaScript Async/Await","task_num":1,"total_tasks":4}}
+{"timestamp":"2026-02-18T17:49:29.945516Z","type":"grader_result","data":{"feedback":"All assertions passed","grader_name":"explains_async_pattern","grader_type":"","passed":true,"score":1}}
+{"timestamp":"2026-02-18T17:49:29.945572Z","type":"grader_result","data":{"feedback":"All assertions passed","grader_name":"has_explanation","grader_type":"","passed":true,"score":1}}
+{"timestamp":"2026-02-18T17:49:29.945581Z","type":"grader_result","data":{"feedback":"All patterns matched","grader_name":"no_errors","grader_type":"","passed":true,"score":1}}
+{"timestamp":"2026-02-18T17:49:30.006449Z","type":"grader_result","data":{"feedback":"All assertions passed","grader_name":"explains_async_pattern","grader_type":"","passed":true,"score":1}}
+{"timestamp":"2026-02-18T17:49:30.006485Z","type":"grader_result","data":{"feedback":"All assertions passed","grader_name":"has_explanation","grader_type":"","passed":true,"score":1}}
+{"timestamp":"2026-02-18T17:49:30.0065Z","type":"grader_result","data":{"feedback":"All patterns matched","grader_name":"no_errors","grader_type":"","passed":true,"score":1}}
+{"timestamp":"2026-02-18T17:49:30.066151Z","type":"grader_result","data":{"feedback":"All assertions passed","grader_name":"explains_async_pattern","grader_type":"","passed":true,"score":1}}
+{"timestamp":"2026-02-18T17:49:30.066193Z","type":"grader_result","data":{"feedback":"All assertions passed","grader_name":"has_explanation","grader_type":"","passed":true,"score":1}}
+{"timestamp":"2026-02-18T17:49:30.066201Z","type":"grader_result","data":{"feedback":"All patterns matched","grader_name":"no_errors","grader_type":"","passed":true,"score":1}}
+{"timestamp":"2026-02-18T17:49:30.066219Z","type":"task_complete","data":{"duration_ms":0,"score":0,"status":"passed","task_name":"Explain JavaScript Async/Await"}}
+{"timestamp":"2026-02-18T17:49:30.066227Z","type":"task_start","data":{"task_name":"Explain List Comprehension","task_num":2,"total_tasks":4}}
+{"timestamp":"2026-02-18T17:49:30.13495Z","type":"grader_result","data":{"feedback":"All assertions passed","grader_name":"explains_comprehension","grader_type":"","passed":true,"score":1}}
+{"timestamp":"2026-02-18T17:49:30.135Z","type":"grader_result","data":{"feedback":"All assertions passed","grader_name":"has_explanation","grader_type":"","passed":true,"score":1}}
+{"timestamp":"2026-02-18T17:49:30.135023Z","type":"grader_result","data":{"feedback":"All patterns matched","grader_name":"no_errors","grader_type":"","passed":true,"score":1}}
+{"timestamp":"2026-02-18T17:49:30.202058Z","type":"grader_result","data":{"feedback":"All assertions passed","grader_name":"explains_comprehension","grader_type":"","passed":true,"score":1}}
+{"timestamp":"2026-02-18T17:49:30.202103Z","type":"grader_result","data":{"feedback":"All assertions passed","grader_name":"has_explanation","grader_type":"","passed":true,"score":1}}
+{"timestamp":"2026-02-18T17:49:30.202111Z","type":"grader_result","data":{"feedback":"All patterns matched","grader_name":"no_errors","grader_type":"","passed":true,"score":1}}
+{"timestamp":"2026-02-18T17:49:30.264634Z","type":"grader_result","data":{"feedback":"All assertions passed","grader_name":"explains_comprehension","grader_type":"","passed":true,"score":1}}
+{"timestamp":"2026-02-18T17:49:30.264676Z","type":"grader_result","data":{"feedback":"All assertions passed","grader_name":"has_explanation","grader_type":"","passed":true,"score":1}}
+{"timestamp":"2026-02-18T17:49:30.264685Z","type":"grader_result","data":{"feedback":"All patterns matched","grader_name":"no_errors","grader_type":"","passed":true,"score":1}}
+{"timestamp":"2026-02-18T17:49:30.264704Z","type":"task_complete","data":{"duration_ms":0,"score":0,"status":"passed","task_name":"Explain List Comprehension"}}
+{"timestamp":"2026-02-18T17:49:30.264716Z","type":"task_start","data":{"task_name":"Explain Python Recursion","task_num":3,"total_tasks":4}}
+{"timestamp":"2026-02-18T17:49:30.329308Z","type":"grader_result","data":{"feedback":"All assertions passed","grader_name":"explains_recursion","grader_type":"","passed":true,"score":1}}
+{"timestamp":"2026-02-18T17:49:30.329342Z","type":"grader_result","data":{"feedback":"All assertions passed","grader_name":"has_explanation","grader_type":"","passed":true,"score":1}}
+{"timestamp":"2026-02-18T17:49:30.329349Z","type":"grader_result","data":{"feedback":"All patterns matched","grader_name":"no_errors","grader_type":"","passed":true,"score":1}}
+{"timestamp":"2026-02-18T17:49:30.393108Z","type":"grader_result","data":{"feedback":"All assertions passed","grader_name":"explains_recursion","grader_type":"","passed":true,"score":1}}
+{"timestamp":"2026-02-18T17:49:30.393156Z","type":"grader_result","data":{"feedback":"All assertions passed","grader_name":"has_explanation","grader_type":"","passed":true,"score":1}}
+{"timestamp":"2026-02-18T17:49:30.393163Z","type":"grader_result","data":{"feedback":"All patterns matched","grader_name":"no_errors","grader_type":"","passed":true,"score":1}}
+{"timestamp":"2026-02-18T17:49:30.457708Z","type":"grader_result","data":{"feedback":"All assertions passed","grader_name":"explains_recursion","grader_type":"","passed":true,"score":1}}
+{"timestamp":"2026-02-18T17:49:30.457748Z","type":"grader_result","data":{"feedback":"All assertions passed","grader_name":"has_explanation","grader_type":"","passed":true,"score":1}}
+{"timestamp":"2026-02-18T17:49:30.457756Z","type":"grader_result","data":{"feedback":"All patterns matched","grader_name":"no_errors","grader_type":"","passed":true,"score":1}}
+{"timestamp":"2026-02-18T17:49:30.457769Z","type":"task_complete","data":{"duration_ms":0,"score":0,"status":"passed","task_name":"Explain Python Recursion"}}
+{"timestamp":"2026-02-18T17:49:30.457775Z","type":"task_start","data":{"task_name":"Explain SQL JOIN Query","task_num":4,"total_tasks":4}}
+{"timestamp":"2026-02-18T17:49:30.523432Z","type":"grader_result","data":{"feedback":"All assertions passed","grader_name":"explains_sql_join","grader_type":"","passed":true,"score":1}}
+{"timestamp":"2026-02-18T17:49:30.523475Z","type":"grader_result","data":{"feedback":"All assertions passed","grader_name":"has_explanation","grader_type":"","passed":true,"score":1}}
+{"timestamp":"2026-02-18T17:49:30.523483Z","type":"grader_result","data":{"feedback":"All patterns matched","grader_name":"no_errors","grader_type":"","passed":true,"score":1}}
+{"timestamp":"2026-02-18T17:49:30.587695Z","type":"grader_result","data":{"feedback":"All assertions passed","grader_name":"explains_sql_join","grader_type":"","passed":true,"score":1}}
+{"timestamp":"2026-02-18T17:49:30.587737Z","type":"grader_result","data":{"feedback":"All assertions passed","grader_name":"has_explanation","grader_type":"","passed":true,"score":1}}
+{"timestamp":"2026-02-18T17:49:30.587744Z","type":"grader_result","data":{"feedback":"All patterns matched","grader_name":"no_errors","grader_type":"","passed":true,"score":1}}
+{"timestamp":"2026-02-18T17:49:30.653213Z","type":"grader_result","data":{"feedback":"All assertions passed","grader_name":"explains_sql_join","grader_type":"","passed":true,"score":1}}
+{"timestamp":"2026-02-18T17:49:30.653262Z","type":"grader_result","data":{"feedback":"All assertions passed","grader_name":"has_explanation","grader_type":"","passed":true,"score":1}}
+{"timestamp":"2026-02-18T17:49:30.65327Z","type":"grader_result","data":{"feedback":"All patterns matched","grader_name":"no_errors","grader_type":"","passed":true,"score":1}}
+{"timestamp":"2026-02-18T17:49:30.653296Z","type":"task_complete","data":{"duration_ms":0,"score":0,"status":"passed","task_name":"Explain SQL JOIN Query"}}
+{"timestamp":"2026-02-18T17:49:30.653309Z","type":"session_complete","data":{"duration_ms":812,"errors":0,"failed":0,"passed":0,"total_tests":0}}

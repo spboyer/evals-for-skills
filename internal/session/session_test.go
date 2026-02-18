@@ -138,7 +138,7 @@ func TestJSONLoggerPath(t *testing.T) {
 	if err != nil {
 		t.Fatalf("NewJSONLogger with subdirectory: %v", err)
 	}
-	defer logger.Close()
+	defer logger.Close() //nolint:errcheck
 
 	if logger.Path() != path {
 		t.Errorf("Path() = %q, want %q", logger.Path(), path)
@@ -174,7 +174,7 @@ func TestListSessions(t *testing.T) {
 		"20250116T100000Z-session.jsonl",
 		"not-a-session.txt",
 	} {
-		os.WriteFile(filepath.Join(dir, name), []byte("{}\n"), 0644)
+		os.WriteFile(filepath.Join(dir, name), []byte("{}\n"), 0644) //nolint:errcheck
 	}
 
 	files, err := ListSessions(dir)
@@ -214,11 +214,11 @@ func TestReadEvents(t *testing.T) {
 	if err != nil {
 		t.Fatalf("NewJSONLogger: %v", err)
 	}
-	logger.Log(NewEvent(EventSessionStart, SessionStartData("e.yaml", "m", "mock", 1)))
-	logger.Log(NewEvent(EventTaskStart, TaskStartData("t1", 1, 1)))
-	logger.Log(NewEvent(EventTaskComplete, TaskCompleteData("t1", "passed", 1.0, 100)))
-	logger.Log(NewEvent(EventSessionEnd, SessionCompleteData(1, 1, 0, 0, 100)))
-	logger.Close()
+	logger.Log(NewEvent(EventSessionStart, SessionStartData("e.yaml", "m", "mock", 1))) //nolint:errcheck
+	logger.Log(NewEvent(EventTaskStart, TaskStartData("t1", 1, 1)))                     //nolint:errcheck
+	logger.Log(NewEvent(EventTaskComplete, TaskCompleteData("t1", "passed", 1.0, 100))) //nolint:errcheck
+	logger.Log(NewEvent(EventSessionEnd, SessionCompleteData(1, 1, 0, 0, 100)))         //nolint:errcheck
+	logger.Close()                                                                      //nolint:errcheck
 
 	events, err := ReadEvents(path)
 	if err != nil {
@@ -243,7 +243,7 @@ func TestReadEventsSkipsMalformed(t *testing.T) {
 not valid json
 {"timestamp":"2025-01-15T10:00:01Z","type":"session_complete","data":{}}
 `
-	os.WriteFile(path, []byte(content), 0644)
+	os.WriteFile(path, []byte(content), 0644) //nolint:errcheck
 
 	events, err := ReadEvents(path)
 	if err != nil {
