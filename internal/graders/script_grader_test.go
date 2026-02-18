@@ -2,6 +2,7 @@ package graders
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"path/filepath"
 	"testing"
@@ -90,14 +91,20 @@ console.log(JSON.stringify({score, passed: score >= 0.5, message: "js check", de
 }
 
 func TestScriptGrader_ScriptNotFound(t *testing.T) {
-	grader, err := NewScriptGrader("missing", ScriptGraderArgs{
+	_, err := NewScriptGrader("missing", ScriptGraderArgs{
+		Path:    "nonexistent.py",
+		SpecDir: os.TempDir(),
+	})
+	require.ErrorContains(t, err,
+		fmt.Sprintf("can't access script file %q", filepath.Join(os.TempDir(), "nonexistent.py")),
+	)
+}
+
+func TestScriptGrader_MissingSpecDir(t *testing.T) {
+	_, err := NewScriptGrader("missing", ScriptGraderArgs{
 		Path: "nonexistent.py",
 	})
-	require.NoError(t, err)
-
-	_, err = grader.Grade(context.Background(), &Context{})
-	require.Error(t, err)
-	require.Contains(t, err.Error(), "script not found")
+	require.ErrorContains(t, err, "missing SpecDir parameter")
 }
 
 func TestScriptGrader_UnsupportedExtension(t *testing.T) {

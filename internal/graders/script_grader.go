@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"os"
 	"os/exec"
@@ -46,7 +47,15 @@ func NewScriptGrader(name string, args ScriptGraderArgs) (*ScriptGrader, error) 
 		return nil, fmt.Errorf("unsupported script extension '%s' for script grader (supported: .py, .js)", ext)
 	}
 
+	if args.SpecDir == "" {
+		return nil, errors.New("missing SpecDir parameter")
+	}
+
 	scriptPath := filepath.Join(args.SpecDir, args.Path)
+
+	if _, err := os.Stat(scriptPath); err != nil {
+		return nil, fmt.Errorf("can't access script file %q: %w", scriptPath, err)
+	}
 
 	return &ScriptGrader{
 		name:       name,
@@ -60,7 +69,6 @@ func (sg *ScriptGrader) Kind() models.GraderKind { return models.GraderKindScrip
 
 func (sg *ScriptGrader) Grade(ctx context.Context, gradingContext *Context) (*models.GraderResults, error) {
 	return measureTime(func() (*models.GraderResults, error) {
-		// TODO: fix
 		stdinJSONText, err := getStdinTextForScript(gradingContext, []string{})
 		if err != nil {
 			return nil, fmt.Errorf("script grader '%s': failed to build stdin: %w", sg.name, err)
