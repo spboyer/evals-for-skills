@@ -405,6 +405,12 @@ config:
   model: claude-sonnet-4-20250514
   group_by: model          # Group results by model (or other dimension)
 
+# Custom input variables available as {{.Vars.key}} in tasks and hooks
+inputs:
+  api_version: v2
+  environment: production
+  max_retries: 3
+
 hooks:
   before_run:
     - command: "echo 'Starting evaluation'"
@@ -448,9 +454,84 @@ graders:
       matching_mode: in_order_match
       expected_actions: ["bash", "edit", "report_progress"]
 
+# Task definitions: glob patterns or CSV dataset
 tasks:
   - "tasks/*.yaml"
+  
+# Optional: Generate tasks from CSV dataset
+# tasks_from: ./test-cases.csv
+# range: [1, 10]  # Only include rows 1-10 (0-indexed, skips header)
 ```
+
+### Custom Input Variables
+
+Use the `inputs` section to define key-value variables available throughout your evaluation as `{{.Vars.key}}`:
+
+```yaml
+inputs:
+  api_endpoint: https://api.example.com
+  timeout: 30
+  environment: staging
+
+hooks:
+  before_run:
+    - command: "echo 'Testing against {{.Vars.environment}}'"
+      working_directory: "."
+      exit_codes: [0]
+      error_on_fail: false
+```
+
+Variables are accessible in:
+- Hook commands
+- Task prompts and fixtures (via template rendering)
+- Grader configurations
+
+### CSV Dataset Support
+
+Generate tasks dynamically from a CSV file using `tasks_from`:
+
+```yaml
+# eval.yaml
+tasks_from: ./test-cases.csv
+range: [0, 50]  # Optional: limit to rows 0-50 (skip header at 0)
+```
+
+**CSV Format:**
+```csv
+prompt,expected_output,language
+"Explain this function","Function explanation",python
+"Review this code","Code review",javascript
+```
+
+**Task Generation:**
+- **First row** is treated as column headers
+- **Each subsequent row** becomes a task
+- **Column values** are available as `{{.Vars.column_name}}`
+- **Range filtering** (optional) allows limiting to a subset of rows
+
+**Example task prompt using CSV variables:**
+
+In your task file or inline prompt:
+```yaml
+prompt: "{{.Vars.prompt}}"
+expected_output: "{{.Vars.expected_output}}"
+language: "{{.Vars.language}}"
+```
+
+Tasks can also be mixed — use both explicit task files and CSV-generated tasks:
+
+```yaml
+tasks:
+  - "tasks/*.yaml"        # Explicit tasks
+  
+tasks_from: ./test-cases.csv    # CSV-generated tasks
+range: [0, 20]                  # Only first 20 rows
+```
+
+**CSV vs Inputs:**
+- `inputs`: Static key-value pairs defined once in eval.yaml
+- `tasks_from`: Generates multiple tasks from CSV rows
+- **Conflict resolution**: CSV column values override `inputs` for the same key
 
 ### Retry/Attempts
 
@@ -539,14 +620,15 @@ Available variables in hook commands and task execution contexts:
 - `{{.Iteration}}` — Current trial number (1-indexed)
 - `{{.Attempt}}` — Current attempt number (1-indexed, used for retries)
 - `{{.Timestamp}}` — ISO 8601 timestamp of execution
-- `{{.Vars.key}}` — User-defined variables from the `vars` section
+- `{{.Vars.key}}` — User-defined variables from the `inputs` section or CSV columns
 
-Custom variables can be defined in the spec and referenced in hooks:
+Custom variables can be defined in the `inputs` section and referenced in hooks:
 
 ```yaml
-vars:
+inputs:
   environment: production
   api_version: v2
+  debug_mode: "true"
 
 hooks:
   before_run:
@@ -555,6 +637,8 @@ hooks:
       exit_codes: [0]
       error_on_fail: false
 ```
+
+When using CSV-generated tasks, each row's column values are also available as `{{.Vars.column_name}}`.
 
 ## CI/CD Integration
 
