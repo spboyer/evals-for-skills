@@ -17,13 +17,30 @@ export function TaskRow({ task }: TaskRowProps) {
       <tr
         className="cursor-pointer border-b border-gray-100 hover:bg-gray-50 dark:border-gray-800 dark:hover:bg-gray-800/50"
         onClick={() => setExpanded(!expanded)}
+        onKeyDown={(e) => {
+          if (e.key === "Enter" || e.key === " ") {
+            e.preventDefault();
+            setExpanded(!expanded);
+          }
+        }}
       >
         <td className="py-3 pl-4 pr-2">
-          {expanded ? (
-            <ChevronDown className="h-4 w-4 text-gray-400" />
-          ) : (
-            <ChevronRight className="h-4 w-4 text-gray-400" />
-          )}
+          <button
+            type="button"
+            aria-expanded={expanded}
+            aria-label={`${expanded ? "Collapse" : "Expand"} ${task.name}`}
+            className="flex items-center justify-center rounded p-0.5 hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-waza-500 dark:hover:bg-gray-700"
+            onClick={(e) => {
+              e.stopPropagation();
+              setExpanded(!expanded);
+            }}
+          >
+            {expanded ? (
+              <ChevronDown className="h-4 w-4 text-gray-400" />
+            ) : (
+              <ChevronRight className="h-4 w-4 text-gray-400" />
+            )}
+          </button>
         </td>
         <td className="py-3 pr-4 font-medium text-gray-900 dark:text-gray-100">
           {task.name}

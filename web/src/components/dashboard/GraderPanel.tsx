@@ -19,9 +19,9 @@ export function GraderPanel({ graders }: GraderPanelProps) {
       <h4 className="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
         Grader Results
       </h4>
-      {graders.map((g) => (
+      {graders.map((g, index) => (
         <div
-          key={g.name}
+          key={`${g.name}-${index}`}
           className="flex flex-col gap-1 rounded border border-gray-200 bg-white p-2 text-sm dark:border-gray-700 dark:bg-gray-900"
         >
           <div className="flex items-center justify-between">

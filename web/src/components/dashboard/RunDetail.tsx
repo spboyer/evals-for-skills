@@ -161,8 +161,8 @@ export function RunDetail() {
               </tr>
             </thead>
             <tbody>
-              {run.tasks.map((task) => (
-                <TaskRow key={task.name} task={task} />
+              {run.tasks.map((task, index) => (
+                <TaskRow key={`${task.name}-${index}`} task={task} />
               ))}
             </tbody>
           </Table>
