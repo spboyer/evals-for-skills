@@ -9,6 +9,7 @@ import (
 	"os"
 	"os/exec"
 	"strings"
+	"time"
 
 	_ "embed"
 
@@ -75,9 +76,11 @@ func resolvePythonBin() string {
 	// Microsoft Store registers a python3.exe stub that just prints
 	// "Python was not found" and exits 9009.
 	if path, err := exec.LookPath("python3"); err == nil {
-		cmd := exec.Command(path, "--version")
+		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+		cmd := exec.CommandContext(ctx, path, "--version")
 		if cmd.Run() == nil {
-			return "python3"
+			return path
 		}
 	}
 	return "python"
