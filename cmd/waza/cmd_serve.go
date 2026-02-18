@@ -50,7 +50,7 @@ Supported methods:
 				if err != nil {
 					return fmt.Errorf("failed to start TCP server: %w", err)
 				}
-				defer listener.Close()
+				defer listener.Close() //nolint:errcheck
 				fmt.Fprintf(os.Stderr, "JSON-RPC server listening on %s\n", listener.Addr())
 				return listener.Serve()
 			}

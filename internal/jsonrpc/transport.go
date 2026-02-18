@@ -94,7 +94,7 @@ func (tl *TCPListener) Serve() error {
 			return err
 		}
 		go func() {
-			defer func() { _ = conn.Close() }()
+			defer conn.Close() //nolint:errcheck
 			transport := NewTransport(conn, conn)
 			tl.server.ServeTransport(transport)
 		}()
