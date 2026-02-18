@@ -9,6 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Retry/Attempts** — Add `max_attempts` config field for retrying failed task executions within each trial (#191)
+- **Lifecycle Hooks** — Add `hooks` section with `before_run`/`after_run`/`before_task`/`after_task` lifecycle points (#191)
 - **`prompt` grader (LLM-as-judge)** — LLM-based evaluation with rubrics, tool-based grading, and session management modes (#177, closes #104)
   - Two modes: `clean` (fresh context) and `continue_session` (resumes test session)
   - Tool-based grading: `set_waza_grade_pass` and `set_waza_grade_fail` tools for LLM graders

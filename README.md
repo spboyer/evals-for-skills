@@ -398,10 +398,36 @@ version: "1.0"
 
 config:
   trials_per_task: 3
+  max_attempts: 3          # Retry failed graders up to 3 times (default: 1, no retries)
   timeout_seconds: 300
   parallel: false
   executor: mock          # or copilot-sdk
   model: claude-sonnet-4-20250514
+
+hooks:
+  before_run:
+    - command: "echo 'Starting evaluation'"
+      working_directory: "."
+      exit_codes: [0]
+      error_on_fail: false
+  
+  after_run:
+    - command: "echo 'Evaluation complete'"
+      working_directory: "."
+      exit_codes: [0]
+      error_on_fail: false
+  
+  before_task:
+    - command: "echo 'Running task: {{.TaskName}}'"
+      working_directory: "."
+      exit_codes: [0]
+      error_on_fail: false
+  
+  after_task:
+    - command: "echo 'Task {{.TaskName}} completed'"
+      working_directory: "."
+      exit_codes: [0]
+      error_on_fail: false
 
 graders:
   - type: regex
@@ -424,6 +450,65 @@ graders:
 tasks:
   - "tasks/*.yaml"
 ```
+
+### Retry/Attempts
+
+Use `max_attempts` to retry failed grader validations within each trial:
+
+```yaml
+config:
+  max_attempts: 3  # Retry failed graders up to 3 times (default: 1, no retries)
+```
+
+When a grader fails, waza will retry the task execution up to `max_attempts` times. The evaluation outcome includes an `attempts` field showing how many executions were needed to pass. This is useful for handling transient failures in external services or non-deterministic grader behavior.
+
+**Output:** JSON results include `attempts` per task showing the number of executions performed.
+
+### Lifecycle Hooks
+
+Use `hooks` to run commands before/after evaluations and tasks:
+
+```yaml
+hooks:
+  before_run:
+    - command: "npm install"
+      working_directory: "."
+      exit_codes: [0]
+      error_on_fail: true
+  
+  after_run:
+    - command: "rm -rf node_modules"
+      working_directory: "."
+      exit_codes: [0]
+      error_on_fail: false
+  
+  before_task:
+    - command: "echo 'Task: {{.TaskName}}'"
+      working_directory: "."
+      exit_codes: [0]
+      error_on_fail: false
+  
+  after_task:
+    - command: "echo 'Done: {{.TaskName}}'"
+      working_directory: "."
+      exit_codes: [0]
+      error_on_fail: false
+```
+
+**Hook Fields:**
+- `command` — Shell command to execute
+- `working_directory` — Directory to run command in (relative to eval.yaml)
+- `exit_codes` — List of acceptable exit codes (default: `[0]`)
+- `error_on_fail` — Fail entire evaluation if hook fails (default: `false`)
+
+**Lifecycle Points:**
+- `before_run` — Execute once before all tasks
+- `after_run` — Execute once after all tasks
+- `before_task` — Execute before each task
+- `after_task` — Execute after each task
+
+**Template Variables:**
+- `{{.TaskName}}` — Name/ID of the current task (available in `before_task`/`after_task` only)
 
 ## CI/CD Integration
 
