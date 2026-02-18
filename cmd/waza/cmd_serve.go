@@ -6,6 +6,7 @@ import (
 	"net"
 	"os"
 	"os/signal"
+	"syscall"
 
 	"github.com/spboyer/waza/internal/jsonrpc"
 	"github.com/spboyer/waza/internal/webserver"
@@ -25,10 +26,12 @@ func newServeCommand() *cobra.Command {
 		Short: "Start the waza server (HTTP dashboard or JSON-RPC)",
 		Long: `Start the waza server.
 
-By default, an HTTP server is started that serves the waza dashboard and API.
+By default, a JSON-RPC 2.0 server runs on stdin/stdout (for IDE integration).
+
+Use --http to start the HTTP dashboard and API server.
 The browser is opened automatically (disable with --no-browser).
 
-Use --tcp to start a JSON-RPC 2.0 server instead (for IDE integration).
+Use --tcp to start a JSON-RPC 2.0 server on TCP instead.
 TCP defaults to loopback (127.0.0.1) for security. Use --tcp-allow-remote to bind
 to all interfaces.
 
@@ -49,9 +52,9 @@ JSON-RPC methods (when using --tcp or stdin/stdout):
 				return runJSONRPC(tcpAddr, tcpAllowRemote, logger)
 			}
 
-			// HTTP mode (default)
-			if httpMode || !cmd.Flags().Changed("tcp") {
-				ctx, stop := signal.NotifyContext(cmd.Context(), os.Interrupt)
+			// HTTP mode (requires explicit --http flag)
+			if httpMode {
+				ctx, stop := signal.NotifyContext(cmd.Context(), os.Interrupt, syscall.SIGTERM)
 				defer stop()
 
 				srv := webserver.New(webserver.Config{
@@ -63,7 +66,7 @@ JSON-RPC methods (when using --tcp or stdin/stdout):
 				return srv.ListenAndServe(ctx)
 			}
 
-			// Fallback: JSON-RPC on stdio
+			// Default: JSON-RPC on stdio (backward compatible)
 			return runJSONRPCStdio(logger)
 		},
 	}
@@ -71,7 +74,7 @@ JSON-RPC methods (when using --tcp or stdin/stdout):
 	cmd.Flags().StringVar(&tcpAddr, "tcp", "", "TCP address to listen on for JSON-RPC (e.g., :9000)")
 	cmd.Flags().BoolVar(&tcpAllowRemote, "tcp-allow-remote", false,
 		"Allow binding to non-loopback addresses (WARNING: exposes the server to the network with no authentication)")
-	cmd.Flags().BoolVar(&httpMode, "http", false, "Start HTTP dashboard server (default when --tcp is not set)")
+	cmd.Flags().BoolVar(&httpMode, "http", false, "Start HTTP dashboard server (default is stdio JSON-RPC)")
 	cmd.Flags().IntVar(&httpPort, "port", 3000, "HTTP server port")
 	cmd.Flags().BoolVar(&noBrowser, "no-browser", false, "Don't auto-open the browser")
 	cmd.Flags().StringVar(&resultsDir, "results-dir", ".", "Directory to read results from")
