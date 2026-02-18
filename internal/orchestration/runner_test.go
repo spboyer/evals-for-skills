@@ -350,3 +350,93 @@ description: Validate Azure config
 		assert.NoError(t, err)
 	})
 }
+
+func TestComputeGroupStats_MixedGroups(t *testing.T) {
+	outcomes := []models.TestOutcome{
+		{TestID: "t1", Group: "gpt-4o", Status: models.StatusPassed, Stats: &models.TestStats{AvgScore: 0.9}},
+		{TestID: "t2", Group: "gpt-4o", Status: models.StatusFailed, Stats: &models.TestStats{AvgScore: 0.4}},
+		{TestID: "t3", Group: "claude", Status: models.StatusPassed, Stats: &models.TestStats{AvgScore: 1.0}},
+	}
+
+	stats := computeGroupStats(outcomes)
+	require.Len(t, stats, 2)
+
+	assert.Equal(t, "gpt-4o", stats[0].Name)
+	assert.Equal(t, 1, stats[0].Passed)
+	assert.Equal(t, 2, stats[0].Total)
+	assert.InDelta(t, 0.65, stats[0].AvgScore, 0.001)
+
+	assert.Equal(t, "claude", stats[1].Name)
+	assert.Equal(t, 1, stats[1].Passed)
+	assert.Equal(t, 1, stats[1].Total)
+	assert.InDelta(t, 1.0, stats[1].AvgScore, 0.001)
+}
+
+func TestComputeGroupStats_SingleGroup(t *testing.T) {
+	outcomes := []models.TestOutcome{
+		{TestID: "t1", Group: "alpha", Status: models.StatusPassed},
+		{TestID: "t2", Group: "alpha", Status: models.StatusPassed},
+	}
+
+	stats := computeGroupStats(outcomes)
+	require.Len(t, stats, 1)
+	assert.Equal(t, "alpha", stats[0].Name)
+	assert.Equal(t, 2, stats[0].Passed)
+	assert.Equal(t, 2, stats[0].Total)
+	assert.Equal(t, 0.0, stats[0].AvgScore)
+}
+
+func TestComputeGroupStats_EmptyOutcomes(t *testing.T) {
+	stats := computeGroupStats(nil)
+	assert.Nil(t, stats)
+
+	stats = computeGroupStats([]models.TestOutcome{})
+	assert.Nil(t, stats)
+}
+
+func TestComputeGroupStats_NoGroupSet(t *testing.T) {
+	outcomes := []models.TestOutcome{
+		{TestID: "t1", Group: "", Status: models.StatusPassed},
+	}
+	stats := computeGroupStats(outcomes)
+	assert.Nil(t, stats)
+}
+
+func TestResolveGroup_Model(t *testing.T) {
+	spec := &models.BenchmarkSpec{
+		Config: models.Config{
+			ModelID: "gpt-4o",
+			GroupBy: "model",
+		},
+	}
+	cfg := config.NewBenchmarkConfig(spec)
+	runner := NewTestRunner(cfg, nil)
+
+	assert.Equal(t, "gpt-4o", runner.resolveGroup())
+}
+
+func TestResolveGroup_Empty(t *testing.T) {
+	spec := &models.BenchmarkSpec{
+		Config: models.Config{
+			ModelID: "gpt-4o",
+			GroupBy: "",
+		},
+	}
+	cfg := config.NewBenchmarkConfig(spec)
+	runner := NewTestRunner(cfg, nil)
+
+	assert.Equal(t, "", runner.resolveGroup())
+}
+
+func TestResolveGroup_Unknown(t *testing.T) {
+	spec := &models.BenchmarkSpec{
+		Config: models.Config{
+			ModelID: "gpt-4o",
+			GroupBy: "region",
+		},
+	}
+	cfg := config.NewBenchmarkConfig(spec)
+	runner := NewTestRunner(cfg, nil)
+
+	assert.Equal(t, "", runner.resolveGroup())
+}

@@ -1022,7 +1022,10 @@ func (r *TestRunner) resolveGroup() string {
 	switch spec.Config.GroupBy {
 	case "model":
 		return spec.Config.ModelID
+	case "":
+		return ""
 	default:
+		fmt.Printf("[WARN] unknown group_by value %q, grouping disabled\n", spec.Config.GroupBy)
 		return ""
 	}
 }
