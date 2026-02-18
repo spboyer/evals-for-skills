@@ -13,10 +13,12 @@ import (
 
 	"github.com/spboyer/waza/internal/cache"
 	"github.com/spboyer/waza/internal/config"
+	"github.com/spboyer/waza/internal/dataset"
 	"github.com/spboyer/waza/internal/execution"
 	"github.com/spboyer/waza/internal/graders"
 	"github.com/spboyer/waza/internal/hooks"
 	"github.com/spboyer/waza/internal/models"
+	"github.com/spboyer/waza/internal/template"
 	"github.com/spboyer/waza/internal/utils"
 )
 
@@ -213,6 +215,144 @@ func (r *TestRunner) RunBenchmark(ctx context.Context) (*models.EvaluationOutcom
 }
 
 func (r *TestRunner) loadTestCases() ([]*models.TestCase, error) {
+	spec := r.cfg.Spec()
+
+	// CSV dataset path: generate tasks from CSV rows
+	if spec.TasksFrom != "" {
+		return r.loadTestCasesFromCSV()
+	}
+
+	// Fall through to existing Tasks []string behavior
+	return r.loadTestCasesFromFiles()
+}
+
+// loadTestCasesFromCSV generates in-memory TestCases from CSV rows.
+func (r *TestRunner) loadTestCasesFromCSV() ([]*models.TestCase, error) {
+	spec := r.cfg.Spec()
+
+	// Resolve CSV path relative to spec directory
+	csvPath := spec.TasksFrom
+	if !filepath.IsAbs(csvPath) {
+		baseDir := r.cfg.SpecDir()
+		if baseDir == "" {
+			baseDir = "."
+		}
+		csvPath = filepath.Join(baseDir, csvPath)
+	}
+
+	// Load CSV with optional range filtering
+	var rows []dataset.Row
+	var err error
+	if spec.Range[0] > 0 && spec.Range[1] > 0 {
+		rows, err = dataset.LoadCSVRange(csvPath, spec.Range[0], spec.Range[1])
+	} else {
+		rows, err = dataset.LoadCSV(csvPath)
+	}
+	if err != nil {
+		return nil, fmt.Errorf("loading CSV dataset: %w", err)
+	}
+
+	// Build template context for resolving templates
+	now := time.Now()
+	baseCtx := &template.Context{
+		JobID:     fmt.Sprintf("run-%d", now.Unix()),
+		Iteration: 0,
+		Attempt:   0,
+		Timestamp: now.Format(time.RFC3339),
+		Vars:      make(map[string]string),
+	}
+
+	// Merge spec.Inputs as base variables
+	for k, v := range spec.Inputs {
+		baseCtx.Vars[k] = v
+	}
+
+	// Resolve model template if it contains template delimiters
+	resolveModelForRow := func(row dataset.Row) (string, error) {
+		if !strings.Contains(spec.Config.ModelID, "{{") {
+			return spec.Config.ModelID, nil
+		}
+		// Build a context with CSV row data overriding inputs
+		ctx := &template.Context{
+			JobID:     baseCtx.JobID,
+			Iteration: 0,
+			Attempt:   0,
+			Timestamp: baseCtx.Timestamp,
+			Vars:      make(map[string]string),
+		}
+		for k, v := range spec.Inputs {
+			ctx.Vars[k] = v
+		}
+		for k, v := range row {
+			ctx.Vars[k] = v
+		}
+		return template.Render(spec.Config.ModelID, ctx)
+	}
+
+	testCases := make([]*models.TestCase, 0, len(rows))
+	for i, row := range rows {
+		rowNum := i + 1
+
+		// Determine TestID: prefer "id" column, then "name", then "row-N"
+		testID := fmt.Sprintf("row-%d", rowNum)
+		if v, ok := row["id"]; ok && v != "" {
+			testID = v
+		} else if v, ok := row["name"]; ok && v != "" {
+			testID = v
+		}
+
+		// Determine DisplayName: prefer "name" column, then "row-N"
+		displayName := fmt.Sprintf("row-%d", rowNum)
+		if v, ok := row["name"]; ok && v != "" {
+			displayName = v
+		}
+
+		// Build per-row template context: inputs + CSV row (CSV overrides inputs on conflict)
+		rowCtx := &template.Context{
+			JobID:     baseCtx.JobID,
+			TaskName:  displayName,
+			Iteration: 0,
+			Attempt:   0,
+			Timestamp: baseCtx.Timestamp,
+			Vars:      make(map[string]string),
+		}
+		for k, v := range spec.Inputs {
+			rowCtx.Vars[k] = v
+		}
+		for k, v := range row {
+			rowCtx.Vars[k] = v
+		}
+
+		// Resolve prompt: use "prompt" column if present, otherwise empty
+		prompt := row["prompt"]
+		if strings.Contains(prompt, "{{") {
+			prompt, err = template.Render(prompt, rowCtx)
+			if err != nil {
+				return nil, fmt.Errorf("resolving prompt template for row %d: %w", rowNum, err)
+			}
+		}
+
+		// Resolve model template for this row
+		_, err = resolveModelForRow(row)
+		if err != nil {
+			return nil, fmt.Errorf("resolving model template for row %d: %w", rowNum, err)
+		}
+
+		tc := &models.TestCase{
+			TestID:      testID,
+			DisplayName: displayName,
+			Stimulus: models.TestStimulus{
+				Message: prompt,
+			},
+		}
+		testCases = append(testCases, tc)
+	}
+
+	return testCases, nil
+}
+
+// loadTestCasesFromFiles loads test cases from YAML files via glob patterns.
+func (r *TestRunner) loadTestCasesFromFiles() ([]*models.TestCase, error) {
 	spec := r.cfg.Spec()
 
 	// Get base directory for test file resolution (spec directory)

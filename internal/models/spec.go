@@ -17,6 +17,8 @@ type BenchmarkSpec struct {
 	Config       Config            `yaml:"config"`
 	Hooks        hooks.HooksConfig `yaml:"hooks,omitempty"`
 	Inputs       map[string]string `yaml:"inputs,omitempty" json:"inputs,omitempty"`
+	TasksFrom    string            `yaml:"tasks_from,omitempty" json:"tasks_from,omitempty"`
+	Range        [2]int            `yaml:"range,omitempty" json:"range,omitempty"`
 	Graders      []GraderConfig    `yaml:"graders"`
 	Metrics      []MeasurementDef  `yaml:"metrics"`
 	Tasks        []string          `yaml:"tasks"`
