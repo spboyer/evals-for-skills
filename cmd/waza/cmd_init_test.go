@@ -192,8 +192,8 @@ func TestInitCommand_CIWorkflowContent(t *testing.T) {
 	content := string(data)
 	assert.Contains(t, content, "Run Skill Evaluations")
 	assert.Contains(t, content, "actions/checkout@v4")
-	assert.Contains(t, content, "actions/setup-go@v5")
-	assert.Contains(t, content, "waza run")
+	assert.Contains(t, content, "Azure/setup-azd@v2")
+	assert.Contains(t, content, "azd waza run")
 	assert.Contains(t, content, "upload-artifact@v4")
 }
 
