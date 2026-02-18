@@ -33,3 +33,12 @@
 - Key findings: Skills as reasoning cache, post-failure generation > pre-task generation, quality > quantity, composability matters
 - Strategic recommendations: P0 A/B impact (#194), P1 multi-agent decoupling (#195), defer Docker, P2 domain examples
 - Positioning: Waza is developer tool ("does MY skill work?"), SkillsBench is research benchmark ("do skills help in general?") — complementary, not competitive
+
+### 2026-02-18: Positioning Strategy Document
+- Created `docs/research/positioning-strategy.md` with ready-to-use language for competitive landscape
+- Covers: core positioning statement, elevator pitch variants (for developers, managers, contributors), key differentiators (speed, Sensei compliance, token management, Copilot-native)
+- Anti-patterns: Don't say "better than SkillsBench", don't claim we're a benchmark, don't dismiss Docker
+- Recommended README blurb with comparison table and recommended workflow
+- Amplified SkillsBench's +4.5pp software engineering finding as positioning anchor — thin margin makes skill quality non-negotiable
+- Communication checklist and future positioning opportunities (A/B impact, post-failure generation, skill composition, token normalization)
+- Key framing: Waza is the developer tool, SkillsBench is the research benchmark — complementary, not competitive

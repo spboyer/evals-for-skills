@@ -2,6 +2,15 @@
 
 ## Learnings
 
+### 2026-02-18: A/B baseline skill impact measurement design (#194)
+- **Design doc:** `docs/design/194-baseline-skill-impact.md` — complete implementation blueprint
+- **Key decision:** Sequential execution (not parallel) for simpler state management and cleaner output. Pass 1 (skills-enabled) → Pass 2 (baseline) → merge results.
+- **skill_impact metric:** `(pass_rate_with - pass_rate_without) / max(pass_rate_without, 0.01)` with div-by-zero guard to avoid infinity when baseline is 0%.
+- **Config mutation pattern:** Save/restore `SkillPaths` and `RequiredSkills` between passes. Used elsewhere (task filters), proven pattern.
+- **Exit codes:** 0 if skills improve, 1 if skills hurt or neutral. Enables CI quality gates.
+- **Edge cases:** No skills configured → warning + normal run (exit 0). Both runs fail → inconclusive (exit 0). Task mismatch → error (exit 1).
+- **Workspace isolation:** Existing fixture-copy pattern already gives each run fresh temp dir — no changes needed.
+
 ### 2026-02-17: Multi-part session summary
 - **Unscoped issue triage (#2, #10, #14, #16, #21)**: Decomposed Web UI cluster. JSON-RPC (#16) is independent foundation. All 5 issues P2. Recommended closing #2 (Python-era duplicate of #14).
 - **#65 scoping (azure.yaml integration)**: Phase 1 config-only (~7.5d). New `tools.waza` section in azure.yaml with runtime config, skill directories, token limits. New `internal/azureconfig/` package. Fully backwards compatible. Phase 2 defers lifecycle hooks pending azd support.

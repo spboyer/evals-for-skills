@@ -259,3 +259,38 @@ Approved: PR #154 (shutdown), #160 (tool_call rubrics), #161 (task rubrics).
 **Related:** #184
 **What:** `max_attempts` config field (YAML: `max_attempts`, default: 1) adds an inner retry loop inside each trial. On grader failure (`StatusFailed`), the runner re-executes the task up to `max_attempts` times before recording the final result. Infrastructure errors (`StatusError`) are never retried. `RunResult.Attempts` tracks the attempt count in JSON output.
 **Why:** Flaky agent responses shouldn't fail an entire trial on first attempt. Retrying grader failures within a trial gives non-deterministic agents a fair shot while keeping infrastructure errors fatal. The retry loop is inside `runTestUncached()` (not `executeRun()`) to maintain single-responsibility — `executeRun()` stays a pure single-execution function.
+
+### 2026-02-18: A/B Baseline Skill Impact Measurement Design
+**By:** Rusty (Lead / Architect)  
+**Related:** #194  
+**What:** Design document for `waza run --baseline` flag implementation: A/B skill impact measurement. Location: `docs/design/194-baseline-skill-impact.md` (605 lines). Covers CLI surface, config changes (BenchmarkSpec.Baseline), runner architecture (two sequential passes), results/comparison (SkillImpactMetric), exit codes (0 if improvement, 1 if regression), edge cases (no skills, negative impact, task mismatch), and full implementation checklist.
+
+**Key Design Decisions:**
+1. **Sequential Baseline Execution** — Pass 1: skills-enabled (normal). Pass 2: skills-disabled (same tests). Each pass gets fresh workspace (existing isolation pattern).
+2. **Skill Impact Metric Formula** — `delta = pass_rate_with - pass_rate_without`; `percent_change = delta / max(pass_rate_without, 0.01) * 100` (division guard prevents infinity).
+3. **Config Mutation Pattern** — Save SkillPaths/RequiredSkills before Pass 2, clear to disable, restore after (proven pattern used elsewhere).
+4. **Exit Code Semantics** — 0 = improvement (gate passes), 1 = hurt/neutral (gate fails, signals regression) — enables CI quality gates.
+5. **No Skills Case** — Warn but don't fail; execute single-pass normal evaluation; skip A/B comparison (meaningless without skills).
+
+**Why:** Unblocks Linus for implementation. Clear architecture & edge case handling. Enables quantitative skill effectiveness measurement. Backward compatible (opt-in).
+
+### 2026-02-18: Positioning strategy drafted
+**By:** Saul  
+**What:** Created `docs/research/positioning-strategy.md` — comprehensive positioning for Waza/SkillsBench relationship. Core insight: complementary, not competitive. They answer different questions for different audiences.
+
+**Content:**
+1. **Core Positioning** — Waza (developer tool, seconds, no Docker); SkillsBench (research benchmark, hours, containerized).
+2. **Elevator Pitch Variants** — For developers, managers, contributors (ready for copy-paste).
+3. **Key Differentiators** — Iteration speed (no Docker, single binary), Sensei compliance scoring (SkillsBench doesn't have), token management/budget tracking, Copilot SDK native.
+4. **Anti-Patterns** — Don't say "better than SkillsBench", don't claim we're a benchmark, don't dismiss Docker.
+5. **README Language** — Comparison table and "Waza vs. SkillsBench" section ready for integration.
+6. **SkillsBench Insight** — Paper found +4.5pp skill improvement (lowest domain) — our strongest anchor: thin margins mean skill quality is non-negotiable. Sensei compliance built for this constraint.
+
+**Why:** Team needs consistent, polished language for competitive landscape. Document ready for presentations, README, community conversations. +4.5pp finding reframes comparison from "feature parity" to "different problems, different solutions."
+
+### 2026-02-18: SkillsBench competitive research completed
+**By:** Saul  
+**What:** Published `docs/research/skillsbench-competitive-analysis.md` — formal competitive analysis including: executive summary (complementary positioning), product overview (architecture, task structure), feature comparison matrix (16 dimensions), community insights (HN: skills as reasoning cache, feedback-driven generation, quality > quantity), gap analysis with priorities (P0: #194, P1: #195, skip Docker, P2: domain examples).
+
+**Why:** Team needs shared understanding of competitive landscape, feature gaps, roadmap priorities. Document polished and actionable.
+
