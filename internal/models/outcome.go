@@ -82,13 +82,13 @@ type MeasureResult struct {
 
 // TestOutcome represents the result of one test case
 type TestOutcome struct {
-	TestID      string              `json:"test_id"`
-	DisplayName string              `json:"display_name"`
-	Group       string              `json:"group,omitempty"`
-	Status      Status              `json:"status"`
-	Runs        []RunResult         `json:"runs"`
-	Stats       *TestStats          `json:"stats,omitempty"`
-	SkillImpact *SkillImpactMetric  `json:"skill_impact,omitempty"`
+	TestID      string             `json:"test_id"`
+	DisplayName string             `json:"display_name"`
+	Group       string             `json:"group,omitempty"`
+	Status      Status             `json:"status"`
+	Runs        []RunResult        `json:"runs"`
+	Stats       *TestStats         `json:"stats,omitempty"`
+	SkillImpact *SkillImpactMetric `json:"skill_impact,omitempty"`
 }
 
 // GroupStats holds aggregate statistics for a group of test outcomes.

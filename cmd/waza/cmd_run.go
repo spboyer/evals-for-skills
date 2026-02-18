@@ -495,7 +495,7 @@ func runSingleModel(_ *cobra.Command, spec *models.BenchmarkSpec, specPath strin
 	if outcome.IsBaseline {
 		withPassRate := outcome.Digest.SuccessRate
 		withoutPassRate := outcome.BaselineOutcome.Digest.SuccessRate
-		
+
 		if withPassRate <= withoutPassRate {
 			// Skills hurt or neutral → exit 1
 			return outcome, &TestFailureError{
@@ -506,7 +506,7 @@ func runSingleModel(_ *cobra.Command, spec *models.BenchmarkSpec, specPath strin
 		// Skills improved → exit 0
 		return outcome, nil
 	}
-	
+
 	// Normal mode: fail if tests failed or errors occurred
 	var failures []string
 	if outcome.Digest.Failed > 0 || outcome.Digest.Errors > 0 {
