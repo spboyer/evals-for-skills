@@ -2,6 +2,16 @@
 
 ## Learnings
 
+### 2026-02-18: Result groupBy categorization (#188)
+**What:** Added `GroupBy` field to `Config`, `Group` field to `TestOutcome`, `GroupStats` struct, and grouped CLI output. The runner resolves groups via `resolveGroup()` — currently only `"model"` is supported (uses `spec.Config.ModelID`). Group stats are computed in `computeGroupStats()` using insertion-order-preserving accumulation and attached to `OutcomeDigest.Groups`. CLI prints a "RESULTS BY GROUP" section when groups are present. No GroupBy = unchanged flat output (backward compatible).
+
+**Key design decisions:**
+- `GroupStats` lives in `models/outcome.go` alongside `OutcomeDigest` — keeps the data model cohesive.
+- `Groups []GroupStats` added directly to `OutcomeDigest` (not a separate top-level field) so it serializes naturally under `"summary"` in JSON output.
+- `resolveGroup()` is a method on `TestRunner` with a switch on `GroupBy` value — extensible for future CSV column grouping (#187) without touching the stats computation.
+- `computeGroupStats()` is a package-level function (not a method) since it only needs the outcomes slice — makes it independently testable.
+- Group insertion order is preserved via a separate `order` slice to ensure deterministic output regardless of map iteration order.
+
 ### 2026-02-18: Template variable support (#186)
 **What:** Created `internal/template/` package with `Context` struct and `Render()` function. Uses Go `text/template` with `missingkey=error` for strict variable resolution. Fast path skips template parsing when input contains no `{{` delimiters.
 
