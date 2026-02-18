@@ -90,7 +90,7 @@ func TestExecute_ContextCancellation(t *testing.T) {
 		t.Fatal("expected context cancellation error but got nil")
 	}
 
-	if got := err.Error(); !contains(got, "context cancelled") {
+	if got := err.Error(); !contains(got, "context canceled") {
 		t.Errorf("error %q does not mention context cancellation", got)
 	}
 }

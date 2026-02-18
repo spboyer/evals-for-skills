@@ -34,7 +34,7 @@ type Runner struct {
 func (r *Runner) Execute(ctx context.Context, name string, hooks []HookConfig) error {
 	for i, h := range hooks {
 		if err := ctx.Err(); err != nil {
-			return fmt.Errorf("hook %s: context cancelled: %w", name, err)
+			return fmt.Errorf("hook %s: context canceled: %w", name, err)
 		}
 
 		if err := r.runHook(ctx, name, i, h); err != nil {
@@ -64,24 +64,22 @@ func (r *Runner) runHook(ctx context.Context, name string, index int, h HookConf
 	}
 
 	if err != nil {
-		exitCode := -1
 		var exitErr *exec.ExitError
 		if ok := errors.As(err, &exitErr); ok {
-			exitCode = exitErr.ExitCode()
+			exitCode := exitErr.ExitCode()
+
+			if !isAcceptableExit(exitCode, h.ExitCodes) {
+				if h.ErrorOnFail {
+					return fmt.Errorf("hook %s[%d]: command exited with code %d", name, index, exitCode)
+				}
+				fmt.Printf("[WARN] hook %s[%d] exited with code %d (continuing)\n", name, index, exitCode)
+			}
 		} else {
 			// Non-exit error (e.g. command not found)
 			if h.ErrorOnFail {
 				return fmt.Errorf("hook %s[%d]: %w", name, index, err)
 			}
 			fmt.Printf("[WARN] hook %s[%d] failed: %v\n", name, index, err)
-			return nil
-		}
-
-		if !isAcceptableExit(exitCode, h.ExitCodes) {
-			if h.ErrorOnFail {
-				return fmt.Errorf("hook %s[%d]: command exited with code %d", name, index, exitCode)
-			}
-			fmt.Printf("[WARN] hook %s[%d] exited with code %d (continuing)\n", name, index, exitCode)
 		}
 		return nil
 	}
@@ -110,5 +108,3 @@ func isAcceptableExit(exitCode int, allowedCodes []int) bool {
 	}
 	return false
 }
-
-

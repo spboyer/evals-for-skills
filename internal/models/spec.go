@@ -12,13 +12,13 @@ import (
 // BenchmarkSpec represents a complete evaluation specification
 type BenchmarkSpec struct {
 	SpecIdentity `yaml:",inline"`
-	SkillName    string           `yaml:"skill"`
-	Version      string           `yaml:"version"`
-	Config       Config           `yaml:"config"`
+	SkillName    string            `yaml:"skill"`
+	Version      string            `yaml:"version"`
+	Config       Config            `yaml:"config"`
 	Hooks        hooks.HooksConfig `yaml:"hooks,omitempty"`
-	Graders      []GraderConfig   `yaml:"graders"`
-	Metrics      []MeasurementDef `yaml:"metrics"`
-	Tasks        []string         `yaml:"tasks"`
+	Graders      []GraderConfig    `yaml:"graders"`
+	Metrics      []MeasurementDef  `yaml:"metrics"`
+	Tasks        []string          `yaml:"tasks"`
 }
 
 type SpecIdentity struct {
