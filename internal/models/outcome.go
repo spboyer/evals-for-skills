@@ -89,6 +89,7 @@ type TestOutcome struct {
 // RunResult is the result of a single run/trial
 type RunResult struct {
 	RunNumber int `json:"run_number"`
+	Attempts  int `json:"attempts"`
 	// Status contains the overall status of the run.
 	// NOTE: if Status == [StatusError], then [ErrorMsg] will be set to the
 	// message from the error.

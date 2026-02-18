@@ -15,6 +15,7 @@ import (
 	"github.com/spboyer/waza/internal/config"
 	"github.com/spboyer/waza/internal/execution"
 	"github.com/spboyer/waza/internal/graders"
+	"github.com/spboyer/waza/internal/hooks"
 	"github.com/spboyer/waza/internal/models"
 	"github.com/spboyer/waza/internal/utils"
 )
@@ -133,6 +134,26 @@ func (r *TestRunner) RunBenchmark(ctx context.Context) (*models.EvaluationOutcom
 		}
 	}()
 
+	// Set up hooks runner
+	spec := r.cfg.Spec()
+	hookRunner := &hooks.Runner{Verbose: r.verbose}
+
+	// Run after_run hooks on exit (even on error)
+	defer func() {
+		if len(spec.Hooks.AfterRun) > 0 {
+			if err := hookRunner.Execute(ctx, "after_run", spec.Hooks.AfterRun); err != nil {
+				fmt.Printf("[WARN] after_run hook error: %v\n", err)
+			}
+		}
+	}()
+
+	// Run before_run hooks
+	if len(spec.Hooks.BeforeRun) > 0 {
+		if err := hookRunner.Execute(ctx, "before_run", spec.Hooks.BeforeRun); err != nil {
+			return nil, fmt.Errorf("before_run hook failed: %w", err)
+		}
+	}
+
 	// Preflight check: validate required skills
 	if err := r.validateRequiredSkills(); err != nil {
 		return nil, err
@@ -169,7 +190,6 @@ func (r *TestRunner) RunBenchmark(ctx context.Context) (*models.EvaluationOutcom
 	// Execute tests
 	var testOutcomes []models.TestOutcome
 
-	spec := r.cfg.Spec()
 	// Now that CopilotEngine is concurrency-safe (protected by mutex),
 	// we can safely use concurrent execution when configured
 	if spec.Config.Concurrent {
@@ -422,6 +442,10 @@ func (r *TestRunner) runTest(ctx context.Context, tc *models.TestCase, testNum, 
 func (r *TestRunner) runTestUncached(ctx context.Context, tc *models.TestCase, testNum, totalTests int) models.TestOutcome {
 	spec := r.cfg.Spec()
 	runsPerTest := spec.Config.RunsPerTest
+	maxAttempts := spec.Config.MaxAttempts
+	if maxAttempts < 1 {
+		maxAttempts = 1
+	}
 
 	runs := make([]models.RunResult, 0, runsPerTest)
 
@@ -435,8 +459,24 @@ func (r *TestRunner) runTestUncached(ctx context.Context, tc *models.TestCase, t
 			TotalRuns:  runsPerTest,
 		})
 
-		run := r.executeRun(ctx, tc, runNum)
-		// surface errors even in non-verbose mode because they're critical for understanding test failures
+		var run models.RunResult
+		for attempt := 1; attempt <= maxAttempts; attempt++ {
+			run = r.executeRun(ctx, tc, runNum)
+			run.Attempts = attempt
+
+			// If all graders passed or this is an infrastructure error, stop retrying
+			if run.Status == models.StatusPassed || run.Status == models.StatusError {
+				break
+			}
+
+			// If more attempts remain, log the retry
+			if attempt < maxAttempts && r.verbose {
+				fmt.Printf("[RETRY] %s run %d: attempt %d/%d failed, retrying\n",
+					tc.DisplayName, runNum, attempt, maxAttempts)
+			}
+		}
+
+		// Surface errors even in non-verbose mode because they're critical for understanding test failures
 		if run.ErrorMsg != "" && !r.verbose {
 			fmt.Printf("[ERROR] %s\n\n", run.ErrorMsg)
 		}
