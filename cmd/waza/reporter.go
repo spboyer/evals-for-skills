@@ -35,13 +35,13 @@ func FormatGitHubComment(outcome *models.EvaluationOutcome) string {
 		statusIcon = "❌ Failed"
 	}
 
-	b.WriteString(fmt.Sprintf("**Status:** %s | **Score:** %.2f | **Duration:** %s\n\n",
-		statusIcon, digest.AggregateScore, formatDuration(duration)))
+	fmt.Fprintf(&b, "**Status:** %s | **Score:** %.2f | **Duration:** %s\n\n",
+		statusIcon, digest.AggregateScore, formatDuration(duration))
 
 	// Summary stats
-	b.WriteString(fmt.Sprintf("- **Tests:** %d total, %d passed, %d failed, %d errors\n",
-		digest.TotalTests, digest.Succeeded, digest.Failed, digest.Errors))
-	b.WriteString(fmt.Sprintf("- **Success Rate:** %.1f%%\n", digest.SuccessRate*100))
+	fmt.Fprintf(&b, "- **Tests:** %d total, %d passed, %d failed, %d errors\n",
+		digest.TotalTests, digest.Succeeded, digest.Failed, digest.Errors)
+	fmt.Fprintf(&b, "- **Success Rate:** %.1f%%\n", digest.SuccessRate*100)
 	b.WriteString(fmt.Sprintf("- **Score Range:** %.2f - %.2f (σ=%.4f)\n\n",
 		digest.MinScore, digest.MaxScore, digest.StdDev))
 
