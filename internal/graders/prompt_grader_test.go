@@ -48,7 +48,7 @@ func TestPromptGraderNoContinueWithoutIDFails(t *testing.T) {
 	results, err := promptGrader.Grade(context.Background(), &Context{
 		SessionID: "",
 	})
-	require.ErrorContains(t, err, "no session id set, can't continue session in prmopt grading")
+	require.ErrorContains(t, err, "no session id set, can't continue session in prompt grading")
 	require.Empty(t, results)
 }
 

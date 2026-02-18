@@ -14,7 +14,7 @@ import (
 
 type ScriptGraderArgs struct {
 	Path    string `mapstructure:"path"`
-	SpecDir string
+	SpecDir string `mapstructure:"-"`
 }
 
 // ScriptGrader launches an external script (.py or .js) and reads a
