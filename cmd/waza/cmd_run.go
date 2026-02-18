@@ -633,6 +633,22 @@ func printSummary(outcome *models.EvaluationOutcome) {
 	fmt.Printf("Duration:       %v\n", duration)
 	fmt.Println()
 
+	// Grouped results summary
+	if len(digest.Groups) > 0 {
+		fmt.Println("-" + strings.Repeat("-", 50))
+		fmt.Println(" RESULTS BY GROUP")
+		fmt.Println("-" + strings.Repeat("-", 50))
+		for _, g := range digest.Groups {
+			pct := 0.0
+			if g.Total > 0 {
+				pct = float64(g.Passed) / float64(g.Total) * 100
+			}
+			fmt.Printf("  %-20s %d/%d passed (%.0f%%)  avg: %.2f\n",
+				g.Name+":", g.Passed, g.Total, pct, g.AvgScore)
+		}
+		fmt.Println()
+	}
+
 	// Per-task breakdown
 	fmt.Println("-" + strings.Repeat("-", 50))
 	fmt.Println(" PER-TASK BREAKDOWN")

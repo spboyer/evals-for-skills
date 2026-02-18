@@ -2,6 +2,16 @@
 
 ## Learnings
 
+### 2026-02-18: Template variable support (#186)
+**What:** Created `internal/template/` package with `Context` struct and `Render()` function. Uses Go `text/template` with `missingkey=error` for strict variable resolution. Fast path skips template parsing when input contains no `{{` delimiters.
+
+**Key design decisions:**
+- `Context` holds system variables (`JobID`, `TaskName`, `Iteration`, `Attempt`, `Timestamp`) as typed fields and user-defined variables in a `Vars map[string]string`. This separates known system state from arbitrary user inputs.
+- `Option("missingkey=error")` ensures unresolved variables produce clear errors rather than silent empty strings. This catches typos in eval YAML early.
+- Fast path: if the input string contains no `{{`, return it unchanged with zero allocation. Most eval YAML fields won't use templates, so this avoids unnecessary parsing overhead.
+- Error wrapping uses `fmt.Errorf("template: %w", err)` with `parse:` or `render:` sub-prefix to distinguish parse-time vs execution-time failures.
+- Package is standalone — no integration into runner.go yet. CSV support (#187) will wire `Render` into task expansion.
+
 ### 2026-02-18: Lifecycle hooks for eval runs (#185)
 **What:** Added lifecycle hooks (before_run, after_run, before_task, after_task) to the evaluation runner. Created `internal/hooks/hooks.go` with `Runner.Execute()` that runs shell commands via `os/exec` with configurable exit code validation, working directory, and error-on-fail semantics.
 
