@@ -2,6 +2,7 @@ package webapi
 
 import (
 	"encoding/json"
+	"errors"
 	"net/http"
 	"strings"
 )
@@ -67,7 +68,11 @@ func (h *Handlers) HandleRunDetail(w http.ResponseWriter, r *http.Request) {
 
 	detail, err := h.store.GetRun(id)
 	if err != nil {
-		writeError(w, http.StatusNotFound, "run not found")
+		if errors.Is(err, ErrRunNotFound) {
+			writeError(w, http.StatusNotFound, "run not found")
+		} else {
+			writeError(w, http.StatusInternalServerError, err.Error())
+		}
 		return
 	}
 	writeJSON(w, http.StatusOK, detail)
@@ -82,12 +87,22 @@ func RegisterRoutes(mux *http.ServeMux, store RunStore) {
 	mux.HandleFunc("GET /api/runs/{id}", h.HandleRunDetail)
 }
 
-// CORSMiddleware wraps a handler with CORS headers for dev server compatibility.
-func CORSMiddleware(next http.Handler) http.Handler {
+// CORSMiddleware wraps a handler with CORS headers.
+// If allowedOrigins is empty, no CORS header is set (same-origin only).
+// Otherwise, the request Origin is checked against the allowed list.
+func CORSMiddleware(next http.Handler, allowedOrigins ...string) http.Handler {
+	allowed := make(map[string]bool, len(allowedOrigins))
+	for _, o := range allowedOrigins {
+		allowed[o] = true
+	}
+
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Access-Control-Allow-Origin", "*")
-		w.Header().Set("Access-Control-Allow-Methods", "GET, OPTIONS")
-		w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
+		origin := r.Header.Get("Origin")
+		if len(allowedOrigins) > 0 && origin != "" && allowed[origin] {
+			w.Header().Set("Access-Control-Allow-Origin", origin)
+			w.Header().Set("Access-Control-Allow-Methods", "GET, OPTIONS")
+			w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
+		}
 
 		if r.Method == http.MethodOptions {
 			w.WriteHeader(http.StatusNoContent)

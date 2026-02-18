@@ -2,14 +2,18 @@ package webapi
 
 import (
 	"encoding/json"
-	"fmt"
+	"errors"
 	"os"
 	"path/filepath"
 	"sort"
 	"strings"
 	"sync"
+
 	"github.com/spboyer/waza/internal/models"
 )
+
+// ErrRunNotFound is returned when a run ID does not match any stored run.
+var ErrRunNotFound = errors.New("run not found")
 
 // RunStore provides access to evaluation run data.
 type RunStore interface {
@@ -89,9 +93,19 @@ func (fs *FileStore) load() error {
 	return nil
 }
 
-// ensureLoaded loads data if not already loaded. Reloads on every call
-// to pick up new result files.
+// ensureLoaded loads data if not already loaded.
 func (fs *FileStore) ensureLoaded() error {
+	fs.mu.RLock()
+	if fs.loaded {
+		fs.mu.RUnlock()
+		return nil
+	}
+	fs.mu.RUnlock()
+	return fs.load()
+}
+
+// Reload forces a fresh reload of all result files from disk.
+func (fs *FileStore) Reload() error {
 	return fs.load()
 }
 
@@ -199,7 +213,7 @@ func (fs *FileStore) GetRun(id string) (*RunDetail, error) {
 
 	o, ok := fs.runs[id]
 	if !ok {
-		return nil, fmt.Errorf("run not found")
+		return nil, ErrRunNotFound
 	}
 
 	return outcomeToDetail(o), nil

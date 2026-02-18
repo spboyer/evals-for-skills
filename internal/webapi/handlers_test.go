@@ -43,7 +43,7 @@ func (m *mockStore) GetRun(id string) (*RunDetail, error) {
 	}
 	d, ok := m.runs[id]
 	if !ok {
-		return nil, fmt.Errorf("run not found")
+		return nil, ErrRunNotFound
 	}
 	return d, nil
 }
@@ -339,28 +339,60 @@ func TestCORSMiddleware(t *testing.T) {
 	inner := http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusOK)
 	})
-	handler := CORSMiddleware(inner)
 
-	// Regular GET request.
-	req := httptest.NewRequest(http.MethodGet, "/api/health", nil)
-	rec := httptest.NewRecorder()
-	handler.ServeHTTP(rec, req)
+	t.Run("no origins configured means no CORS header", func(t *testing.T) {
+		handler := CORSMiddleware(inner)
+		req := httptest.NewRequest(http.MethodGet, "/api/health", nil)
+		req.Header.Set("Origin", "http://evil.com")
+		rec := httptest.NewRecorder()
+		handler.ServeHTTP(rec, req)
 
-	if rec.Header().Get("Access-Control-Allow-Origin") != "*" {
-		t.Error("expected CORS header")
-	}
-	if rec.Code != http.StatusOK {
-		t.Errorf("expected 200, got %d", rec.Code)
-	}
+		if rec.Header().Get("Access-Control-Allow-Origin") != "" {
+			t.Error("expected no CORS header when no origins configured")
+		}
+		if rec.Code != http.StatusOK {
+			t.Errorf("expected 200, got %d", rec.Code)
+		}
+	})
 
-	// OPTIONS preflight.
-	req = httptest.NewRequest(http.MethodOptions, "/api/health", nil)
-	rec = httptest.NewRecorder()
-	handler.ServeHTTP(rec, req)
+	t.Run("allowed origin gets CORS header", func(t *testing.T) {
+		handler := CORSMiddleware(inner, "http://localhost:5173")
+		req := httptest.NewRequest(http.MethodGet, "/api/health", nil)
+		req.Header.Set("Origin", "http://localhost:5173")
+		rec := httptest.NewRecorder()
+		handler.ServeHTTP(rec, req)
 
-	if rec.Code != http.StatusNoContent {
-		t.Errorf("expected 204 for OPTIONS, got %d", rec.Code)
-	}
+		if rec.Header().Get("Access-Control-Allow-Origin") != "http://localhost:5173" {
+			t.Error("expected CORS header for allowed origin")
+		}
+		if rec.Code != http.StatusOK {
+			t.Errorf("expected 200, got %d", rec.Code)
+		}
+	})
+
+	t.Run("disallowed origin gets no CORS header", func(t *testing.T) {
+		handler := CORSMiddleware(inner, "http://localhost:5173")
+		req := httptest.NewRequest(http.MethodGet, "/api/health", nil)
+		req.Header.Set("Origin", "http://evil.com")
+		rec := httptest.NewRecorder()
+		handler.ServeHTTP(rec, req)
+
+		if rec.Header().Get("Access-Control-Allow-Origin") != "" {
+			t.Error("expected no CORS header for disallowed origin")
+		}
+	})
+
+	t.Run("OPTIONS preflight", func(t *testing.T) {
+		handler := CORSMiddleware(inner, "http://localhost:5173")
+		req := httptest.NewRequest(http.MethodOptions, "/api/health", nil)
+		req.Header.Set("Origin", "http://localhost:5173")
+		rec := httptest.NewRecorder()
+		handler.ServeHTTP(rec, req)
+
+		if rec.Code != http.StatusNoContent {
+			t.Errorf("expected 204 for OPTIONS, got %d", rec.Code)
+		}
+	})
 }
 
 func TestRegisterRoutes(t *testing.T) {
@@ -441,5 +473,30 @@ func TestSummaryError(t *testing.T) {
 
 	if rec.Code != http.StatusInternalServerError {
 		t.Fatalf("expected 500, got %d", rec.Code)
+	}
+}
+
+func TestHandleRunDetailStoreError(t *testing.T) {
+	store := newMockStore()
+	store.getErr = fmt.Errorf("disk I/O error")
+
+	mux := http.NewServeMux()
+	RegisterRoutes(mux, store)
+
+	req := httptest.NewRequest(http.MethodGet, "/api/runs/any-id", nil)
+	rec := httptest.NewRecorder()
+
+	mux.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusInternalServerError {
+		t.Fatalf("expected 500 for store error, got %d", rec.Code)
+	}
+
+	var errResp ErrorResponse
+	if err := json.NewDecoder(rec.Body).Decode(&errResp); err != nil {
+		t.Fatal(err)
+	}
+	if errResp.Code != 500 {
+		t.Errorf("expected error code 500, got %d", errResp.Code)
 	}
 }
