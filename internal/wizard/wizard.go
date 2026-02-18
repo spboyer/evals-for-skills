@@ -1,11 +1,12 @@
 package wizard
 
 import (
-	"bufio"
 	"fmt"
 	"io"
 	"strings"
 	"text/template"
+
+	"github.com/charmbracelet/huh"
 )
 
 // SkillType represents the category of a skill.
@@ -56,53 +57,75 @@ description: >
 {{- end }}
 `
 
-// RunSkillWizard runs an interactive prompt session to collect skill metadata.
+// RunSkillWizard runs an interactive huh form to collect skill metadata.
 // It reads from the provided reader and writes prompts to the provided writer.
 func RunSkillWizard(in io.Reader, out io.Writer) (*SkillSpec, error) {
-	scanner := bufio.NewScanner(in)
-	spec := &SkillSpec{}
+	var (
+		name            string
+		description     string
+		triggersRaw     string
+		antiTriggersRaw string
+		skillType       string
+	)
 
-	name, err := prompt(scanner, out, "Skill name: ")
-	if err != nil {
-		return nil, err
-	}
-	if name == "" {
-		return nil, fmt.Errorf("skill name is required")
-	}
-	spec.Name = name
+	form := huh.NewForm(
+		huh.NewGroup(
+			huh.NewInput().
+				Title("Skill name").
+				Description("A kebab-case name for your skill").
+				Placeholder("my-skill").
+				Value(&name).
+				Validate(func(s string) error {
+					if strings.TrimSpace(s) == "" {
+						return fmt.Errorf("skill name is required")
+					}
+					return nil
+				}),
+			huh.NewInput().
+				Title("Description").
+				Description("What does this skill do?").
+				Placeholder("Describe your skill").
+				Value(&description).
+				Validate(func(s string) error {
+					if strings.TrimSpace(s) == "" {
+						return fmt.Errorf("description is required")
+					}
+					return nil
+				}),
+			huh.NewInput().
+				Title("Trigger phrases").
+				Description("Comma-separated phrases that should activate this skill").
+				Placeholder("deploy app, create resource").
+				Value(&triggersRaw),
+			huh.NewInput().
+				Title("Anti-trigger phrases").
+				Description("Comma-separated phrases that should NOT activate this skill").
+				Placeholder("unrelated task, wrong domain").
+				Value(&antiTriggersRaw),
+			huh.NewSelect[string]().
+				Title("Skill type").
+				Options(
+					huh.NewOption("workflow", "workflow"),
+					huh.NewOption("utility", "utility"),
+					huh.NewOption("analysis", "analysis"),
+				).
+				Value(&skillType),
+		),
+	).
+		WithInput(in).
+		WithOutput(out)
 
-	desc, err := prompt(scanner, out, "Description: ")
-	if err != nil {
-		return nil, err
+	if err := form.Run(); err != nil {
+		return nil, fmt.Errorf("wizard failed: %w", err)
 	}
-	if desc == "" {
-		return nil, fmt.Errorf("description is required")
-	}
-	spec.Description = desc
 
-	triggersRaw, err := prompt(scanner, out, "Trigger phrases (comma-separated): ")
-	if err != nil {
-		return nil, err
-	}
-	spec.Triggers = splitAndTrim(triggersRaw)
-
-	antiTriggersRaw, err := prompt(scanner, out, "Anti-trigger phrases (comma-separated): ")
-	if err != nil {
-		return nil, err
-	}
-	spec.AntiTriggers = splitAndTrim(antiTriggersRaw)
-
-	skillType, err := prompt(scanner, out, "Skill type (workflow/utility/analysis): ")
-	if err != nil {
-		return nil, err
-	}
-	st, ok := validSkillTypes[strings.ToLower(strings.TrimSpace(skillType))]
-	if !ok {
-		return nil, fmt.Errorf("invalid skill type %q: must be workflow, utility, or analysis", skillType)
-	}
-	spec.Type = st
-
-	return spec, nil
+	return &SkillSpec{
+		Name:         strings.TrimSpace(name),
+		Description:  strings.TrimSpace(description),
+		Triggers:     splitAndTrim(triggersRaw),
+		AntiTriggers: splitAndTrim(antiTriggersRaw),
+		Type:         SkillType(skillType),
+	}, nil
 }
 
 // GenerateSkillMD renders a SKILL.md from the given spec.
@@ -117,19 +140,6 @@ func GenerateSkillMD(spec *SkillSpec) (string, error) {
 		return "", fmt.Errorf("failed to render template: %w", err)
 	}
 	return buf.String(), nil
-}
-
-func prompt(scanner *bufio.Scanner, out io.Writer, question string) (string, error) {
-	if _, err := fmt.Fprint(out, question); err != nil {
-		return "", err
-	}
-	if !scanner.Scan() {
-		if err := scanner.Err(); err != nil {
-			return "", err
-		}
-		return "", fmt.Errorf("unexpected end of input")
-	}
-	return strings.TrimSpace(scanner.Text()), nil
 }
 
 func splitAndTrim(s string) []string {

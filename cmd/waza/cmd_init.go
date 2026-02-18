@@ -14,7 +14,6 @@ import (
 )
 
 func newInitCommand() *cobra.Command {
-	var interactive bool
 	var noSkill bool
 
 	cmd := &cobra.Command{
@@ -34,22 +33,20 @@ Only creates what's missing — never overwrites existing files.
 After scaffolding, prompts to create a new skill (calls waza new internally).
 
 Use --no-skill to skip the skill creation prompt.
-Use --interactive for project-level wizard (reserved for future use).
 
 If no directory is specified, the current directory is used.`,
 		Args: cobra.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return initCommandE(cmd, args, interactive, noSkill)
+			return initCommandE(cmd, args, noSkill)
 		},
 	}
 
-	cmd.Flags().BoolVarP(&interactive, "interactive", "i", false, "Run project-level setup wizard")
 	cmd.Flags().BoolVar(&noSkill, "no-skill", false, "Skip the first-skill creation prompt")
 
 	return cmd
 }
 
-func initCommandE(cmd *cobra.Command, args []string, interactive bool, noSkill bool) error {
+func initCommandE(cmd *cobra.Command, args []string, noSkill bool) error {
 	dir := "."
 	if len(args) > 0 {
 		dir = args[0]
@@ -285,7 +282,8 @@ defaults:
 		defer os.Chdir(origDir) //nolint:errcheck
 
 		fmt.Fprintln(out) //nolint:errcheck
-		if err := newCommandE(cmd, []string{skillName}, false, ""); err != nil {
+		skillContent := defaultSkillMD(skillName)
+		if err := scaffoldInProject(cmd, absDir, skillName, skillContent); err != nil {
 			return err
 		}
 	}

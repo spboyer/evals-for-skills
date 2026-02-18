@@ -7,12 +7,12 @@ import (
 	"strings"
 
 	"github.com/spf13/cobra"
+	"golang.org/x/term"
 
 	"github.com/spboyer/waza/internal/wizard"
 )
 
 func newNewCommand() *cobra.Command {
-	var interactive bool
 	var template string
 
 	cmd := &cobra.Command{
@@ -30,20 +30,20 @@ Two modes of operation:
     Creates {name}/ with SKILL.md, evals/, .github/workflows/eval.yml,
     .gitignore, and README.md.
 
-Use --interactive to run a guided wizard for skill metadata collection.`,
+When running in a terminal (TTY), launches an interactive wizard for skill
+metadata collection. In non-interactive environments (CI, pipes), uses defaults.`,
 		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return newCommandE(cmd, args, interactive, template)
+			return newCommandE(cmd, args, template)
 		},
 	}
 
-	cmd.Flags().BoolVarP(&interactive, "interactive", "i", false, "Run guided skill metadata wizard")
 	cmd.Flags().StringVarP(&template, "template", "t", "", "Template pack to use (coming soon)")
 
 	return cmd
 }
 
-func newCommandE(cmd *cobra.Command, args []string, interactive bool, templatePack string) error {
+func newCommandE(cmd *cobra.Command, args []string, templatePack string) error {
 	skillName := args[0]
 
 	if err := validateSkillName(skillName); err != nil {
@@ -58,7 +58,7 @@ func newCommandE(cmd *cobra.Command, args []string, interactive bool, templatePa
 	projectRoot, inProject := findProjectRoot()
 
 	var skillMDContent string
-	if interactive {
+	if term.IsTerminal(int(os.Stdin.Fd())) {
 		spec, err := wizard.RunSkillWizard(cmd.InOrStdin(), cmd.OutOrStdout())
 		if err != nil {
 			return fmt.Errorf("wizard failed: %w", err)

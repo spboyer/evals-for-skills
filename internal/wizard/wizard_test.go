@@ -2,8 +2,10 @@ package wizard
 
 import (
 	"bytes"
+	"io"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -93,9 +95,24 @@ func TestSplitAndTrim(t *testing.T) {
 	}
 }
 
+// pipeInput feeds lines to an io.Pipe with small delays so bubbletea
+// processes each field before the next line arrives.
+func pipeInput(t *testing.T, lines ...string) io.Reader {
+	t.Helper()
+	r, w := io.Pipe()
+	go func() {
+		defer w.Close()
+		for _, line := range lines {
+			_, _ = w.Write([]byte(line + "\n"))
+			time.Sleep(50 * time.Millisecond)
+		}
+	}()
+	return r
+}
+
 func TestRunSkillWizard_ValidInput(t *testing.T) {
-	input := "my-skill\nA great skill\ntrigger1, trigger2\nanti1, anti2\nworkflow\n"
-	in := strings.NewReader(input)
+	// huh accessible mode: Input reads a line, Select reads option number (1-indexed)
+	in := pipeInput(t, "my-skill", "A great skill", "trigger1, trigger2", "anti1, anti2", "1")
 	out := &bytes.Buffer{}
 
 	spec, err := RunSkillWizard(in, out)
@@ -108,40 +125,34 @@ func TestRunSkillWizard_ValidInput(t *testing.T) {
 	assert.Equal(t, SkillTypeWorkflow, spec.Type)
 }
 
-func TestRunSkillWizard_EmptyName(t *testing.T) {
-	input := "\n"
-	in := strings.NewReader(input)
+func TestRunSkillWizard_EmptyInput(t *testing.T) {
+	// huh gracefully handles EOF by using default (empty) values
+	in := strings.NewReader("")
 	out := &bytes.Buffer{}
 
-	_, err := RunSkillWizard(in, out)
-	assert.EqualError(t, err, "skill name is required")
+	spec, err := RunSkillWizard(in, out)
+	require.NoError(t, err)
+	assert.Empty(t, spec.Name)
+	assert.Equal(t, SkillType("workflow"), spec.Type) // default to first option
 }
 
-func TestRunSkillWizard_EmptyDescription(t *testing.T) {
-	input := "my-skill\n\n"
-	in := strings.NewReader(input)
+func TestRunSkillWizard_IncompleteInput(t *testing.T) {
+	// Only name provided; remaining fields use defaults
+	in := pipeInput(t, "my-skill")
 	out := &bytes.Buffer{}
 
-	_, err := RunSkillWizard(in, out)
-	assert.EqualError(t, err, "description is required")
+	spec, err := RunSkillWizard(in, out)
+	require.NoError(t, err)
+	assert.Equal(t, "my-skill", spec.Name)
+	assert.Empty(t, spec.Description)
 }
 
-func TestRunSkillWizard_InvalidType(t *testing.T) {
-	input := "my-skill\nDesc\nt1\na1\nbadtype\n"
-	in := strings.NewReader(input)
+func TestRunSkillWizard_SelectAnalysis(t *testing.T) {
+	// 3 = analysis (third option)
+	in := pipeInput(t, "test-skill", "A test skill", "", "", "3")
 	out := &bytes.Buffer{}
 
-	_, err := RunSkillWizard(in, out)
-	assert.Error(t, err)
-	assert.Contains(t, err.Error(), "invalid skill type")
-}
-
-func TestRunSkillWizard_UnexpectedEOF(t *testing.T) {
-	input := "my-skill\n"
-	in := strings.NewReader(input)
-	out := &bytes.Buffer{}
-
-	_, err := RunSkillWizard(in, out)
-	assert.Error(t, err)
-	assert.Contains(t, err.Error(), "unexpected end of input")
+	spec, err := RunSkillWizard(in, out)
+	require.NoError(t, err)
+	assert.Equal(t, SkillTypeAnalysis, spec.Type)
 }

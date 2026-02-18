@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"os"
 	"path/filepath"
-	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -332,16 +331,14 @@ func TestNewCommand_TaskFileIDs(t *testing.T) {
 
 // ── Interactive Flag Tests ─────────────────────────────────────────────────────
 
-func TestNewCommand_InteractiveFlagAccepted(t *testing.T) {
-	// Just verify the --interactive flag is recognized (no crash)
+func TestNewCommand_InteractiveFlagRemoved(t *testing.T) {
+	// Verify --interactive flag is no longer accepted
 	cmd := newNewCommand()
 	cmd.SetOut(&bytes.Buffer{})
 	cmd.SetErr(&bytes.Buffer{})
-	// With --interactive, the wizard will try to read stdin — provide EOF
-	cmd.SetIn(strings.NewReader(""))
 	cmd.SetArgs([]string{"--interactive", "test-skill"})
-	// The wizard will fail reading stdin (EOF), which is expected
-	_ = cmd.Execute() //nolint:errcheck // EOF error expected
+	err := cmd.Execute()
+	assert.Error(t, err, "--interactive flag should no longer be accepted")
 }
 
 // ── Template Flag Tests ────────────────────────────────────────────────────────
