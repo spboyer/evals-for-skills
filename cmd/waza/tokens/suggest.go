@@ -6,7 +6,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -18,6 +17,7 @@ import (
 
 	"github.com/spboyer/waza/cmd/waza/tokens/internal"
 	"github.com/spboyer/waza/internal/execution"
+	"github.com/spboyer/waza/internal/spinner"
 	"github.com/spboyer/waza/internal/tokens"
 	"github.com/spf13/cobra"
 )
@@ -134,7 +134,7 @@ func runSuggest(cmd *cobra.Command, args []string) error {
 		}
 		ch := make(chan result, len(files))
 		sem := make(chan struct{}, maxCopilotWorkers)
-		stopSpinner := startSpinner(errOut)
+		stopSpinner := spinner.Start(errOut, "🤖 Analyzing with Copilot...")
 
 		var wg sync.WaitGroup
 		for _, f := range files {
@@ -489,31 +489,6 @@ func suggestionJSON(analyses []fileAnalysis) (string, error) {
 	enc.SetIndent("", "  ")
 	err := enc.Encode(out)
 	return buf.String(), err
-}
-
-func startSpinner(w io.Writer) func() {
-	done := make(chan struct{})
-	cleared := make(chan struct{})
-	msg := "  🤖 Analyzing with Copilot..."
-	go func() {
-		frames := []string{"⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"}
-		i := 0
-		for {
-			select {
-			case <-done:
-				fmt.Fprintf(w, "\r%s\r", strings.Repeat(" ", len(msg)+1)) //nolint:errcheck
-				close(cleared)
-				return
-			case <-time.After(80 * time.Millisecond):
-				fmt.Fprintf(w, "\r%s%s", frames[i%len(frames)], msg) //nolint:errcheck
-				i++
-			}
-		}
-	}()
-	return func() {
-		close(done)
-		<-cleared
-	}
 }
 
 //go:embed suggestion_prompt.md
