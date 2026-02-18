@@ -57,7 +57,7 @@ func spaHandler() (http.Handler, error) {
 			// Check if the file exists in the embedded FS.
 			cleanPath := strings.TrimPrefix(path, "/")
 			if f, err := distFS.Open(cleanPath); err == nil {
-				f.Close()
+				f.Close() //nolint:errcheck
 				fileServer.ServeHTTP(w, r)
 				return
 			}
