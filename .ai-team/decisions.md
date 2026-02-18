@@ -294,3 +294,15 @@ Approved: PR #154 (shutdown), #160 (tool_call rubrics), #161 (task rubrics).
 
 **Why:** Team needs shared understanding of competitive landscape, feature gaps, roadmap priorities. Document polished and actionable.
 
+
+### 2026-02-18: Baseline A/B comparison execution model
+**By:** Linus
+**What:** The `--baseline` flag runs two sequential passes (not parallel): Pass 1 with skills, Pass 2 without. Each pass gets a fresh engine instance and workspace. The config mutation pattern (save → clear → restore) is used to disable skills for Pass 2. Exit code semantics change when baseline is enabled: 0 = improvement, 1 = regression/neutral.
+**Why:** Sequential execution simplifies state management, avoids resource contention, and produces cleaner output. The config mutation pattern is proven and used elsewhere (task filters). Exit code branching allows CI to gate on skill quality — pipelines can require skills to improve or maintain pass rates.
+
+### 2026-02-18: Baseline Feature Test Patterns
+**By:** Basher (Tester)  
+**Related:** #194 (A/B Baseline Skill Impact Measurement)
+**What:** Baseline feature tests use actual `TestOutcome.Runs` slice for pass rate calculations, NOT hypothetical `Passed`/`Trials` fields. Tests are table-driven with subtests following existing `runner_test.go` patterns. Key patterns: Pass Rate Calculation (computePassRate) uses `len(outcome.Runs)` to count trials, counts `run.Status == models.StatusPassed` to determine passes, zero-runs guard returns 0.0. Skill Impact Calculation (computeSkillImpact) uses division-by-zero guard: `denom = max(passRateWithout, 0.01)`. Task Mismatch Errors (mergeBaselineOutcomes) return `*TaskMismatchError` (not generic error) with bidirectional task set alignment checks. Integration tests cover: baseline with no skills, baseline with skills, baseline with empty tasks. Edge cases: zero baseline pass rate, both runs fail, single trial, skills hurt, error status counts as failure, empty runs slice.
+**Why:** Tests ensure implementation matches design. Linus's implementation uses `Runs` slice, so tests must match. Division-by-zero is critical per design doc. Task mismatch detection prevents silent data corruption. Integration tests document expected behavior for full baseline runs.
+

@@ -66,3 +66,5 @@
 - `Range` is `[2]int` with 1-based inclusive bounds. Zero values mean "no range filtering" — the zero value of `[2]int` is `[0, 0]`, which naturally means "load all rows".
 - Go's `csv.Reader.ReadAll()` enforces consistent field count natively, so our manual column count check is a belt-and-suspenders safety net that only fires if `FieldsPerRecord` is set to -1.
 - Model template resolution happens per-row via `resolveModelForRow()` — enables `model: "{{.Vars.model}}"` in eval YAML where each CSV row specifies its own model.
+
+📌 Team update (2026-02-18): Baseline A/B comparison execution model and test patterns established — sequential passes with config mutation pattern, zero-division guards, task mismatch detection. Exit codes: 0 = improvement, 1 = regression. Decided by Linus and Basher
