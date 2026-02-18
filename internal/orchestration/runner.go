@@ -114,6 +114,21 @@ func (r *TestRunner) OnProgress(listener ProgressListener) {
 	r.listeners = append(r.listeners, listener)
 }
 
+// testOutcomeDetails extracts score and duration from a TestOutcome for inclusion
+// in EventTestComplete Details.
+func testOutcomeDetails(o *models.TestOutcome) map[string]any {
+	score := 0.0
+	durationMs := int64(0)
+	if o.Stats != nil {
+		score = o.Stats.AvgScore
+		durationMs = o.Stats.AvgDurationMs
+	}
+	return map[string]any{
+		"score":       score,
+		"duration_ms": durationMs,
+	}
+}
+
 func (r *TestRunner) notifyProgress(event ProgressEvent) {
 	r.progressMu.Lock()
 	listeners := make([]ProgressListener, len(r.listeners))
@@ -660,6 +675,7 @@ func (r *TestRunner) runSequential(ctx context.Context, testCases []*models.Test
 					TestNum:    i + 1,
 					TotalTests: len(testCases),
 					Status:     models.StatusFailed,
+					Details:    map[string]any{"score": 0.0, "duration_ms": int64(0)},
 				})
 				continue
 			}
@@ -698,6 +714,7 @@ func (r *TestRunner) runSequential(ctx context.Context, testCases []*models.Test
 				TestNum:    i + 1,
 				TotalTests: len(testCases),
 				Status:     outcome.Status,
+				Details:    testOutcomeDetails(&outcome),
 			})
 		}
 	}
@@ -746,6 +763,7 @@ func (r *TestRunner) runConcurrent(ctx context.Context, testCases []*models.Test
 						TestNum:    idx + 1,
 						TotalTests: len(testCases),
 						Status:     models.StatusFailed,
+						Details:    map[string]any{"score": 0.0, "duration_ms": int64(0)},
 					})
 					return
 				}
@@ -783,6 +801,7 @@ func (r *TestRunner) runConcurrent(ctx context.Context, testCases []*models.Test
 					TestNum:    idx + 1,
 					TotalTests: len(testCases),
 					Status:     outcome.Status,
+					Details:    testOutcomeDetails(&outcome),
 				})
 			}
 		}(i, tc)

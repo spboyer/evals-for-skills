@@ -414,6 +414,11 @@ func runSingleModel(_ *cobra.Command, spec *models.BenchmarkSpec, specPath strin
 		case orchestration.EventTestStart:
 			ev = session.NewEvent(session.EventTaskStart,
 				session.TaskStartData(event.TestName, event.TestNum, event.TotalTests))
+		case orchestration.EventTestComplete:
+			score, _ := event.Details["score"].(float64)
+			durationMs, _ := event.Details["duration_ms"].(int64)
+			ev = session.NewEvent(session.EventTaskComplete,
+				session.TaskCompleteData(event.TestName, string(event.Status), score, durationMs))
 		case orchestration.EventGraderResult:
 			grader, _ := event.Details["grader"].(string)
 			graderType, _ := event.Details["grader_type"].(string)
@@ -467,17 +472,6 @@ func runSingleModel(_ *cobra.Command, spec *models.BenchmarkSpec, specPath strin
 
 	// Log task completion and session summary from outcome data
 	if sessionLog {
-		for _, to := range outcome.TestOutcomes {
-			score := 0.0
-			durationMs := int64(0)
-			if to.Stats != nil {
-				score = to.Stats.AvgScore
-				durationMs = to.Stats.AvgDurationMs
-			}
-			ev := session.NewEvent(session.EventTaskComplete,
-				session.TaskCompleteData(to.DisplayName, string(to.Status), score, durationMs))
-			sessLogger.Log(ev) //nolint:errcheck
-		}
 		d := outcome.Digest
 		ev := session.NewEvent(session.EventSessionEnd,
 			session.SessionCompleteData(d.TotalTests, d.Succeeded, d.Failed, d.Errors, d.DurationMs))
