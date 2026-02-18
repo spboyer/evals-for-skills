@@ -15,7 +15,7 @@ import (
 // RunState tracks the status of an eval run.
 type RunState struct {
 	ID     string `json:"id"`
-	Status string `json:"status"` // "running", "completed", "failed", "cancelled"
+	Status string `json:"status"` // "running", "completed", "failed", "canceled"
 	Error  string `json:"error,omitempty"`
 }
 
@@ -402,7 +402,7 @@ type RunCancelParams struct {
 }
 
 type RunCancelResult struct {
-	Cancelled bool `json:"cancelled"`
+	Canceled bool `json:"canceled"`
 }
 
 func (h *HandlerContext) handleRunCancel(_ context.Context, params json.RawMessage) (any, *Error) {
@@ -423,14 +423,14 @@ func (h *HandlerContext) handleRunCancel(_ context.Context, params json.RawMessa
 	}
 
 	if state.Status != "running" {
-		return &RunCancelResult{Cancelled: false}, nil
+		return &RunCancelResult{Canceled: false}, nil
 	}
 
 	if cancel, exists := h.cancelFuncs[p.RunID]; exists {
 		cancel()
 		delete(h.cancelFuncs, p.RunID)
 	}
-	state.Status = "cancelled"
+	state.Status = "canceled"
 
-	return &RunCancelResult{Cancelled: true}, nil
+	return &RunCancelResult{Canceled: true}, nil
 }

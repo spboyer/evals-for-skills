@@ -221,7 +221,8 @@ tasks:
 	resp := rpcCall(t, server, "eval.run", map[string]string{"path": evalPath})
 	require.Nil(t, resp.Error)
 
-	data, _ := json.Marshal(resp.Result)
+	data, err := json.Marshal(resp.Result)
+	require.NoError(t, err)
 	var runResult EvalRunResult
 	require.NoError(t, json.Unmarshal(data, &runResult))
 
@@ -232,7 +233,8 @@ tasks:
 	resp = rpcCall(t, server, "run.status", map[string]string{"run_id": runResult.RunID})
 	assert.Nil(t, resp.Error)
 
-	data, _ = json.Marshal(resp.Result)
+	data, err = json.Marshal(resp.Result)
+	require.NoError(t, err)
 	var state RunState
 	require.NoError(t, json.Unmarshal(data, &state))
 	assert.Equal(t, runResult.RunID, state.ID)
@@ -289,7 +291,8 @@ tasks:
 	resp := rpcCall(t, server, "eval.run", map[string]string{"path": evalPath})
 	require.Nil(t, resp.Error)
 
-	data, _ := json.Marshal(resp.Result)
+	data, err := json.Marshal(resp.Result)
+	require.NoError(t, err)
 	var runResult EvalRunResult
 	require.NoError(t, json.Unmarshal(data, &runResult))
 

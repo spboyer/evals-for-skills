@@ -55,7 +55,7 @@ func TestServer_InvalidVersion(t *testing.T) {
 func TestServer_SuccessfulMethod(t *testing.T) {
 	registry := NewMethodRegistry()
 	registry.Register("echo", func(_ context.Context, params json.RawMessage) (any, *Error) {
-		return json.RawMessage(params), nil
+		return params, nil
 	})
 	server := NewServer(registry, nil)
 
@@ -116,7 +116,7 @@ func TestServer_Notification_NoResponse(t *testing.T) {
 func TestServer_Notification_WithNullID_GetsResponse(t *testing.T) {
 	registry := NewMethodRegistry()
 	registry.Register("echo", func(_ context.Context, params json.RawMessage) (any, *Error) {
-		return json.RawMessage(params), nil
+		return params, nil
 	})
 	server := NewServer(registry, nil)
 
