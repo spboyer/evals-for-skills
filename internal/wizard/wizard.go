@@ -3,10 +3,12 @@ package wizard
 import (
 	"fmt"
 	"io"
+	"os"
 	"strings"
 	"text/template"
 
 	"github.com/charmbracelet/huh"
+	"golang.org/x/term"
 )
 
 // SkillType represents the category of a skill.
@@ -114,6 +116,11 @@ func RunSkillWizard(in io.Reader, out io.Writer) (*SkillSpec, error) {
 	).
 		WithInput(in).
 		WithOutput(out)
+
+	// Use accessible mode for non-TTY input (e.g., tests, piped input).
+	if f, ok := in.(*os.File); !ok || !term.IsTerminal(int(f.Fd())) {
+		form = form.WithAccessible(true)
+	}
 
 	if err := form.Run(); err != nil {
 		return nil, fmt.Errorf("wizard failed: %w", err)

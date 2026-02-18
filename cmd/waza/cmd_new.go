@@ -58,7 +58,13 @@ func newCommandE(cmd *cobra.Command, args []string, templatePack string) error {
 	projectRoot, inProject := findProjectRoot()
 
 	var skillMDContent string
-	if term.IsTerminal(int(os.Stdin.Fd())) {
+	// Check TTY from the command's input stream, not os.Stdin directly.
+	inReader := cmd.InOrStdin()
+	isTTY := false
+	if f, ok := inReader.(*os.File); ok {
+		isTTY = term.IsTerminal(int(f.Fd()))
+	}
+	if isTTY {
 		spec, err := wizard.RunSkillWizard(cmd.InOrStdin(), cmd.OutOrStdout())
 		if err != nil {
 			return fmt.Errorf("wizard failed: %w", err)

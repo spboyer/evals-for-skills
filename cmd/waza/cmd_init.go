@@ -268,6 +268,9 @@ defaults:
 	// --- Phase 5: Create skill if requested ---
 	skillName = strings.TrimSpace(skillName)
 	if createSkill && skillName != "" {
+		if err := validateSkillName(skillName); err != nil {
+			return err
+		}
 		origDir, err := os.Getwd()
 		if err != nil {
 			return fmt.Errorf("failed to get working directory: %w", err)
