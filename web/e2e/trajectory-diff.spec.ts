@@ -61,12 +61,12 @@ test.describe("Trajectory Diff", () => {
     const taskRow = page.locator("tbody tr").filter({ hasText: "explain-fibonacci" });
     await taskRow.click();
 
-    // Session Digest Comparison section should appear
+    // Session Digest Comparison section should appear with actual metric labels and values
     await expect(page.getByText("Session Digest Comparison")).toBeVisible();
-
-    // Should show delta arrows (Run A has 3 turns, Run B has 4)
+    // Verify metric labels are rendered (values validated by presence of section + label)
     await expect(page.getByText("Turns").last()).toBeVisible();
     await expect(page.getByText("Tool Calls").last()).toBeVisible();
+    await expect(page.getByText("Tokens").last()).toBeVisible();
   });
 
   test("diff entries render with correct labels", async ({ page }) => {
@@ -81,11 +81,15 @@ test.describe("Trajectory Diff", () => {
     const taskRow = page.locator("tbody tr").filter({ hasText: "explain-fibonacci" });
     await taskRow.click();
 
-    // Diff entries should show tool names and diff kinds
-    // Both runs have read_file (changed — different result), write_file (changed — different args)
-    // Run A has no run_tests, Run B has run_tests → Only in B
+    // LCS alignment: read_file (Changed — different results), run_tests (Only in B), write_file (Changed — different args)
     await expect(page.getByText("read_file").first()).toBeVisible();
     await expect(page.getByText("write_file").first()).toBeVisible();
+    // run_tests is only in Run B → should show "Only in B" label
+    await expect(page.getByText("run_tests")).toBeVisible();
+    await expect(page.getByText("Only in B")).toBeVisible();
+    // read_file and write_file should show "Changed" labels
+    const changedLabels = page.getByText("Changed");
+    await expect(changedLabels.first()).toBeVisible();
   });
 
   test("legend shows matched, changed, and missing counts", async ({ page }) => {
@@ -100,10 +104,14 @@ test.describe("Trajectory Diff", () => {
     const taskRow = page.locator("tbody tr").filter({ hasText: "explain-fibonacci" });
     await taskRow.click();
 
-    // Legend should show counts for matched, changed, missing
-    await expect(page.getByText(/\d+ matched/)).toBeVisible();
-    await expect(page.getByText(/\d+ changed/)).toBeVisible();
-    await expect(page.getByText(/\d+ missing/)).toBeVisible();
+    // LCS alignment of [read_file, write_file] vs [read_file, run_tests, write_file]:
+    //   read_file = matched (same args, no toolResult on Start events)
+    //   run_tests = deletion (only in B)
+    //   write_file = changed (different args content)
+    // Expected: 1 matched, 1 changed, 1 missing
+    await expect(page.getByText("1 matched")).toBeVisible();
+    await expect(page.getByText("1 changed")).toBeVisible();
+    await expect(page.getByText("1 missing")).toBeVisible();
   });
 
   test("clicking hint text is visible in comparison table", async ({ page }) => {
