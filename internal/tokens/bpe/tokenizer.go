@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"encoding/base64"
 	"fmt"
+	"io"
 	"os"
 	"regexp"
 	"sort"
@@ -46,7 +47,21 @@ func NewTokenizerFromFile(
 	regexPattern string,
 	cacheSize int,
 ) (*Tokenizer, error) {
-	bpeDict, err := loadTikTokenBPE(tikTokenBPEFile)
+	f, err := os.Open(tikTokenBPEFile)
+	if err != nil {
+		return nil, fmt.Errorf("failed to open BPE encoder file: %w", err)
+	}
+	defer f.Close()
+	return NewTokenizerFromReader(f, specialTokensEncoder, regexPattern, cacheSize)
+}
+
+func NewTokenizerFromReader(
+	r io.Reader,
+	specialTokensEncoder map[string]int,
+	regexPattern string,
+	cacheSize int,
+) (*Tokenizer, error) {
+	bpeDict, err := loadTikTokenBPEFromReader(r)
 	if err != nil {
 		return nil, err
 	}
@@ -105,15 +120,9 @@ func NewTokenizerFromRanks(
 	return t, nil
 }
 
-func loadTikTokenBPE(tikTokenBPEFile string) (map[string]int, error) {
-	f, err := os.Open(tikTokenBPEFile)
-	if err != nil {
-		return nil, fmt.Errorf("failed to load from BPE encoder file stream: %w", err)
-	}
-	defer f.Close()
-
+func loadTikTokenBPEFromReader(r io.Reader) (map[string]int, error) {
 	bpeDict := map[string]int{}
-	scanner := bufio.NewScanner(f)
+	scanner := bufio.NewScanner(r)
 	for scanner.Scan() {
 		line := strings.TrimSpace(scanner.Text())
 		if line == "" {

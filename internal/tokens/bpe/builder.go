@@ -1,12 +1,10 @@
 package tokenizer
 
 import (
+	"embed"
 	"errors"
 	"fmt"
-	"io"
-	"net/http"
-	"os"
-	"path/filepath"
+	"io/fs"
 	"strings"
 )
 
@@ -75,21 +73,15 @@ var regexPatternO200k = strings.Join([]string{
 	`\s+`,
 }, "|")
 
-var modelDirOverride string
+//go:embed model
+var modelFS embed.FS
 
-func modelDir() string {
-	if modelDirOverride != "" {
-		return modelDirOverride
+func modelDir() fs.FS {
+	sub, err := fs.Sub(modelFS, "model")
+	if err != nil {
+		panic("embedded model directory missing: " + err.Error())
 	}
-	if path := os.Getenv("TOKENIZER_GO_MODEL_DIR"); path != "" {
-		return path
-	}
-	return filepath.Join(".", "model")
-}
-
-// SetModelDir overrides the directory used to cache .tiktoken files.
-func SetModelDir(path string) {
-	modelDirOverride = path
+	return sub
 }
 
 func encodingForModelName(modelName string) string {
@@ -112,45 +104,12 @@ func mergeSpecialTokens(base map[string]int, extra map[string]int) map[string]in
 	return out
 }
 
-func fetchAndSaveFile(url, filePath string) error {
-	resp, err := http.Get(url)
-	if err != nil {
-		return fmt.Errorf("failed to fetch file from %s: %w", url, err)
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusOK {
-		return fmt.Errorf("failed to fetch file from %s. status code: %d", url, resp.StatusCode)
-	}
-
-	out, err := os.Create(filePath)
-	if err != nil {
-		return err
-	}
-	defer out.Close()
-
-	if _, err := io.Copy(out, resp.Body); err != nil {
-		return err
-	}
-	return nil
-}
-
-func bpeURLForEncoding(encoding string) (string, string, error) {
+func bpeFileForEncoding(encoding string) (string, string, error) {
 	switch encoding {
 	case "o200k_base":
-		return regexPatternO200k, "https://openaipublic.blob.core.windows.net/encodings/o200k_base.tiktoken", nil
-	case "cl100k_base":
-		return regexPatternModern, "https://openaipublic.blob.core.windows.net/encodings/cl100k_base.tiktoken", nil
-	case "p50k_base":
-		return regexPatternLegacy, "https://openaipublic.blob.core.windows.net/encodings/p50k_base.tiktoken", nil
-	case "p50k_edit":
-		return regexPatternLegacy, "https://openaipublic.blob.core.windows.net/encodings/p50k_base.tiktoken", nil
-	case "r50k_base":
-		return regexPatternLegacy, "https://openaipublic.blob.core.windows.net/encodings/r50k_base.tiktoken", nil
-	case "gpt2":
-		return regexPatternLegacy, "https://raw.githubusercontent.com/microsoft/Tokenizer/main/model/gpt2.tiktoken", nil
+		return regexPatternO200k, "o200k_base.tiktoken", nil
 	default:
-		return "", "", fmt.Errorf("doesn't support this encoder [%s]", encoding)
+		return "", "", errors.New(encoding + " encoding isn't supported")
 	}
 }
 
@@ -200,7 +159,7 @@ func NewTokenizerForModel(modelName string, extraSpecialTokens map[string]int) (
 }
 
 func NewTokenizerForEncoding(encoding string, extraSpecialTokens map[string]int) (*Tokenizer, error) {
-	regexPattern, mergeableRanksURL, err := bpeURLForEncoding(encoding)
+	regexPattern, fileName, err := bpeFileForEncoding(encoding)
 	if err != nil {
 		return nil, err
 	}
@@ -210,23 +169,11 @@ func NewTokenizerForEncoding(encoding string, extraSpecialTokens map[string]int)
 		specialTokens = mergeSpecialTokens(specialTokens, extraSpecialTokens)
 	}
 
-	dirPath := modelDir()
-	if err := os.MkdirAll(dirPath, 0o755); err != nil {
-		return nil, err
+	f, err := modelDir().Open(fileName)
+	if err != nil {
+		return nil, fmt.Errorf("failed to open embedded model file %s: %w", fileName, err)
 	}
+	defer f.Close()
 
-	fileName := filepath.Base(mergeableRanksURL)
-	filePath := filepath.Join(dirPath, fileName)
-	if _, statErr := os.Stat(filePath); statErr != nil {
-		if !errors.Is(statErr, os.ErrNotExist) {
-			return nil, statErr
-		}
-		fmt.Printf("Downloading file from %s\n", mergeableRanksURL)
-		if err := fetchAndSaveFile(mergeableRanksURL, filePath); err != nil {
-			return nil, err
-		}
-		fmt.Printf("Saved file to %s\n", filePath)
-	}
-
-	return NewTokenizerFromFile(filePath, specialTokens, regexPattern, defaultCacheSize)
+	return NewTokenizerFromReader(f, specialTokens, regexPattern, defaultCacheSize)
 }
