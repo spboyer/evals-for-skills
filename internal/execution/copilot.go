@@ -21,11 +21,6 @@ type CopilotEngine struct {
 	mu     sync.Mutex
 	client *copilot.Client
 
-	// Sessions run using this copilot instance until the engine is shut down.
-	// This lets us use things like PromptGrader to query the previous context.
-	sessionsIDsMu sync.Mutex
-	sessionsIDs   []string
-
 	workspace     string
 	oldWorkspaces []string // previous workspaces to clean up at Shutdown
 }
@@ -139,13 +134,6 @@ func (e *CopilotEngine) Execute(ctx context.Context, req *ExecutionRequest) (*Ex
 		return nil, fmt.Errorf("failed to create session: %w", err)
 	}
 
-	// We'll destroy all the sessions after we shut down the entire engine instance.
-	// this lets load up the previous session context if we want to run things like
-	// prompt grading later.
-	e.sessionsIDsMu.Lock()
-	e.sessionsIDs = append(e.sessionsIDs, session.SessionID)
-	e.sessionsIDsMu.Unlock()
-
 	eventsCollector := NewSessionEventsCollector()
 
 	// Event handler with updated API
@@ -205,16 +193,6 @@ func (e *CopilotEngine) Shutdown(ctx context.Context) error {
 	defer e.mu.Unlock()
 
 	if e.client != nil {
-		e.sessionsIDsMu.Lock()
-		sessions := e.sessionsIDs
-		e.sessionsIDsMu.Unlock()
-
-		for _, sessionID := range sessions {
-			if err := e.client.DeleteSession(ctx, sessionID); err != nil {
-				fmt.Printf("warning: failed to destroy session: %v\n", err)
-			}
-		}
-
 		if err := e.client.Stop(); err != nil {
 			// Log but continue cleanup
 			fmt.Printf("warning: failed to stop client: %v\n", err)
