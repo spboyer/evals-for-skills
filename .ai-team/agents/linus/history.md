@@ -25,3 +25,17 @@
 - Copilot SDK integration (via AgentEngine interface)
 - Web UI gets results from CLI JSON output
 - Makefile for build/test/lint automation
+
+### Web API Architecture
+- API types in `internal/webapi/types.go` are decoupled from internal models (no direct imports)
+- `outcomeToDetail()` in `store.go` maps `models.EvaluationOutcome` → API response types
+- JSON uses camelCase consistently across the API surface
+- TranscriptEvent mapping uses direct field access (not marshal/unmarshal) due to MarshalJSON snake_case mismatch
+
+## Completed Work
+
+### #237 — Expose transcript & session digest in web API (PR #242)
+- **Date:** 2026-02-19
+- **Branch:** `squad/237-api-transcript`
+- **Files changed:** `internal/webapi/types.go`, `internal/webapi/store.go`, `internal/webapi/handlers_test.go`, `web/src/api/client.ts`
+- **What:** Added `TranscriptEventResponse`, `SessionDigestResponse` API types; wired them into `TaskResult`; mapped from `RunResult` in `outcomeToDetail()`; added TS interfaces; added test
