@@ -21,47 +21,58 @@ function jsonEqual(a: unknown, b: unknown): boolean {
   return JSON.stringify(a) === JSON.stringify(b);
 }
 
-/** Align tool calls from two transcripts by tool name + position. */
+/**
+ * Align tool calls from two transcripts using LCS on tool names.
+ * Produces a correct diff even when the same tool is called multiple times.
+ */
 export function alignToolCalls(
   transcriptA: TranscriptEvent[],
   transcriptB: TranscriptEvent[],
 ): DiffEntry[] {
   const callsA = extractToolCalls(transcriptA);
   const callsB = extractToolCalls(transcriptB);
-  const usedB = new Set<number>();
+  const m = callsA.length;
+  const n = callsB.length;
+
+  // Build LCS table on tool names
+  const dp: number[][] = Array.from({ length: m + 1 }, () => Array(n + 1).fill(0));
+  for (let i = 1; i <= m; i++) {
+    for (let j = 1; j <= n; j++) {
+      if ((callsA[i - 1]!.toolName ?? "") === (callsB[j - 1]!.toolName ?? "")) {
+        dp[i]![j] = dp[i - 1]![j - 1]! + 1;
+      } else {
+        dp[i]![j] = Math.max(dp[i - 1]![j]!, dp[i]![j - 1]!);
+      }
+    }
+  }
+
+  // Backtrack to produce diff entries in order
   const entries: DiffEntry[] = [];
+  let i = m, j = n;
+  const stack: DiffEntry[] = [];
 
-  for (let i = 0; i < callsA.length; i++) {
-    const a = callsA[i]!;
-    const name = a.toolName ?? "unknown";
-    const bAtI = i < callsB.length ? callsB[i]! : undefined;
-
-    // Perfect match: same name at same index
-    if (bAtI && bAtI.toolName === name && !usedB.has(i)) {
-      usedB.add(i);
-      const same = jsonEqual(a.arguments, bAtI.arguments) && jsonEqual(a.toolResult, bAtI.toolResult);
-      entries.push({ kind: same ? "matched" : "changed", index: i, toolName: name, a, b: bAtI });
-      continue;
-    }
-    // Fallback: find same name elsewhere in B
-    const alt = callsB.findIndex((b, j) => !usedB.has(j) && b.toolName === name);
-    if (alt !== -1) {
-      const bAlt = callsB[alt]!;
-      usedB.add(alt);
-      const same = jsonEqual(a.arguments, bAlt.arguments) && jsonEqual(a.toolResult, bAlt.toolResult);
-      entries.push({ kind: same ? "matched" : "changed", index: i, toolName: name, a, b: bAlt });
+  while (i > 0 || j > 0) {
+    if (i > 0 && j > 0 && (callsA[i - 1]!.toolName ?? "") === (callsB[j - 1]!.toolName ?? "")) {
+      const a = callsA[i - 1]!;
+      const b = callsB[j - 1]!;
+      const name = a.toolName ?? "unknown";
+      const same = jsonEqual(a.arguments, b.arguments) && jsonEqual(a.toolResult, b.toolResult);
+      stack.push({ kind: same ? "matched" : "changed", index: i - 1, toolName: name, a, b });
+      i--;
+      j--;
+    } else if (j > 0 && (i === 0 || dp[i]![j - 1]! >= dp[i - 1]![j]!)) {
+      const b = callsB[j - 1]!;
+      stack.push({ kind: "deletion", index: j - 1, toolName: b.toolName ?? "unknown", b });
+      j--;
     } else {
-      entries.push({ kind: "insertion", index: i, toolName: name, a });
+      const a = callsA[i - 1]!;
+      stack.push({ kind: "insertion", index: i - 1, toolName: a.toolName ?? "unknown", a });
+      i--;
     }
   }
 
-  // Remaining unmatched in B → deletions
-  for (let j = 0; j < callsB.length; j++) {
-    if (!usedB.has(j)) {
-      const bJ = callsB[j]!;
-      entries.push({ kind: "deletion", index: j, toolName: bJ.toolName ?? "unknown", b: bJ });
-    }
-  }
+  // Reverse (backtrack produces entries in reverse order)
+  while (stack.length > 0) entries.push(stack.pop()!);
 
   return entries;
 }
