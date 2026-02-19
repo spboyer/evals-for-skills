@@ -49,3 +49,5 @@
 ### Web Dashboard Routing
 - Pages in App.tsx: home (Dashboard), run (RunDetail), compare (CompareView), trends (TrendsPage), live (LiveView)
 - Features: live updates, search, filtering by status/tags/date, export, dark mode
+
+📌 Team update (2026-02-19): Documentation maintenance gates established (Saul reviews PRs for doc impact) — decided by Saul (#256)

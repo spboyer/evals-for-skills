@@ -57,3 +57,5 @@
 - **Trends view:** Uses `/api/runs?sort=timestamp&order=asc` which is already handled by the runs list regex mock
 - **Compare view setup:** Must select both runs via `selectOption` before screenshotting, otherwise you just get empty selectors
 - **Total E2E count:** 37 tests (4 screenshot + 33 existing), all passing on Chromium
+
+📌 Team update (2026-02-19): Screenshot conventions formalized (viewport, paths, naming, mock reuse) — decided by Basher (#251)

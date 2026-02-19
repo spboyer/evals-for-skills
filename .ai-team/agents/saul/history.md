@@ -33,3 +33,5 @@
 - Saul now owns ongoing doc-freshness verification across all code PRs
 - Documentation Impact Matrix maps code paths to required doc updates
 - Screenshot maintenance automated via Playwright E2E tests in `web/`
+
+📌 Team update (2026-02-19): Screenshot conventions formalized (viewport, paths, naming, mock reuse) — decided by Basher (#251)

@@ -23,3 +23,41 @@
 **What:** Dashboard theme should use colors/styling close to the DevEx Token Efficiency Benchmarks dashboard. No fancy gradients — keep it clean and functional.
 
 **Why:** User preference — captured for design consistency
+
+## 2026-02-19: Screenshot spec conventions
+
+**By:** Basher (Tester / QA)
+**Issue:** #251
+
+**What:** Screenshot tests live in `web/e2e/screenshots.spec.ts` and output to `docs/images/`. Conventions:
+- Viewport: 1280×720, chromium only (no firefox — screenshots must be pixel-consistent)
+- Paths: Use `../docs/images/` (relative to Playwright config root `web/`), NOT relative to the test file
+- Mock data: Reuse `mockAllAPIs` and existing fixtures — no screenshot-specific mock data
+- Views requiring interaction: Set up state (select options, expand rows) before capturing
+- Naming: kebab-case matching the view name: `dashboard-overview.png`, `run-detail.png`, `compare.png`, `trends.png`
+
+**Why:** Reproducible screenshots from mock data mean docs images stay consistent regardless of when/where they're generated. Running `npx playwright test e2e/screenshots.spec.ts --project=chromium` regenerates all four images deterministically.
+
+## 2026-02-19: Documentation Maintenance Routing (Issue #256)
+
+**By:** Saul (Documentation Lead)
+
+**Status:** Implemented
+
+**What:** Established Saul (Documentation Lead) as the documentation quality gate. Added two new PR review rules:
+- **Doc-review gate** (Rule 9): Saul reviews PRs touching CLI code (`cmd/waza/`, `internal/`, `web/src/`) for documentation impact
+- **Doc-consistency gate** (Rule 10): Saul reviews PRs touching documentation files for style consistency and accuracy
+
+Added Documentation Impact Matrix mapping code paths to required doc updates, showing which doc files must be checked when specific code changes.
+
+**Why:** **Problem:** Documentation was reactive rather than proactive. Code changes happened without corresponding doc updates. Screenshots became stale. Examples diverged from actual behavior. No clear responsibility for doc freshness.
+
+**Solution:** Make documentation review a first-class routing rule, like code review. Saul owns ongoing doc-freshness verification across all PRs. The Impact Matrix provides clear guidance on what needs checking for each code path.
+
+**Scope:**
+- **routing.md:** Added Rules 9–10 and Documentation Impact Matrix
+- **charter.md:** Added doc-freshness reviews to "What I Own" and PR monitoring to "How I Work"
+- **AGENTS.md:** Added Documentation Maintenance section with tables for "When to Update Docs" and screenshot regeneration steps
+- **history.md:** Recorded doc-freshness reviews as a key learning
+
+**Impact:** All code PRs (`cmd/waza/`, `internal/`, `web/src/`) now automatically routed to Saul for doc-impact review. All doc PRs (`docs/`, `README.md`, `DEMO-SCRIPT.md`) routed to Saul for consistency check. Clear accountability: Saul owns the matrix and updates it as new paths are discovered. Screenshot maintenance can be automated via Playwright tests.
