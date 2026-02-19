@@ -14,10 +14,8 @@ var modelPrefixToEncoding = []struct {
 	Prefix   string
 	Encoding string
 }{
-	{Prefix: "gpt-4o-", Encoding: "o200k_base"},
-	{Prefix: "gpt-4-", Encoding: "cl100k_base"},
-	{Prefix: "gpt-3.5-turbo-", Encoding: "cl100k_base"},
-	{Prefix: "gpt-35-turbo-", Encoding: "cl100k_base"},
+	{Prefix: "gpt-5", Encoding: "o200k_base"},
+	{Prefix: "gpt-4.", Encoding: "o200k_base"},
 }
 
 // ModelToEncoding maps model names to the tokenizer encoding used by the model.
@@ -59,9 +57,6 @@ var ModelToEncoding = map[string]string{
 
 const (
 	endOfText   = "<|endoftext|>"
-	fimPrefix   = "<|fim_prefix|>"
-	fimMiddle   = "<|fim_middle|>"
-	fimSuffix   = "<|fim_suffix|>"
 	endOfPrompt = "<|endofprompt|>"
 )
 
@@ -167,21 +162,6 @@ func SpecialTokensForEncoding(encoding string) map[string]int {
 			endOfText:   199999,
 			endOfPrompt: 200018,
 		}
-	case "cl100k_base":
-		specialTokens = map[string]int{
-			endOfText:   100257,
-			fimPrefix:   100258,
-			fimMiddle:   100259,
-			fimSuffix:   100260,
-			endOfPrompt: 100276,
-		}
-	case "p50k_edit":
-		specialTokens = map[string]int{
-			endOfText: 50256,
-			fimPrefix: 50281,
-			fimMiddle: 50282,
-			fimSuffix: 50283,
-		}
 	}
 	return specialTokens
 }
@@ -194,8 +174,6 @@ func RegexForEncoding(encoding string) string {
 	switch encoding {
 	case "o200k_base":
 		return regexPatternO200k
-	case "cl100k_base":
-		return regexPatternModern
 	default:
 		return regexPatternLegacy
 	}
