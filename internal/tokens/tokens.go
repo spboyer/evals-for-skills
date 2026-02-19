@@ -19,7 +19,7 @@ const (
 	estimatedCharsPerToken = 4
 )
 
-// SupportedEncodings lists supported values for the --tokenizer flag. TokenizerDefault isn't included
+// ValidTokenizers lists supported values for the --tokenizer flag. TokenizerDefault isn't included
 // because it's an alias for the default tokenizer and not a distinct option users can specify.
 var ValidTokenizers = []string{string(TokenizerBPE), string(TokenizerEstimate)}
 
