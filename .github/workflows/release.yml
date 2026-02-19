@@ -72,34 +72,21 @@ jobs:
 
   # ════════════════════════════════════════════════
   # FLOW 1: Standalone CLI Release
+  # Build all platform binaries, then create GitHub Release
   # ════════════════════════════════════════════════
 
-  # ──────────────────────────────────────────────
-  # 1a. Build standalone CLI binaries (matrix)
-  # ──────────────────────────────────────────────
-  build-cli:
-    name: CLI ${{ matrix.os }}/${{ matrix.arch }}
+  release-cli:
+    name: Release CLI
     needs: setup-version
     if: inputs.build_cli != false
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        include:
-          - os: linux
-            arch: amd64
-          - os: linux
-            arch: arm64
-          - os: darwin
-            arch: amd64
-          - os: darwin
-            arch: arm64
-          - os: windows
-            arch: amd64
-          - os: windows
-            arch: arm64
+    env:
+      VERSION: ${{ needs.setup-version.outputs.version }}
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Setup Go Environment
         uses: actions/setup-go@v5
@@ -118,52 +105,25 @@ jobs:
         working-directory: web
         run: npm ci && npm run build
 
-      - name: Build Binary
-        env:
-          GOOS: ${{ matrix.os }}
-          GOARCH: ${{ matrix.arch }}
-          CGO_ENABLED: '0'
+      - name: Build All Platform Binaries
         run: |
-          VERSION="${{ needs.setup-version.outputs.version }}"
-          BINARY_NAME="waza-${{ matrix.os }}-${{ matrix.arch }}"
-          if [ "${{ matrix.os }}" = "windows" ]; then
-            BINARY_NAME="${BINARY_NAME}.exe"
-          fi
+          mkdir -p artifacts
+          platforms="linux/amd64 linux/arm64 darwin/amd64 darwin/arm64 windows/amd64 windows/arm64"
+          for platform in $platforms; do
+            OS="${platform%/*}"
+            ARCH="${platform#*/}"
+            BINARY_NAME="waza-${OS}-${ARCH}"
+            if [ "$OS" = "windows" ]; then
+              BINARY_NAME="${BINARY_NAME}.exe"
+            fi
 
-          go build \
-            -ldflags "-X main.version=${VERSION}" \
-            -o "${BINARY_NAME}" \
-            ./cmd/waza
-
-          echo "Built ${BINARY_NAME}"
-
-      - name: Upload Binary Artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: cli-waza-${{ matrix.os }}-${{ matrix.arch }}
-          path: waza-${{ matrix.os }}-${{ matrix.arch }}*
-          if-no-files-found: error
-
-  # ──────────────────────────────────────────────
-  # 1b. Create CLI GitHub Release
-  # ──────────────────────────────────────────────
-  release-cli:
-    name: Release CLI
-    needs: [setup-version, build-cli]
-    if: inputs.build_cli != false
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout Repository
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-
-      - name: Download CLI Artifacts
-        uses: actions/download-artifact@v4
-        with:
-          pattern: cli-*
-          path: artifacts
-          merge-multiple: true
+            echo "Building ${BINARY_NAME}..."
+            CGO_ENABLED=0 GOOS="$OS" GOARCH="$ARCH" go build \
+              -ldflags "-X main.version=${VERSION}" \
+              -o "artifacts/${BINARY_NAME}" \
+              ./cmd/waza
+          done
+          echo "Built all platform binaries"
 
       - name: Generate SHA256 Checksums
         working-directory: artifacts
