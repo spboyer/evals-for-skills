@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useRuns, useRunDetail } from "../hooks/useApi";
 import type { RunDetail, TaskResult } from "../api/client";
+import TaskTrajectoryCompare from "./TaskTrajectoryCompare";
 import {
   formatDuration,
   formatCost,
@@ -102,9 +103,13 @@ function RunSelector({
 function TaskComparisonTable({
   runA,
   runB,
+  selectedTask,
+  onSelectTask,
 }: {
   runA: RunDetail;
   runB: RunDetail;
+  selectedTask: string | null;
+  onSelectTask: (name: string | null) => void;
 }) {
   const taskMap = new Map<string, { a?: TaskResult; b?: TaskResult }>();
   for (const t of runA.tasks) {
@@ -155,7 +160,8 @@ function TaskComparisonTable({
           {tasks.map(([name, { a, b }]) => (
             <tr
               key={name}
-              className="border-b border-zinc-700/50 hover:bg-zinc-700/30"
+              onClick={() => onSelectTask(selectedTask === name ? null : name)}
+              className={`cursor-pointer border-b border-zinc-700/50 hover:bg-zinc-700/30 ${selectedTask === name ? "bg-zinc-700/40" : ""}`}
             >
               <td className="px-4 py-3 font-medium text-zinc-100">{name}</td>
               <td className="px-4 py-3">
@@ -240,6 +246,7 @@ export default function CompareView() {
   const { data: runs, isLoading: runsLoading } = useRuns();
   const [idA, setIdA] = useState("");
   const [idB, setIdB] = useState("");
+  const [selectedTask, setSelectedTask] = useState<string | null>(null);
 
   const detailA = useRunDetail(idA);
   const detailB = useRunDetail(idB);
@@ -397,9 +404,24 @@ export default function CompareView() {
           <div>
             <h3 className="mb-3 text-sm font-medium text-zinc-300">
               Per-Task Comparison
+              <span className="ml-2 text-xs font-normal text-zinc-500">
+                Click a row to view trajectory diff
+              </span>
             </h3>
-            <TaskComparisonTable runA={runA} runB={runB} />
+            <TaskComparisonTable runA={runA} runB={runB} selectedTask={selectedTask} onSelectTask={setSelectedTask} />
           </div>
+
+          {/* Trajectory diff panel */}
+          {selectedTask && (() => {
+            const tA = runA.tasks.find((t) => t.name === selectedTask);
+            const tB = runB.tasks.find((t) => t.name === selectedTask);
+            if (!tA || !tB) return null;
+            return (
+              <div className="rounded-lg border border-zinc-700 bg-zinc-800/60 p-4">
+                <TaskTrajectoryCompare taskName={selectedTask} taskA={tA} taskB={tB} />
+              </div>
+            );
+          })()}
         </div>
       )}
 
