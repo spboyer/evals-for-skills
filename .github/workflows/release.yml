@@ -337,9 +337,6 @@ jobs:
 
           echo "Created PR: $PR_URL"
 
-          gh pr merge "$PR_URL" --squash --admin --delete-branch
-          echo "Auto-merged registry PR"
-
   # ──────────────────────────────────────────────
   # 6. Sync version files to match the release
   # ──────────────────────────────────────────────
