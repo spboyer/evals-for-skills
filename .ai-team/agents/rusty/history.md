@@ -24,3 +24,15 @@
 - Basher owns all testing strategy
 - Livingston/Saul own documentation
 - Richard Park available for Copilot SDK questions
+
+## Work Log
+
+### 2025-07-25: #238 — True trajectory replay viewer (PR #243)
+- **Branch:** `squad/238-trajectory-viewer`
+- Full rewrite of `TrajectoryViewer.tsx` to consume real `TranscriptEvent` data
+- Created `SessionDigestCard.tsx` (digest stats + tools used badges + errors)
+- Created `ToolCallDetail.tsx` (expandable JSON viewers for args/result)
+- Timeline: color-coded dots (blue=tool start, green/red=complete, emerald=turn, red=error)
+- `toolCallId` correlation links Start ↔ Complete events
+- Graceful fallback to grader-based heuristic when transcript is empty
+- Depends on #237 (transcript + session digest in API)
