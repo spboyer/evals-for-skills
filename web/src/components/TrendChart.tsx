@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback } from "react";
+import { useState, useRef, useEffect } from "react";
 
 export interface DataPoint {
   label: string;
@@ -28,22 +28,18 @@ export default function TrendChart({
   } | null>(null);
   const [svgWidth, setSvgWidth] = useState(400);
 
-  const measuredRef = useCallback(
-    (node: SVGSVGElement | null) => {
-      if (node) {
-        (svgRef as React.MutableRefObject<SVGSVGElement>).current = node;
-        const observer = new ResizeObserver((entries) => {
-          for (const entry of entries) {
-            setSvgWidth(entry.contentRect.width);
-          }
-        });
-        observer.observe(node);
-        setSvgWidth(node.clientWidth);
-        return () => observer.disconnect();
+  useEffect(() => {
+    const node = svgRef.current;
+    if (!node) return;
+    setSvgWidth(node.clientWidth);
+    const observer = new ResizeObserver((entries) => {
+      for (const entry of entries) {
+        setSvgWidth(entry.contentRect.width);
       }
-    },
-    [],
-  );
+    });
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, []);
 
   if (data.length === 0) {
     return (
@@ -111,7 +107,7 @@ export default function TrendChart({
     <div className="rounded-lg border border-zinc-700 bg-zinc-800 p-4">
       <h3 className="mb-2 text-sm font-medium text-zinc-300">{title}</h3>
       <svg
-        ref={measuredRef}
+        ref={svgRef}
         width="100%"
         height={CHART_HEIGHT}
         className="overflow-visible"

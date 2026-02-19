@@ -1,10 +1,10 @@
 import type { RunSummary, RunDetail } from "../api/client";
 
 function escapeCSV(value: string): string {
-  // Neutralize spreadsheet formula injection
-  const FORMULA_CHARS = ["=", "+", "-", "@"];
+  // Neutralize spreadsheet formula injection (including leading whitespace bypass)
+  const FORMULA_RE = /^[\s]*[=+\-@]/;
   let safe = value;
-  if (safe.length > 0 && FORMULA_CHARS.includes(safe.charAt(0))) {
+  if (FORMULA_RE.test(safe)) {
     safe = "'" + safe;
   }
   if (safe.includes(",") || safe.includes('"') || safe.includes("\n")) {
