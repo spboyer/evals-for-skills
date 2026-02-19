@@ -134,7 +134,7 @@ func NewTokenizerForEncoding(encoding string, extraSpecialTokens map[string]int)
 	if err != nil {
 		return nil, fmt.Errorf("failed to open embedded model file %s: %w", fileName, err)
 	}
-	defer f.Close()
+	defer f.Close() //nolint:errcheck
 
 	return NewTokenizerFromReader(f, specialTokens, regexPattern, defaultCacheSize)
 }

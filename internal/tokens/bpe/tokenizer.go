@@ -51,7 +51,7 @@ func NewTokenizerFromFile(
 	if err != nil {
 		return nil, fmt.Errorf("failed to open BPE encoder file: %w", err)
 	}
-	defer f.Close()
+	defer f.Close() //nolint:errcheck
 	return NewTokenizerFromReader(f, specialTokensEncoder, regexPattern, cacheSize)
 }
 
