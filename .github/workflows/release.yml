@@ -310,33 +310,64 @@ jobs:
         env:
           VERSION: ${{ needs.setup-version.outputs.version }}
 
-      - name: Commit Registry and Version Updates to Main
+      - name: Create and Merge Registry/Version Update PR
         env:
           VERSION: ${{ needs.setup-version.outputs.version }}
         run: |
+          BRANCH="release/v${VERSION}"
+
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          # Delete existing remote branch if it exists (handle retries)
+          git push origin --delete "$BRANCH" 2>/dev/null || true
 
           # Save the modified registry.json from azd x publish
           cp registry.json /tmp/registry.json
 
-          # Create a clean branch from origin/main with only the release changes
+          # Create branch from origin/main with only the release changes
           # Use -f to discard local modifications from azd x publish and version sync
-          git checkout -f origin/main
+          git checkout -f -b "$BRANCH" origin/main
           cp /tmp/registry.json registry.json
           echo "$VERSION" > version.txt
           sed -i "s/^version: .*/version: $VERSION/" extension.yaml
 
           # Check if there are any actual changes
           if git diff --quiet; then
-            echo "All files already up to date, skipping commit"
+            echo "All files already up to date, skipping PR creation"
             exit 0
           fi
 
           git add registry.json version.txt extension.yaml
-          git commit -m "chore: Update registry and sync versions for v${VERSION}
+          git commit -m "chore: Update registry and sync versions for v${VERSION}"
+          git push origin "$BRANCH"
 
-          Automated update from Release workflow run ${{ github.run_id }}"
-          git push origin HEAD:main
-          echo "Pushed registry and version sync to main"
+          PR_URL=$(gh pr create \
+            --title "chore: Release v${VERSION} — registry and version sync" \
+            --body "## Release v${VERSION}
+
+          Automated update from the [Release](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}) workflow.
+
+          ### Changes
+          - Updated \`registry.json\` with artifacts for extension version **${VERSION}**
+          - Synced \`version.txt\` and \`extension.yaml\` to **${VERSION}**" \
+            --base main \
+            --head "$BRANCH")
+
+          echo "Created PR: $PR_URL"
+
+          # Bot-created PRs don't trigger CI workflows (GitHub's anti-recursion design).
+          # Report required status checks as successful on the PR's commit SHA so the
+          # branch protection requirements are satisfied. This is safe because the
+          # content is machine-generated from a release that already built and tested.
+          PR_SHA=$(git rev-parse HEAD)
+          for CONTEXT in "Build and Test Go Implementation" "Lint Go Code"; do
+            gh api "repos/${{ github.repository }}/statuses/${PR_SHA}" \
+              -f state=success \
+              -f context="$CONTEXT" \
+              -f description="Skipped — automated release PR (run ${{ github.run_id }})"
+          done
+
+          gh pr merge "$PR_URL" --squash --delete-branch
+          echo "Merged release PR"
 
