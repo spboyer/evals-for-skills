@@ -29,9 +29,8 @@ If the first argument looks like a skill name (no path separators or file
 extension), it is resolved via workspace detection to scope counting to that
 skill's directory.
 
-The default tokenizer uses a byte-pair encoding (BPE) algorithm similar to that
-used by OpenAI models. The "estimate" tokenizer provides a faster, more generic
-estimate based on character count.`,
+The default tokenizer uses a byte-pair encoding (BPE) algorithm. The "estimate"
+tokenizer provides a faster, less accurate estimate based on character count.`,
 		Args: cobra.ArbitraryArgs,
 		RunE: runCount,
 	}
