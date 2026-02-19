@@ -306,7 +306,7 @@ jobs:
           azd x publish \
             --repo ${{ github.repository }} \
             --version "$VERSION" \
-            --artifacts"./artifacts/*.zip,./artifacts/*.tar.gz" \
+            --artifacts "./artifacts/*.zip,./artifacts/*.tar.gz" \
             --registry ./registry.json
         env:
           VERSION: ${{ needs.setup-version.outputs.version }}
