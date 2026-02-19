@@ -81,13 +81,19 @@ test.describe("Runs Table", () => {
     // Wait for table to render
     await expect(page.getByText("code-explainer")).toBeVisible();
 
-    // Click the Spec header to trigger sorting
+    // Click the Spec header to trigger sort (asc)
     await page.getByRole("button", { name: /Spec/ }).click();
 
-    // After sorting, rows should be reordered — first row text should change
-    // The table is rendered, sorting state changed (visual confirmation)
+    // After ascending sort: code-explainer, doc-writer, skill-checker
+    // Note: first column is the outcome icon, spec is the second column
     const rows = page.locator("tbody tr");
     await expect(rows).toHaveCount(3);
+    await expect(rows.nth(0).locator("td:nth-child(2)")).toContainText("code-explainer");
+    await expect(rows.nth(2).locator("td:nth-child(2)")).toContainText("skill-checker");
+
+    // Click again to reverse (desc)
+    await page.getByRole("button", { name: /Spec/ }).click();
+    await expect(rows.nth(0).locator("td:nth-child(2)")).toContainText("skill-checker");
   });
 
   test("pass/fail badges display correctly", async ({ page }) => {
