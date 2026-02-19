@@ -395,7 +395,7 @@ export default function TrajectoryViewer({ task }: { task: TaskResult }) {
         <div className="rounded-lg border border-zinc-700 bg-zinc-800 p-4">
           {task.transcript!.map((event, i) => (
             <TimelineRow
-              key={`${event.type}-${event.toolCallId ?? i}`}
+              key={`${event.type}-${event.toolCallId ?? "noid"}-${i}`}
               event={event}
               correlated={correlated}
             />
