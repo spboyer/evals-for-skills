@@ -326,7 +326,8 @@ jobs:
           cp registry.json /tmp/registry.json
 
           # Create branch from origin/main with only the release changes
-          git checkout -b "$BRANCH" origin/main
+          # Use -f to discard local modifications from azd x publish and version sync
+          git checkout -f -b "$BRANCH" origin/main
           cp /tmp/registry.json registry.json
           echo "$VERSION" > version.txt
           sed -i "s/^version: .*/version: $VERSION/" extension.yaml
