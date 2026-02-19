@@ -369,6 +369,52 @@ directories (scanned recursively for `.md`/`.mdx`).
 | `--copilot` | Enable Copilot-powered suggestions |
 | `--model <id>` | Model to use with `--copilot` |
 
+### `waza serve`
+
+Start the waza dashboard server to visualize evaluation results. The HTTP server opens in your browser automatically and scans the specified directory for `.json` result files.
+
+Optionally, run a JSON-RPC 2.0 server (for IDE integration) instead of the HTTP dashboard using the `--tcp` flag.
+
+| Flag | Default | Description |
+|------|---------|-------------|
+| `--port <port>` | `3000` | HTTP server port |
+| `--no-browser` | `false` | Don't auto-open the browser |
+| `--results-dir <dir>` | `.` | Directory to scan for result files |
+| `--tcp <addr>` | (off) | TCP address for JSON-RPC (e.g., `:9000`); defaults to loopback for security |
+| `--tcp-allow-remote` | `false` | Allow TCP binding to non-loopback addresses (⚠️ no authentication) |
+
+**Examples:**
+
+Start the HTTP dashboard on port 3000:
+```bash
+waza serve
+```
+
+Start the HTTP dashboard on a custom port and scan a results directory:
+```bash
+waza serve --port 8080 --results-dir ./results
+```
+
+Start the dashboard without auto-opening the browser:
+```bash
+waza serve --no-browser
+```
+
+Start a JSON-RPC server for IDE integration:
+```bash
+waza serve --tcp :9000
+```
+
+**Dashboard Views:**
+
+The dashboard displays evaluation results with:
+- Task-level pass/fail status
+- Score distributions across trials
+- Model comparisons
+- Aggregated metrics and trends
+
+For detailed documentation on the dashboard and result visualization, see [docs/GUIDE.md](docs/GUIDE.md).
+
 ## Building
 
 ```bash

@@ -48,3 +48,12 @@
 - **Tab testing pattern:** Navigate to `/#/runs/run-001`, click `getByRole("button", { name: "Trajectory" })`, then click task buttons
 - **Compare flow:** Navigate to `/#/compare`, select runs via `page.locator("select").nth(0).selectOption("run-001")`, then click table rows
 - **Total E2E count:** 33 tests (15 new + 18 existing), all passing on Chromium
+
+### Screenshot Spec (Issue #251)
+- **Spec file:** `web/e2e/screenshots.spec.ts` — 4 tests, chromium-only, 1280×720 viewport
+- **Output dir:** `docs/images/` (with `.gitkeep`), screenshots: dashboard-overview.png, run-detail.png, compare.png, trends.png
+- **Path gotcha:** Playwright resolves screenshot paths from config root (`web/`), NOT from the test file (`web/e2e/`). Use `../docs/images/` not `../../docs/images/`
+- **Reuses existing mocks:** `mockAllAPIs` + existing mock-data.ts fixtures — no new mock data needed
+- **Trends view:** Uses `/api/runs?sort=timestamp&order=asc` which is already handled by the runs list regex mock
+- **Compare view setup:** Must select both runs via `selectOption` before screenshotting, otherwise you just get empty selectors
+- **Total E2E count:** 37 tests (4 screenshot + 33 existing), all passing on Chromium

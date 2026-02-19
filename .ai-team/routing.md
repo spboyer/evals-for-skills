@@ -59,3 +59,15 @@ When triaging, Rusty should ask:
 6. **Anticipate downstream work.** If a feature is being built, spawn Basher to write test cases simultaneously.
 7. **Issue-labeled work** — when a `squad:{member}` label is applied to an issue, route to that member. Rusty handles all `squad` (base label) triage.
 8. **@copilot routing** — when evaluating issues, check @copilot's capability profile in `team.md`. Route 🟢 good-fit tasks to `squad:copilot`. Flag 🟡 needs-review tasks for PR review. Keep 🔴 not-suitable tasks with squad members.
+9. **Doc-review gate** — When a PR touches `cmd/waza/`, `internal/`, or `web/src/`, Saul reviews whether documentation needs updating. Check: are new flags documented? Are screenshots still accurate? Do examples still work?
+10. **Doc-consistency gate** — When a PR touches `docs/`, `README.md`, `DEMO-SCRIPT.md`, or any markdown documentation file, Saul reviews for style consistency, cross-references, and accuracy.
+
+## Documentation Impact Matrix
+
+| Path Changed | Doc Files to Check | What to Verify |
+|---|---|---|
+| `cmd/waza/*.go` | README.md (Commands), docs/GUIDE.md | New flags documented, examples updated |
+| `internal/scoring/` | README.md (Validators), docs/GUIDE.md | Validator docs match implementation |
+| `web/src/` | docs/GUIDE.md (Dashboard), docs/DEMO-GUIDE.md | Screenshots current, view descriptions match |
+| `schemas/` | README.md (YAML Schema), docs/GUIDE.md | Schema examples match definitions |
+| `install.sh` | README.md (Install), docs/GUIDE.md (Install) | Install instructions current |

@@ -26,3 +26,10 @@
 - All PRs must update relevant docs
 - Livingston and Saul review doc changes
 - Style consistency checked before merge
+
+### Doc-Freshness Reviews (Added in #256)
+- **Doc-review gate** triggered by changes to `cmd/waza/`, `internal/`, or `web/src/`
+- **Doc-consistency gate** triggered by changes to `docs/`, `README.md`, `DEMO-SCRIPT.md`
+- Saul now owns ongoing doc-freshness verification across all code PRs
+- Documentation Impact Matrix maps code paths to required doc updates
+- Screenshot maintenance automated via Playwright E2E tests in `web/`

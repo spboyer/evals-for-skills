@@ -15,6 +15,7 @@
 - Style guide (markdown, examples, code blocks)
 - Documentation review and approval
 - Knowledge organization and searchability
+- Doc-freshness reviews — reviewing PRs that touch CLI code to verify documentation is current
 
 ## How I Work
 
@@ -22,6 +23,9 @@
 - Review all documentation changes for consistency
 - Think about how documentation connects (navigation, cross-references)
 - Keep a living style guide that evolves with the project
+- Monitor PRs changing CLI commands or flags for documentation impact
+- When reviewing, check: new flags documented? Screenshots still accurate? Examples still work?
+- Maintain the Documentation Impact Matrix in routing.md
 
 ## Boundaries
 

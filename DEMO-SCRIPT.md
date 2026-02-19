@@ -17,8 +17,7 @@ cd ~/demo && rm -rf waza-demo
 mkdir waza-demo && cd waza-demo
 
 # Install waza
-uv venv && source .venv/bin/activate
-uv pip install "https://github.com/spboyer/waza/releases/latest/download/waza-0.1.0-py3-none-any.whl"
+curl -fsSL https://raw.githubusercontent.com/spboyer/waza/main/install.sh | bash
 ```
 
 ---
@@ -498,7 +497,7 @@ waza run examples/code-explainer/eval.yaml \
 ### View Transcript
 
 ```bash
-cat transcript.json | python -m json.tool | head -30
+cat transcript.json | jq . | head -30
 ```
 
 **Expected:**
@@ -527,7 +526,7 @@ cat transcript.json | python -m json.tool | head -30
 waza run code-reviewer/eval.yaml --output results.json
 
 # View the JSON structure
-cat results.json | python -m json.tool | head -40
+cat results.json | jq . | head -40
 ```
 
 **Highlight:**
@@ -950,13 +949,13 @@ rm -rf waza-demo
 
 ### If `waza` command not found
 ```bash
-pip install -e /path/to/waza
+curl -fsSL https://raw.githubusercontent.com/spboyer/waza/main/install.sh | bash
 ```
 
 ### If tasks not loading
 ```bash
 # Check YAML syntax
-python -c "import yaml; yaml.safe_load(open('eval.yaml'))"
+jq . eval.yaml
 ```
 
 ### If results look wrong

@@ -4,14 +4,9 @@ This tutorial walks you through creating evaluations for your Agent Skills.
 
 ## Prerequisites
 
-- Python 3.11+
-- `waza` installed:
+- `waza` CLI installed:
   ```bash
-  # From GitHub releases (recommended)
-  pip install https://github.com/spboyer/waza/releases/latest/download/waza-0.1.0-py3-none-any.whl
-  
-  # Or from PyPI when available
-  pip install waza
+  curl -fsSL https://raw.githubusercontent.com/spboyer/waza/main/install.sh | bash
   ```
 - An existing skill to evaluate
 
@@ -101,10 +96,8 @@ waza init my-awesome-skill
 # my-awesome-skill/
 # ├── eval.yaml           # Main eval configuration
 # ├── trigger_tests.yaml  # Trigger accuracy tests
-# ├── tasks/
-# │   └── example-task.yaml
-# └── graders/
-#     └── custom_grader.py
+# └── tasks/
+#     └── example-task.yaml
 ```
 
 ### Option C: Init with SKILL.md Integration
@@ -232,9 +225,9 @@ should_not_trigger_prompts:
   name: output_check
   config:
     assertions:
-      - "len(output) > 0"
+      - "output_length > 0"
       - "'success' in output.lower()"
-      - "len(errors) == 0"
+      - "error_count == 0"
 ```
 
 ### Regex Grader (Pattern Matching)
@@ -459,7 +452,7 @@ Add to your GitHub Actions workflow:
 ```yaml
 - name: Run Skill Evals
   run: |
-    pip install waza
+    curl -fsSL https://raw.githubusercontent.com/spboyer/waza/main/install.sh | bash
     waza run ./my-skill/eval.yaml \
       --output results.json \
       --fail-threshold 0.8 \

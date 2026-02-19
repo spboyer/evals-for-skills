@@ -2,7 +2,7 @@
 
 **Comprehensive walk-through for demonstrating waza's capabilities.**
 
-This guide provides step-by-step instructions for 8 practical demonstrations covering all major waza features. Each demo is self-contained and can be run independently.
+This guide provides step-by-step instructions for 9 practical demonstrations covering all major waza features. Each demo is self-contained and can be run independently.
 
 ---
 
@@ -636,6 +636,105 @@ echo "  focused evaluators for granular pass/fail signals."
 3. **Complementary Dimensions:** "Tool call rubrics evaluate *how* the agent uses tools. Task rubrics evaluate *what* the agent delivers."
 4. **Granular or Composite:** "Use `tool_call_accuracy` for a single 1-5 score, or the three focused evaluators for pass/fail on each dimension."
 5. **Extensible:** "Write your own rubric YAMLs following the same schema—evaluation criteria, rating levels, chain-of-thought, output format."
+
+---
+
+## Demo 9: Web Dashboard — Visualizing Results (5 min)
+
+**What it shows:** The interactive web dashboard for exploring eval results, comparing runs, and tracking trends over time.
+
+### Setup
+
+- **Prerequisite:** Run an evaluation first to generate results
+- **Location:** `examples/code-explainer/`
+- **Server:** HTTP dashboard auto-opens in browser at `http://localhost:3000`
+- **Flags:** `--port` to customize port, `--results-dir` to specify results directory, `--no-browser` to skip auto-open
+
+### Commands
+
+```bash
+# Step 1: Run an evaluation to generate results
+echo "📊 Running evaluation to generate results..."
+./waza-bin run examples/code-explainer/eval.yaml \
+  --context-dir examples/code-explainer/fixtures \
+  -o results.json
+
+# Step 2: Start the dashboard
+echo ""
+echo "🚀 Starting waza dashboard..."
+./waza-bin serve
+
+# Dashboard auto-opens in browser at http://localhost:3000
+# Press Ctrl+C to stop the server
+
+# Alternative: Run on custom port
+echo ""
+echo "🔧 Start on custom port 8080:"
+./waza-bin serve --port 8080
+
+# Alternative: Load results from different directory
+echo ""
+echo "📂 Load results from specific directory:"
+./waza-bin serve --results-dir ./eval-results
+
+# Alternative: Start without auto-opening browser
+echo ""
+echo "🖥️  Start without auto-opening browser:"
+./waza-bin serve --no-browser
+```
+
+### Dashboard Overview
+
+**KPI Cards (Top Section)**
+- Total runs executed
+- Overall pass rate (percentage)
+- Average score across all runs
+
+**Run Table (Main Section)**
+- Sortable columns: Run ID, Date, Model, Overall Score, Pass Rate
+- Click a row to view detailed results
+- Filter by date range or status
+
+### Talking Points
+
+1. **Instant Visibility:** "The dashboard gives you instant visibility into skill quality across all eval runs."
+2. **Side-by-Side Comparison:** "Compare models side-by-side to pick the best one for your skill."
+3. **Trend Tracking:** "Track quality trends over time as you iterate on your skill."
+4. **Task Breakdown:** "Drill into individual tasks to see which ones consistently fail."
+
+### Expected Output
+
+- Web server starts on port 3000
+- Browser opens automatically to dashboard
+- Shows KPI cards with summary metrics
+- Run table with sortable columns
+- Navigation menu for different views
+
+### Variations
+
+**View Task-Level Results**
+```
+Run detail view shows:
+  - Individual task results (pass/fail indicators)
+  - Score for each task
+  - Grader-specific feedback
+```
+
+**Compare Multiple Runs**
+```
+Compare view shows:
+  - Side-by-side model performance
+  - Per-task differences
+  - Score deltas and winner indicators
+```
+
+**Historical Trends**
+```
+Trends view shows:
+  - Pass rate over time (line chart)
+  - Score progression (area chart)
+  - Model comparison trends
+```
 
 ---
 

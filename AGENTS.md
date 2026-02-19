@@ -145,6 +145,28 @@ When completing a feature:
 - [ ] Update tracking issue #66 checkbox
 - [ ] Update docs as needed
 
+## Documentation Maintenance
+
+Documentation must be updated in real-time as features change. This is enforced by Saul (Documentation Lead) who reviews all PRs for doc impact.
+
+### When to Update Docs
+
+| Change Type | Required Doc Updates |
+|---|---|
+| New CLI command or flag | README.md Commands section, docs/GUIDE.md |
+| Changed CLI behavior | README.md, docs/GUIDE.md, affected tutorials |
+| New/changed dashboard view | docs/GUIDE.md Dashboard section, regenerate screenshots, docs/DEMO-GUIDE.md |
+| Changed eval YAML schema | README.md YAML section, docs/GUIDE.md, example files |
+| New validator/grader | README.md Validators section, docs/GUIDE.md |
+
+### Screenshot Maintenance
+
+When dashboard UI changes, regenerate screenshots:
+```bash
+cd web && npx playwright test e2e/screenshots.spec.ts --project=chromium
+```
+Screenshots are saved to `docs/images/` and referenced throughout documentation.
+
 ## Adding New Features
 
 ### Adding a CLI Command
