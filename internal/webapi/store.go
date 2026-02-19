@@ -156,7 +156,7 @@ func outcomeToDetail(o *models.EvaluationOutcome) *RunDetail {
 			tr.Duration = float64(to.Stats.AvgDurationMs) / 1000.0
 		}
 
-		// Collect grader results from the first run.
+		// Collect grader results, transcript, and session digest from the first run.
 		if len(to.Runs) > 0 {
 			run := to.Runs[0]
 			if tr.Duration == 0 {
@@ -171,6 +171,8 @@ func outcomeToDetail(o *models.EvaluationOutcome) *RunDetail {
 					Message: v.Feedback,
 				})
 			}
+			tr.Transcript = mapTranscriptEvents(run.Transcript)
+			tr.SessionDigest = mapSessionDigest(&run.SessionDigest)
 		}
 		if tr.GraderResults == nil {
 			tr.GraderResults = []GraderResult{}
@@ -261,6 +263,52 @@ func (fs *FileStore) Summary() (*SummaryResponse, error) {
 	}
 
 	return resp, nil
+}
+
+func mapTranscriptEvents(events []models.TranscriptEvent) []TranscriptEventResponse {
+	if len(events) == 0 {
+		return nil
+	}
+	resp := make([]TranscriptEventResponse, 0, len(events))
+	for _, e := range events {
+		r := TranscriptEventResponse{
+			Type:      string(e.Type),
+			Arguments: e.Data.Arguments,
+			Success:   e.Data.Success,
+		}
+		if e.Data.Content != nil {
+			r.Content = *e.Data.Content
+		}
+		if e.Data.Message != nil {
+			r.Message = *e.Data.Message
+		}
+		if e.Data.ToolCallID != nil {
+			r.ToolCallID = *e.Data.ToolCallID
+		}
+		if e.Data.ToolName != nil {
+			r.ToolName = *e.Data.ToolName
+		}
+		if e.Data.Result != nil {
+			r.ToolResult = e.Data.Result
+		}
+		resp = append(resp, r)
+	}
+	return resp
+}
+
+func mapSessionDigest(d *models.SessionDigest) *SessionDigestResponse {
+	if d == nil {
+		return nil
+	}
+	return &SessionDigestResponse{
+		TotalTurns:    d.TotalTurns,
+		ToolCallCount: d.ToolCallCount,
+		TokensIn:      d.TokensIn,
+		TokensOut:     d.TokensOut,
+		TokensTotal:   d.TokensTotal,
+		ToolsUsed:     d.ToolsUsed,
+		Errors:        d.Errors,
+	}
 }
 
 func sortRuns(runs []RunSummary, field, order string) {

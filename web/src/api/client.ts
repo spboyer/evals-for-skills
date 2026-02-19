@@ -28,12 +28,35 @@ export interface GraderResult {
   message: string;
 }
 
+export interface TranscriptEvent {
+  type: string;
+  content?: string;
+  message?: string;
+  toolCallId?: string;
+  toolName?: string;
+  arguments?: unknown;
+  toolResult?: unknown;
+  success?: boolean;
+}
+
+export interface SessionDigest {
+  totalTurns: number;
+  toolCallCount: number;
+  tokensIn: number;
+  tokensOut: number;
+  tokensTotal: number;
+  toolsUsed: string[];
+  errors: string[];
+}
+
 export interface TaskResult {
   name: string;
   outcome: string;
   score: number;
   duration: number;
   graderResults: GraderResult[];
+  transcript?: TranscriptEvent[];
+  sessionDigest?: SessionDigest;
 }
 
 export interface RunDetail extends RunSummary {

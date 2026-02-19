@@ -24,11 +24,36 @@ type RunDetail struct {
 
 // TaskResult is a per-task result within a run.
 type TaskResult struct {
-	Name          string         `json:"name"`
-	Outcome       string         `json:"outcome"`
-	Score         float64        `json:"score"`
-	Duration      float64        `json:"duration"`
-	GraderResults []GraderResult `json:"graderResults"`
+	Name          string                   `json:"name"`
+	Outcome       string                   `json:"outcome"`
+	Score         float64                  `json:"score"`
+	Duration      float64                  `json:"duration"`
+	GraderResults []GraderResult           `json:"graderResults"`
+	Transcript    []TranscriptEventResponse `json:"transcript,omitempty"`
+	SessionDigest *SessionDigestResponse    `json:"sessionDigest,omitempty"`
+}
+
+// TranscriptEventResponse is the API representation of a transcript event.
+type TranscriptEventResponse struct {
+	Type       string `json:"type"`
+	Content    string `json:"content,omitempty"`
+	Message    string `json:"message,omitempty"`
+	ToolCallID string `json:"toolCallId,omitempty"`
+	ToolName   string `json:"toolName,omitempty"`
+	Arguments  any    `json:"arguments,omitempty"`
+	ToolResult any    `json:"toolResult,omitempty"`
+	Success    *bool  `json:"success,omitempty"`
+}
+
+// SessionDigestResponse is the API representation of a session digest.
+type SessionDigestResponse struct {
+	TotalTurns    int      `json:"totalTurns"`
+	ToolCallCount int      `json:"toolCallCount"`
+	TokensIn      int      `json:"tokensIn"`
+	TokensOut     int      `json:"tokensOut"`
+	TokensTotal   int      `json:"tokensTotal"`
+	ToolsUsed     []string `json:"toolsUsed"`
+	Errors        []string `json:"errors"`
 }
 
 // GraderResult is a single grader/validator result.

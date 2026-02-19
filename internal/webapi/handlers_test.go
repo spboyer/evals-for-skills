@@ -500,3 +500,95 @@ func TestHandleRunDetailStoreError(t *testing.T) {
 		t.Errorf("expected error code 500, got %d", errResp.Code)
 	}
 }
+
+func TestHandleRunDetailWithTranscriptAndDigest(t *testing.T) {
+	store := newMockStore()
+	ts := time.Date(2026, 2, 18, 15, 30, 0, 0, time.UTC)
+
+	success := true
+	detail := sampleRun("t1", "code-explainer", "claude-4.6", 1, 1, 5000, ts)
+	detail.Tasks[0].Transcript = []TranscriptEventResponse{
+		{
+			Type:    "assistant.message",
+			Content: "Here is the explanation",
+		},
+		{
+			Type:       "tool.execution.start",
+			ToolCallID: "call_123",
+			ToolName:   "bash",
+			Arguments:  map[string]any{"command": "echo hello"},
+		},
+		{
+			Type:       "tool.execution.complete",
+			ToolCallID: "call_123",
+			ToolName:   "bash",
+			ToolResult: map[string]any{"output": "hello"},
+			Success:    &success,
+		},
+	}
+	detail.Tasks[0].SessionDigest = &SessionDigestResponse{
+		TotalTurns:    3,
+		ToolCallCount: 1,
+		TokensIn:      2000,
+		TokensOut:     3000,
+		TokensTotal:   5000,
+		ToolsUsed:     []string{"bash"},
+		Errors:        []string{},
+	}
+	store.addRun(detail)
+
+	mux := http.NewServeMux()
+	RegisterRoutes(mux, store)
+
+	req := httptest.NewRequest(http.MethodGet, "/api/runs/t1", nil)
+	rec := httptest.NewRecorder()
+	mux.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d", rec.Code)
+	}
+
+	var result RunDetail
+	if err := json.NewDecoder(rec.Body).Decode(&result); err != nil {
+		t.Fatal(err)
+	}
+	if len(result.Tasks) != 1 {
+		t.Fatalf("expected 1 task, got %d", len(result.Tasks))
+	}
+
+	task := result.Tasks[0]
+
+	// Verify transcript
+	if len(task.Transcript) != 3 {
+		t.Fatalf("expected 3 transcript events, got %d", len(task.Transcript))
+	}
+	if task.Transcript[0].Type != "assistant.message" {
+		t.Errorf("expected first event type assistant.message, got %q", task.Transcript[0].Type)
+	}
+	if task.Transcript[0].Content != "Here is the explanation" {
+		t.Errorf("expected content 'Here is the explanation', got %q", task.Transcript[0].Content)
+	}
+	if task.Transcript[1].ToolName != "bash" {
+		t.Errorf("expected tool name bash, got %q", task.Transcript[1].ToolName)
+	}
+	if task.Transcript[2].Success == nil || !*task.Transcript[2].Success {
+		t.Error("expected tool execution success to be true")
+	}
+
+	// Verify session digest
+	if task.SessionDigest == nil {
+		t.Fatal("expected session digest to be present")
+	}
+	if task.SessionDigest.TotalTurns != 3 {
+		t.Errorf("expected 3 total turns, got %d", task.SessionDigest.TotalTurns)
+	}
+	if task.SessionDigest.ToolCallCount != 1 {
+		t.Errorf("expected 1 tool call, got %d", task.SessionDigest.ToolCallCount)
+	}
+	if task.SessionDigest.TokensTotal != 5000 {
+		t.Errorf("expected 5000 total tokens, got %d", task.SessionDigest.TokensTotal)
+	}
+	if len(task.SessionDigest.ToolsUsed) != 1 || task.SessionDigest.ToolsUsed[0] != "bash" {
+		t.Errorf("expected tools used [bash], got %v", task.SessionDigest.ToolsUsed)
+	}
+}
