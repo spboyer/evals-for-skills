@@ -300,14 +300,22 @@ func mapSessionDigest(d *models.SessionDigest) *SessionDigestResponse {
 	if d == nil {
 		return nil
 	}
+	toolsUsed := d.ToolsUsed
+	if toolsUsed == nil {
+		toolsUsed = []string{}
+	}
+	errs := d.Errors
+	if errs == nil {
+		errs = []string{}
+	}
 	return &SessionDigestResponse{
 		TotalTurns:    d.TotalTurns,
 		ToolCallCount: d.ToolCallCount,
 		TokensIn:      d.TokensIn,
 		TokensOut:     d.TokensOut,
 		TokensTotal:   d.TokensTotal,
-		ToolsUsed:     d.ToolsUsed,
-		Errors:        d.Errors,
+		ToolsUsed:     toolsUsed,
+		Errors:        errs,
 	}
 }
 
