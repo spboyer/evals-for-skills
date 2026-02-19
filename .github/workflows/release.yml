@@ -282,6 +282,12 @@ jobs:
       - name: Install azd Extensions Developer Kit
         run: azd extension install microsoft.azd.extensions --source azd
 
+      - name: Sync Version Files
+        run: |
+          VERSION="${{ needs.setup-version.outputs.version }}"
+          echo "$VERSION" > version.txt
+          sed -i "s/^version: .*/version: $VERSION/" extension.yaml
+
       - name: Release Extension
         run: |
           azd x release \
