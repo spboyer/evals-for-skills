@@ -292,7 +292,7 @@ jobs:
       - name: Release Extension
         run: |
           azd x release \
-            --repo wbreza/waza \
+            --repo ${{ github.repository }} \
             --version "$VERSION" \
             --title "Waza azd Extension v${VERSION}" \
             --notes-file "./CHANGELOG.md" \
@@ -304,9 +304,9 @@ jobs:
       - name: Publish Extension
         run: |
           azd x publish \
-            --repo wbreza/waza \
+            --repo ${{ github.repository }} \
             --version "$VERSION" \
-            --artifacts "./artifacts/*.zip,./artifacts/*.tar.gz" \
+            --artifacts"./artifacts/*.zip,./artifacts/*.tar.gz" \
             --registry ./registry.json
         env:
           VERSION: ${{ needs.setup-version.outputs.version }}
