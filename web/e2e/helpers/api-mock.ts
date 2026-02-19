@@ -1,5 +1,5 @@
 import type { Page } from "@playwright/test";
-import { SUMMARY, RUNS, RUN_DETAIL, HEALTH } from "../fixtures/mock-data";
+import { SUMMARY, RUNS, RUN_DETAIL, RUN_DETAIL_B, HEALTH } from "../fixtures/mock-data";
 
 /**
  * Intercept all /api/* routes and return deterministic mock data.
@@ -21,6 +21,9 @@ export async function mockAllAPIs(page: Page) {
     const id = url.pathname.split("/").pop()!;
     if (id === "run-001") {
       return route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(RUN_DETAIL) });
+    }
+    if (id === "run-002") {
+      return route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(RUN_DETAIL_B) });
     }
     return route.fulfill({
       status: 404,

@@ -77,6 +77,23 @@ export const RUN_DETAIL = {
           message: 'Matched pattern "recursion|recursive"',
         },
       ],
+      transcript: [
+        { type: "Turn", content: "I'll analyze the code now." },
+        { type: "ToolExecutionStart", toolCallId: "tc-1", toolName: "read_file", arguments: { path: "fibonacci.py" } },
+        { type: "ToolExecutionComplete", toolCallId: "tc-1", toolResult: "def fib(n): ...", success: true },
+        { type: "ToolExecutionStart", toolCallId: "tc-2", toolName: "write_file", arguments: { path: "explanation.md", content: "# Fibonacci" } },
+        { type: "ToolExecutionComplete", toolCallId: "tc-2", toolResult: "File written", success: true },
+        { type: "Error", message: "Rate limit exceeded" },
+      ],
+      sessionDigest: {
+        totalTurns: 3,
+        toolCallCount: 2,
+        tokensIn: 4500,
+        tokensOut: 2100,
+        tokensTotal: 6600,
+        toolsUsed: ["read_file", "write_file"],
+        errors: ["Rate limit exceeded"],
+      },
     },
     {
       name: "explain-quicksort",
@@ -127,6 +144,60 @@ export const RUN_DETAIL = {
           passed: true,
           score: 1.0,
           message: "Output file found",
+        },
+      ],
+    },
+  ],
+};
+
+export const RUN_DETAIL_B = {
+  ...RUNS[1],
+  tasks: [
+    {
+      name: "explain-fibonacci",
+      outcome: "pass",
+      score: 1.0,
+      duration: 15,
+      graderResults: [
+        {
+          name: "output-exists",
+          type: "code",
+          passed: true,
+          score: 1.0,
+          message: "Output file found",
+        },
+      ],
+      transcript: [
+        { type: "Turn", content: "Let me examine the fibonacci implementation." },
+        { type: "ToolExecutionStart", toolCallId: "tc-b1", toolName: "read_file", arguments: { path: "fibonacci.py" } },
+        { type: "ToolExecutionComplete", toolCallId: "tc-b1", toolResult: "def fib(n): return n if n < 2 else fib(n-1) + fib(n-2)", success: true },
+        { type: "ToolExecutionStart", toolCallId: "tc-b2", toolName: "run_tests", arguments: { suite: "fib_tests" } },
+        { type: "ToolExecutionComplete", toolCallId: "tc-b2", toolResult: "All tests passed", success: true },
+        { type: "ToolExecutionStart", toolCallId: "tc-b3", toolName: "write_file", arguments: { path: "explanation.md", content: "# Fibonacci Analysis" } },
+        { type: "ToolExecutionComplete", toolCallId: "tc-b3", toolResult: "File written", success: true },
+      ],
+      sessionDigest: {
+        totalTurns: 4,
+        toolCallCount: 3,
+        tokensIn: 5200,
+        tokensOut: 2800,
+        tokensTotal: 8000,
+        toolsUsed: ["read_file", "run_tests", "write_file"],
+        errors: [],
+      },
+    },
+    {
+      name: "explain-quicksort",
+      outcome: "fail",
+      score: 0.0,
+      duration: 20,
+      graderResults: [
+        {
+          name: "output-exists",
+          type: "code",
+          passed: false,
+          score: 0.0,
+          message: "Output file not found",
         },
       ],
     },
