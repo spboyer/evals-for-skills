@@ -1,4 +1,4 @@
-package tokenizer
+package bpe
 
 const (
 	bytesPerLevel = 6
@@ -14,10 +14,7 @@ func byteAt(k []byte, index int) uint64 {
 
 // BinaryMapKey computes the same 48-bit key shape used by the TypeScript BinaryMap.
 func BinaryMapKey(k []byte, start, end int) uint64 {
-	length := end - start
-	if length < 0 {
-		length = 0
-	}
+	length := max(end-start, 0)
 
 	lowerShift := 0
 	if v := (3 - length) * 8; v > 0 {
@@ -26,13 +23,7 @@ func BinaryMapKey(k []byte, start, end int) uint64 {
 	lowerMask := uint64(0xFFFFFF >> lowerShift)
 	lower := (byteAt(k, start+0) | (byteAt(k, start+1) << 8) | (byteAt(k, start+2) << 16)) & lowerMask
 
-	upperShift := (6 - length) * 8
-	if upperShift < 0 {
-		upperShift = 0
-	}
-	if upperShift > 31 {
-		upperShift = 31
-	}
+	upperShift := min(max((6-length)*8, 0), 31)
 	upperMask := uint64(0xFFFFFF >> upperShift)
 	upper := (byteAt(k, start+3) | (byteAt(k, start+4) << 8) | (byteAt(k, start+5) << 16)) & upperMask
 

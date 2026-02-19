@@ -1,7 +1,6 @@
-package tokenizer
+package bpe
 
 import (
-	"reflect"
 	"strings"
 	"testing"
 
@@ -13,14 +12,7 @@ var (
 	imEnd   = "<|im_end|>"
 )
 
-func requireEqualTokenIDs(t *testing.T, got, want []int) {
-	t.Helper()
-	if !reflect.DeepEqual(got, want) {
-		t.Fatalf("token mismatch\nwant: %v\ngot:  %v", want, got)
-	}
-}
-
-func TestTikTokenizerCore(t *testing.T) {
+func TestTokenizerCore(t *testing.T) {
 	specialTokens := map[string]int{
 		imStart: 100264,
 		imEnd:   100265,
@@ -28,41 +20,40 @@ func TestTikTokenizerCore(t *testing.T) {
 	tokenizer, err := NewTokenizerForModel("gpt-5", specialTokens)
 	require.NoError(t, err)
 
+	t.Run("hello world", func(t *testing.T) {
+		str := "hello world"
+		encoded := tokenizer.Encode(str, nil)
+		require.Equal(t, []int{24912, 2375}, encoded)
+		require.Equal(t, str, tokenizer.Decode(encoded))
+	})
+
 	t.Run("single punctuation", func(t *testing.T) {
 		str := "!"
 		encoded := tokenizer.Encode(str, nil)
-		requireEqualTokenIDs(t, encoded, []int{0})
-		if decoded := tokenizer.Decode(encoded); decoded != str {
-			t.Fatalf("expected %q got %q", str, decoded)
-		}
+		require.Equal(t, []int{0}, encoded)
+		require.Equal(t, str, tokenizer.Decode(encoded))
 	})
 
 	t.Run("empty string", func(t *testing.T) {
 		str := ""
 		encoded := tokenizer.Encode(str, nil)
-		requireEqualTokenIDs(t, encoded, []int{})
-		if decoded := tokenizer.Decode(encoded); decoded != str {
-			t.Fatalf("expected %q got %q", str, decoded)
-		}
+		require.Empty(t, encoded)
+		require.Equal(t, str, tokenizer.Decode(encoded))
 	})
 
 	t.Run("encode trim suffix 3", func(t *testing.T) {
 		str := strings.Repeat("t", 4000)
 		encoded := tokenizer.Encode(str, nil)
 		trimmed := tokenizer.EncodeTrimSuffix(str, 5, []string{})
-		if len(trimmed.TokenIDs) != 5 {
-			t.Fatalf("expected 5 token ids, got %d", len(trimmed.TokenIDs))
-		}
-		requireEqualTokenIDs(t, trimmed.TokenIDs, encoded[:5])
+		require.Len(t, trimmed.TokenIDs, 5)
+		require.Equal(t, encoded[:5], trimmed.TokenIDs)
 	})
 
 	t.Run("encode trim prefix 3", func(t *testing.T) {
 		str := strings.Repeat("t", 4000)
 		encoded := tokenizer.Encode(str, nil)
 		trimmed := tokenizer.EncodeTrimPrefix(str, 5, []string{})
-		if len(trimmed.TokenIDs) != 5 {
-			t.Fatalf("expected 5 token ids, got %d", len(trimmed.TokenIDs))
-		}
-		requireEqualTokenIDs(t, trimmed.TokenIDs, encoded[len(encoded)-5:])
+		require.Len(t, trimmed.TokenIDs, 5)
+		require.Equal(t, encoded[len(encoded)-5:], trimmed.TokenIDs)
 	})
 }

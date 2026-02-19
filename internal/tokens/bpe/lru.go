@@ -1,4 +1,4 @@
-package tokenizer
+package bpe
 
 type lruNode struct {
 	key   string

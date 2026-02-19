@@ -1,6 +1,5 @@
-package tokenizer
+package bpe
 
-// BytePairEncode implements the same byte-pair merge loop as tokenizer_ts/src/bytePairEncode.ts.
 func BytePairEncode(mergingBytes []byte, ranks *BinaryMap[int], length int) []int {
 	if length <= 0 {
 		return nil
