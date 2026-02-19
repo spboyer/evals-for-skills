@@ -1,6 +1,10 @@
 # Unified release workflow for Waza CLI + azd extension
 # Supersedes go-release.yml and azd-ext-release.yml
 #
+# Two independent flows:
+#   Flow 1: Standalone CLI — build matrix → GitHub Release
+#   Flow 2: azd Extension — sync versions → build → pack → release → publish → commit back
+#
 # Triggers:
 #   - Tag push matching v*.*.*
 #   - Manual workflow_dispatch with version and build toggles
@@ -25,15 +29,10 @@ on:
         type: boolean
         default: true
       build_extension:
-        description: 'Build azd extension binaries'
+        description: 'Build and publish azd extension'
         required: false
         type: boolean
         default: true
-      publish_extension:
-        description: 'Publish extension to azd registry'
-        required: false
-        type: boolean
-        default: false
 
 permissions:
   contents: write
@@ -42,7 +41,7 @@ permissions:
 
 jobs:
   # ──────────────────────────────────────────────
-  # 1. Extract and validate the release version
+  # Shared: Extract and validate the release version
   # ──────────────────────────────────────────────
   setup-version:
     name: Setup Version
@@ -71,8 +70,12 @@ jobs:
           echo "tag=$TAG" >> "$GITHUB_OUTPUT"
           echo "Releasing version: $VERSION (tag: $TAG)"
 
+  # ════════════════════════════════════════════════
+  # FLOW 1: Standalone CLI Release
+  # ════════════════════════════════════════════════
+
   # ──────────────────────────────────────────────
-  # 2. Build standalone CLI binaries (matrix)
+  # 1a. Build standalone CLI binaries (matrix)
   # ──────────────────────────────────────────────
   build-cli:
     name: CLI ${{ matrix.os }}/${{ matrix.arch }}
@@ -142,71 +145,10 @@ jobs:
           if-no-files-found: error
 
   # ──────────────────────────────────────────────
-  # 3. Build azd extension binaries
+  # 1b. Create CLI GitHub Release
   # ──────────────────────────────────────────────
-  build-extension:
-    name: Extension Build
-    needs: setup-version
-    if: inputs.build_extension != false
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout Repository
-        uses: actions/checkout@v4
-
-      - name: Setup Go Environment
-        uses: actions/setup-go@v5
-        with:
-          go-version: '1.25'
-          cache-dependency-path: go.sum
-
-      - name: Setup Node.js (for web UI build)
-        if: hashFiles('web/package.json') != ''
-        uses: actions/setup-node@v4
-        with:
-          node-version: '22'
-
-      - name: Build Web UI
-        if: hashFiles('web/package.json') != ''
-        working-directory: web
-        run: npm ci && npm run build
-
-      - name: Install Azure Developer CLI
-        uses: Azure/setup-azd@v2
-
-      - name: Enable azd Extensions
-        run: azd config set alpha.extensions on
-
-      - name: Install azd Extensions Developer Kit
-        run: azd extension install microsoft.azd.extensions --source azd
-
-      - name: Sync Version Files
-        run: |
-          VERSION="${{ needs.setup-version.outputs.version }}"
-          echo "$VERSION" > version.txt
-          sed -i "s/^version: .*/version: $VERSION/" extension.yaml
-
-      - name: Build Extension
-        run: azd x build --all --skip-install
-        env:
-          VERSION: ${{ needs.setup-version.outputs.version }}
-
-      - name: Pack Extension
-        run: azd x pack -o ./artifacts
-        env:
-          VERSION: ${{ needs.setup-version.outputs.version }}
-
-      - name: Upload Extension Artifacts
-        uses: actions/upload-artifact@v4
-        with:
-          name: ext-artifacts
-          path: ./artifacts/*
-          if-no-files-found: error
-
-  # ──────────────────────────────────────────────
-  # 4. Create CLI GitHub Release
-  # ──────────────────────────────────────────────
-  create-cli-release:
-    name: Create CLI Release
+  release-cli:
+    name: Release CLI
     needs: [setup-version, build-cli]
     if: inputs.build_cli != false
     runs-on: ubuntu-latest
@@ -250,29 +192,41 @@ jobs:
             --generate-notes \
             artifacts/*
 
-  # ──────────────────────────────────────────────
-  # 5. Release & publish extension to azd registry
-  # ──────────────────────────────────────────────
-  publish-extension:
-    name: Publish Extension
-    needs: [setup-version, build-extension]
-    if: |
-      needs.build-extension.result == 'success' &&
-      (inputs.publish_extension == true || github.event_name == 'push')
+  # ════════════════════════════════════════════════
+  # FLOW 2: azd Extension Release
+  # Single job: sync versions → build → pack → release → publish → commit back
+  # ════════════════════════════════════════════════
+
+  release-extension:
+    name: Release Extension
+    needs: setup-version
+    if: inputs.build_extension != false
     runs-on: ubuntu-latest
     env:
       GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      VERSION: ${{ needs.setup-version.outputs.version }}
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
-      - name: Download Extension Artifacts
-        uses: actions/download-artifact@v4
+      - name: Setup Go Environment
+        uses: actions/setup-go@v5
         with:
-          name: ext-artifacts
-          path: artifacts
+          go-version: '1.25'
+          cache-dependency-path: go.sum
+
+      - name: Setup Node.js (for web UI build)
+        if: hashFiles('web/package.json') != ''
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Build Web UI
+        if: hashFiles('web/package.json') != ''
+        working-directory: web
+        run: npm ci && npm run build
 
       - name: Install Azure Developer CLI
         uses: Azure/setup-azd@v2
@@ -283,12 +237,21 @@ jobs:
       - name: Install azd Extensions Developer Kit
         run: azd extension install microsoft.azd.extensions --source azd
 
+      # ── Sync version files FIRST so all azd commands see the correct version ──
       - name: Sync Version Files
         run: |
-          VERSION="${{ needs.setup-version.outputs.version }}"
           echo "$VERSION" > version.txt
           sed -i "s/^version: .*/version: $VERSION/" extension.yaml
+          echo "Synced version.txt and extension.yaml to $VERSION"
 
+      # ── Build & pack ──
+      - name: Build Extension
+        run: azd x build --all --skip-install
+
+      - name: Pack Extension
+        run: azd x pack -o ./artifacts
+
+      # ── Release & publish (operate on the same workspace with synced files) ──
       - name: Release Extension
         run: |
           azd x release \
@@ -298,8 +261,6 @@ jobs:
             --notes-file "./CHANGELOG.md" \
             --artifacts "./artifacts/*.zip,./artifacts/*.tar.gz" \
             --confirm
-        env:
-          VERSION: ${{ needs.setup-version.outputs.version }}
 
       - name: Publish Extension
         run: |
@@ -308,12 +269,9 @@ jobs:
             --version "$VERSION" \
             --artifacts "./artifacts/*.zip,./artifacts/*.tar.gz" \
             --registry ./registry.json
-        env:
-          VERSION: ${{ needs.setup-version.outputs.version }}
 
-      - name: Create and Merge Registry/Version Update PR
-        env:
-          VERSION: ${{ needs.setup-version.outputs.version }}
+      # ── Commit version + registry changes back via PR ──
+      - name: Create and Merge Release PR
         run: |
           BRANCH="release/v${VERSION}"
 
@@ -323,15 +281,16 @@ jobs:
           # Delete existing remote branch if it exists (handle retries)
           git push origin --delete "$BRANCH" 2>/dev/null || true
 
-          # Save the modified registry.json from azd x publish
+          # Save modified files from this workspace
           cp registry.json /tmp/registry.json
+          cp version.txt /tmp/version.txt
+          cp extension.yaml /tmp/extension.yaml
 
           # Create branch from origin/main with only the release changes
-          # Use -f to discard local modifications from azd x publish and version sync
           git checkout -f -b "$BRANCH" origin/main
           cp /tmp/registry.json registry.json
-          echo "$VERSION" > version.txt
-          sed -i "s/^version: .*/version: $VERSION/" extension.yaml
+          cp /tmp/version.txt version.txt
+          cp /tmp/extension.yaml extension.yaml
 
           # Check if there are any actual changes
           if git diff --quiet; then
@@ -359,8 +318,7 @@ jobs:
 
           # Bot-created PRs don't trigger CI workflows (GitHub's anti-recursion design).
           # Report required status checks as successful on the PR's commit SHA so the
-          # branch protection requirements are satisfied. This is safe because the
-          # content is machine-generated from a release that already built and tested.
+          # branch protection requirements are satisfied.
           PR_SHA=$(git rev-parse HEAD)
           for CONTEXT in "Build and Test Go Implementation" "Lint Go Code"; do
             gh api "repos/${{ github.repository }}/statuses/${PR_SHA}" \

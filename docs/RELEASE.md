@@ -11,7 +11,7 @@ git tag v1.2.3
 git push origin v1.2.3
 ```
 
-This triggers the full pipeline: version sync → CLI build → extension build → GitHub Release → extension publish → registry + version PR (auto-merged).
+This triggers both flows in parallel: CLI build + release, and extension build + publish.
 
 ### Manual Dispatch
 
@@ -20,19 +20,29 @@ Go to **Actions → Release → Run workflow** and fill in:
 | Input | Description | Default |
 |-------|-------------|---------|
 | `version` | Semver without `v` prefix (e.g. `1.2.3`) | *required* |
-| `build_cli` | Build standalone CLI binaries | `true` |
-| `build_extension` | Build azd extension binaries | `true` |
-| `publish_extension` | Publish extension to azd registry | `false` |
+| `build_cli` | Build and release standalone CLI binaries | `true` |
+| `build_extension` | Build, release, and publish azd extension | `true` |
 
 Manual dispatch creates the git tag automatically if it doesn't exist.
 
-## What the Workflow Does
+## Two Independent Flows
 
-1. **setup-version** — Extracts version from the tag (strips `v`) or manual input. Validates semver format.
-2. **build-cli** — Matrix build for 6 platforms (linux, darwin, windows × amd64, arm64). Builds the web UI then produces `waza-{os}-{arch}` binaries. Version is injected via `-ldflags`.
-3. **build-extension** — Syncs `version.txt` and `extension.yaml` locally so packaged artifacts contain the correct version. Builds the web UI, then the azd extension via `azd x build` and `azd x pack`.
-4. **create-cli-release** — Downloads CLI artifacts, generates SHA256 checksums, creates a **CLI GitHub Release** (`Waza vX.Y.Z`) with standalone binaries attached.
-5. **publish-extension** — Runs `azd x release` to create a separate **Extension GitHub Release**, then `azd x publish` to update the registry. Creates a PR with `registry.json`, `version.txt`, and `extension.yaml` updates, reports required status checks as successful via the commit status API, and merges the PR automatically.
+### Flow 1: Standalone CLI Release
+
+1. **build-cli** — Matrix build for 6 platforms (linux, darwin, windows × amd64, arm64). Builds the web UI then produces `waza-{os}-{arch}` binaries with version injected via `-ldflags`.
+2. **release-cli** — Downloads CLI artifacts, generates SHA256 checksums, creates a **GitHub Release** (`Waza vX.Y.Z`) with standalone binaries attached.
+
+### Flow 2: azd Extension Release
+
+A single `release-extension` job runs all steps sequentially in one workspace:
+
+1. **Sync version files** — Updates `version.txt` and `extension.yaml` to the target version **before** any azd commands run, ensuring all tools see the correct version.
+2. **Build & pack** — Runs `azd x build` and `azd x pack` to produce platform-specific archives.
+3. **Release** — Runs `azd x release` to create an Extension GitHub Release.
+4. **Publish** — Runs `azd x publish` to update `registry.json` with artifact URLs and checksums.
+5. **Commit back** — Creates a PR with the updated `registry.json`, `version.txt`, and `extension.yaml`, reports required CI checks as successful, and auto-merges it.
+
+Running everything in a single job ensures all azd commands operate on the same workspace with consistent, synced version files.
 
 ## Version File Locations
 
