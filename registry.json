@@ -298,50 +298,50 @@
             "darwin/amd64": {
               "checksum": {
                 "algorithm": "sha256",
-                "value": "caf7755b1f44764c6803f07cef3236877d363d3d94da8db4eb9e1c18ef490cb0"
+                "value": "0813c5aeba13287028515f003b5b751c2d5c0f2649cfb707029d94b1407a8c7a"
               },
               "entryPoint": "microsoft-azd-waza-darwin-amd64",
-              "url": "https://github.com/spboyer/waza/releases/download/azd-ext-microsoft-azd-waza_0.4.0-alpha.1/microsoft-azd-waza-darwin-amd64.zip"
+              "url": "https://github.com/spboyer/waza/releases/download/azd-ext-microsoft-azd-waza_0.5.0-alpha.2/microsoft-azd-waza-darwin-amd64.zip"
             },
             "darwin/arm64": {
               "checksum": {
                 "algorithm": "sha256",
-                "value": "3c1e22b7d68c2eafd5be35c2f2b53d6b216a92f394076d1dac0a3e225308fc48"
+                "value": "8a6da1fd45eb338562fc05d4524493c4d4cd2fce325818cf980c33fb9b48ce16"
               },
               "entryPoint": "microsoft-azd-waza-darwin-arm64",
-              "url": "https://github.com/spboyer/waza/releases/download/azd-ext-microsoft-azd-waza_0.4.0-alpha.1/microsoft-azd-waza-darwin-arm64.zip"
+              "url": "https://github.com/spboyer/waza/releases/download/azd-ext-microsoft-azd-waza_0.5.0-alpha.2/microsoft-azd-waza-darwin-arm64.zip"
             },
             "linux/amd64": {
               "checksum": {
                 "algorithm": "sha256",
-                "value": "3f9f2b73a2defe97c6d53b72bcbc76f3dd317e3cc21c079f74c2054bbb0a0a4f"
+                "value": "46036fe88a2280bf97f08646b9debc05ef2933544adf7d16d8d8add40e09d129"
               },
               "entryPoint": "microsoft-azd-waza-linux-amd64",
-              "url": "https://github.com/spboyer/waza/releases/download/azd-ext-microsoft-azd-waza_0.4.0-alpha.1/microsoft-azd-waza-linux-amd64.tar.gz"
+              "url": "https://github.com/spboyer/waza/releases/download/azd-ext-microsoft-azd-waza_0.5.0-alpha.2/microsoft-azd-waza-linux-amd64.tar.gz"
             },
             "linux/arm64": {
               "checksum": {
                 "algorithm": "sha256",
-                "value": "d2c30f1183b7a17a4872920d9dabb7b891baea0e20da119654fda73095fccce1"
+                "value": "2871601c8baab535ffc9209a17d1b1379f2953d240d619a5c060539984544314"
               },
               "entryPoint": "microsoft-azd-waza-linux-arm64",
-              "url": "https://github.com/spboyer/waza/releases/download/azd-ext-microsoft-azd-waza_0.4.0-alpha.1/microsoft-azd-waza-linux-arm64.tar.gz"
+              "url": "https://github.com/spboyer/waza/releases/download/azd-ext-microsoft-azd-waza_0.5.0-alpha.2/microsoft-azd-waza-linux-arm64.tar.gz"
             },
             "windows/amd64": {
               "checksum": {
                 "algorithm": "sha256",
-                "value": "ff312ca29918f201d78e66c312975b572701e624a290f06cabbbc2e2a274c08a"
+                "value": "18bd3478906e3183cdf80b7ec14729892b2b58c62609e3cae92f432435d0a0f7"
               },
               "entryPoint": "microsoft-azd-waza-windows-amd64.exe",
-              "url": "https://github.com/spboyer/waza/releases/download/azd-ext-microsoft-azd-waza_0.4.0-alpha.1/microsoft-azd-waza-windows-amd64.zip"
+              "url": "https://github.com/spboyer/waza/releases/download/azd-ext-microsoft-azd-waza_0.5.0-alpha.2/microsoft-azd-waza-windows-amd64.zip"
             },
             "windows/arm64": {
               "checksum": {
                 "algorithm": "sha256",
-                "value": "c4d918360bcef65b82c649c06f2c6c081f8d8d514a1788848b978c10d1788bd5"
+                "value": "4937f1a44a7953c7d57237b35fccb41eaee02d589426ed0e941adf2ce2aca7dd"
               },
               "entryPoint": "microsoft-azd-waza-windows-arm64.exe",
-              "url": "https://github.com/spboyer/waza/releases/download/azd-ext-microsoft-azd-waza_0.4.0-alpha.1/microsoft-azd-waza-windows-arm64.zip"
+              "url": "https://github.com/spboyer/waza/releases/download/azd-ext-microsoft-azd-waza_0.5.0-alpha.2/microsoft-azd-waza-windows-arm64.zip"
             }
           }
         }
