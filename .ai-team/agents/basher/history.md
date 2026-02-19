@@ -37,3 +37,14 @@
 - **page.request vs page.evaluate:** `page.request.get()` bypasses route interception; use `page.evaluate(() => fetch(...))` instead
 - **Hash routing:** App uses hash-based routing (`#/runs/:id`), not react-router. URLs in tests are like `/#/runs/run-001`
 - **Previous branch was broken:** Old `squad/208-playwright-e2e` committed node_modules and diverged from main. Force-pushed clean version.
+
+### Trajectory E2E Tests (PR #245, Issue #240)
+- **Branch:** `squad/240-trajectory-e2e`
+- **Spec files:** `trajectory.spec.ts` (9 tests), `trajectory-diff.spec.ts` (6 tests)
+- **Mock data:** Extended `RUN_DETAIL` first task with `transcript` + `sessionDigest`; added `RUN_DETAIL_B` for diff tests
+- **API mocks:** `run-002` now returns `RUN_DETAIL_B` for compare/diff test scenarios
+- **Strict mode gotcha:** `getByText("3")` matches "38s" too — scope assertions to parent containers (`.filter({ hasText })` or `.locator()`)
+- **Ambiguous tool names:** `read_file` appears in both digest card badges and timeline text — use `.locator("span").filter()` to target digest badges specifically
+- **Tab testing pattern:** Navigate to `/#/runs/run-001`, click `getByRole("button", { name: "Trajectory" })`, then click task buttons
+- **Compare flow:** Navigate to `/#/compare`, select runs via `page.locator("select").nth(0).selectOption("run-001")`, then click table rows
+- **Total E2E count:** 33 tests (15 new + 18 existing), all passing on Chromium
