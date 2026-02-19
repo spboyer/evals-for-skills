@@ -60,7 +60,7 @@ func encodingForModelName(modelName string) string {
 }
 
 func mergeSpecialTokens(base map[string]int, extra map[string]int) map[string]int {
-	out := cloneStringIntMap(base)
+	out := maps.Clone(base)
 	maps.Copy(out, extra)
 	return out
 }

@@ -1,6 +1,7 @@
 package tokens
 
 import (
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -36,5 +37,24 @@ func TestEstimatingCounter(t *testing.T) {
 	}
 	for _, tt := range tests {
 		require.Equal(t, tt.want, counter.Count(tt.input), "Count(%q)", tt.input)
+	}
+}
+
+var benchInput = strings.Repeat("The quick brown fox jumps over the lazy dog. ", 100)
+
+func BenchmarkBPECounter(b *testing.B) {
+	counter, err := newBPECounter()
+	require.NoError(b, err)
+	b.ResetTimer()
+	for b.Loop() {
+		counter.Count(benchInput)
+	}
+}
+
+func BenchmarkEstimatingCounter(b *testing.B) {
+	counter := &estimatingCounter{}
+	b.ResetTimer()
+	for b.Loop() {
+		counter.Count(benchInput)
 	}
 }

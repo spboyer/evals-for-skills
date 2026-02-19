@@ -5,7 +5,7 @@ import (
 	"encoding/base64"
 	"fmt"
 	"io"
-	"os"
+	"maps"
 	"regexp"
 	"sort"
 	"strconv"
@@ -30,7 +30,6 @@ type EncodeResult struct {
 }
 
 type Tokenizer struct {
-	regex                *regexp.Regexp
 	pieceRegex           *regexp.Regexp
 	encoder              *BinaryMap[int]
 	decoder              map[int][]byte
@@ -38,21 +37,7 @@ type Tokenizer struct {
 	specialTokensEncoder map[string]int
 	specialTokensDecoder map[int]string
 	whitespaceSplitMode  whitespaceSplitMode
-	Cache                *LRUCache
-}
-
-func NewTokenizerFromFile(
-	tikTokenBPEFile string,
-	specialTokensEncoder map[string]int,
-	regexPattern string,
-	cacheSize int,
-) (*Tokenizer, error) {
-	f, err := os.Open(tikTokenBPEFile)
-	if err != nil {
-		return nil, fmt.Errorf("failed to open BPE encoder file: %w", err)
-	}
-	defer f.Close() //nolint:errcheck
-	return NewTokenizerFromReader(f, specialTokensEncoder, regexPattern, cacheSize)
+	cache                *LRUCache
 }
 
 func NewTokenizerFromReader(
@@ -79,10 +64,6 @@ func NewTokenizerFromRanks(
 		cacheSize = defaultCacheSize
 	}
 
-	rx, err := regexp.Compile(regexPattern)
-	if err != nil {
-		return nil, fmt.Errorf("failed to compile regex pattern: %w", err)
-	}
 	pieceRegex, err := regexp.Compile("^(?:" + regexPattern + ")")
 	if err != nil {
 		return nil, fmt.Errorf("failed to compile piece regex pattern: %w", err)
@@ -94,15 +75,14 @@ func NewTokenizerFromRanks(
 	}
 
 	t := &Tokenizer{
-		regex:                rx,
 		pieceRegex:           pieceRegex,
 		encoder:              NewBinaryMap[int](),
 		decoder:              map[int][]byte{},
 		specialTokensRegex:   specialRegex,
-		specialTokensEncoder: cloneStringIntMap(specialTokensEncoder),
+		specialTokensEncoder: maps.Clone(specialTokensEncoder),
 		specialTokensDecoder: map[int]string{},
 		whitespaceSplitMode:  detectWhitespaceSplitMode(regexPattern),
-		Cache:                NewLRUCache(cacheSize),
+		cache:                NewLRUCache(cacheSize),
 	}
 
 	for key, value := range bpeDict {
@@ -171,17 +151,6 @@ func compileSpecialTokensRegex(specialTokens map[string]int) (*regexp.Regexp, er
 		escaped = append(escaped, regexp.QuoteMeta(key))
 	}
 	return regexp.Compile(strings.Join(escaped, "|"))
-}
-
-func cloneStringIntMap(in map[string]int) map[string]int {
-	if in == nil {
-		return map[string]int{}
-	}
-	out := make(map[string]int, len(in))
-	for k, v := range in {
-		out[k] = v
-	}
-	return out
 }
 
 func makeStringSet(values []string) map[string]struct{} {
@@ -344,7 +313,7 @@ func (t *Tokenizer) encodeByIndex(text string, tokenIDs *[]int, start, end int) 
 	substring := text[start:end]
 	matches := t.pieces(substring)
 	for _, piece := range matches {
-		if cached, ok := t.Cache.Get(piece); ok {
+		if cached, ok := t.cache.Get(piece); ok {
 			*tokenIDs = append(*tokenIDs, cached...)
 			continue
 		}
@@ -353,13 +322,13 @@ func (t *Tokenizer) encodeByIndex(text string, tokenIDs *[]int, start, end int) 
 		token, ok := t.encoder.GetRange(bytes, 0, len(bytes))
 		if ok {
 			*tokenIDs = append(*tokenIDs, token)
-			t.Cache.Set(piece, []int{token})
+			t.cache.Set(piece, []int{token})
 			continue
 		}
 
 		encodedTokens := BytePairEncode(bytes, t.encoder, len(bytes))
 		*tokenIDs = append(*tokenIDs, encodedTokens...)
-		t.Cache.Set(piece, encodedTokens)
+		t.cache.Set(piece, encodedTokens)
 	}
 }
 
@@ -374,7 +343,7 @@ func (t *Tokenizer) encodeTrimSuffixByIndex(
 	substring := text[start:end]
 	matches := t.pieces(substring)
 	for _, piece := range matches {
-		if cachedTokens, ok := t.Cache.Get(piece); ok {
+		if cachedTokens, ok := t.cache.Get(piece); ok {
 			if tokenCount+len(cachedTokens) <= maxTokenCount {
 				tokenCount += len(cachedTokens)
 				encodeLength += len(piece)
@@ -393,7 +362,7 @@ func (t *Tokenizer) encodeTrimSuffixByIndex(
 			bytes := []byte(piece)
 			token, ok := t.encoder.GetRange(bytes, 0, len(bytes))
 			if ok {
-				t.Cache.Set(piece, []int{token})
+				t.cache.Set(piece, []int{token})
 				if tokenCount+1 <= maxTokenCount {
 					tokenCount++
 					encodeLength += len(piece)
@@ -403,7 +372,7 @@ func (t *Tokenizer) encodeTrimSuffixByIndex(
 				}
 			} else {
 				encodedTokens := BytePairEncode(bytes, t.encoder, len(bytes))
-				t.Cache.Set(piece, encodedTokens)
+				t.cache.Set(piece, encodedTokens)
 				if tokenCount+len(encodedTokens) <= maxTokenCount {
 					tokenCount += len(encodedTokens)
 					encodeLength += len(piece)
@@ -525,7 +494,7 @@ func (t *Tokenizer) EncodeTrimPrefix(
 			substring := text[start:end]
 			matches := t.pieces(substring)
 			for _, piece := range matches {
-				if cachedTokens, ok := t.Cache.Get(piece); ok {
+				if cachedTokens, ok := t.cache.Get(piece); ok {
 					tokenCount += len(cachedTokens)
 					encodeLength += len(piece)
 					tokenIDs = append(tokenIDs, cachedTokens...)
@@ -537,7 +506,7 @@ func (t *Tokenizer) EncodeTrimPrefix(
 					bytes := []byte(piece)
 					token, ok := t.encoder.GetRange(bytes, 0, len(bytes))
 					if ok {
-						t.Cache.Set(piece, []int{token})
+						t.cache.Set(piece, []int{token})
 						tokenCount++
 						encodeLength += len(piece)
 						tokenIDs = append(tokenIDs, token)
@@ -547,7 +516,7 @@ func (t *Tokenizer) EncodeTrimPrefix(
 						})
 					} else {
 						encodedTokens := BytePairEncode(bytes, t.encoder, len(bytes))
-						t.Cache.Set(piece, encodedTokens)
+						t.cache.Set(piece, encodedTokens)
 						tokenCount += len(encodedTokens)
 						encodeLength += len(piece)
 						tokenIDs = append(tokenIDs, encodedTokens...)
