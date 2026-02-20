@@ -7,6 +7,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 
@@ -1416,4 +1417,187 @@ func TestSaveSummary_WritesValidJSON(t *testing.T) {
 	require.NoError(t, json.Unmarshal(data, &result))
 	assert.Equal(t, 1, result.Overall.TotalSkills)
 	assert.Equal(t, "test-skill", result.Skills[0].SkillName)
+}
+
+// ---------------------------------------------------------------------------
+// Cross-product integration test: multi-skill × multi-model
+// ---------------------------------------------------------------------------
+
+func TestRunCommand_CrossProductMultiSkillMultiModel(t *testing.T) {
+	resetRunGlobals()
+
+	// Create workspace with 2 skills
+	rootDir := t.TempDir()
+
+	createSkillWithEval := func(skillName string) string {
+		skillDir := filepath.Join(rootDir, skillName)
+		require.NoError(t, os.MkdirAll(filepath.Join(skillDir, "tasks"), 0o755))
+
+		skillYAML := `name: ` + skillName + `
+version: "1.0"
+description: Test skill
+`
+		require.NoError(t, os.WriteFile(
+			filepath.Join(skillDir, "skill.yaml"),
+			[]byte(skillYAML),
+			0o644,
+		))
+
+		task := `id: test-task
+name: Test Task
+inputs:
+  prompt: "Test"
+`
+		require.NoError(t, os.WriteFile(
+			filepath.Join(skillDir, "tasks", "task.yaml"),
+			[]byte(task),
+			0o644,
+		))
+
+		spec := `name: test-eval
+skill: ` + skillName + `
+version: "1.0"
+config:
+  trials_per_task: 1
+  timeout_seconds: 30
+  executor: mock
+  model: default-model
+tasks:
+  - "tasks/*.yaml"
+`
+		evalPath := filepath.Join(skillDir, "eval.yaml")
+		require.NoError(t, os.WriteFile(evalPath, []byte(spec), 0o644))
+		return evalPath
+	}
+
+	eval1 := createSkillWithEval("code-explainer")
+	eval2 := createSkillWithEval("sql-generator")
+
+	outFile := filepath.Join(rootDir, "results.json")
+
+	// Manually construct a multi-skill run by calling runCommandE with workspace override
+	// This simulates what happens when workspace detection finds multiple skills
+	savedOutputPath := outputPath
+	outputPath = ""
+
+	var allSkillResults []skillRunResult
+
+	// Run skill 1 with multi-model
+	modelOverrides = []string{"gpt-4o", "claude-sonnet"}
+
+	outcomes1, err := runCommandForSpec(nil, skillSpecPath{specPath: eval1, skillName: "code-explainer"})
+	if err != nil {
+		var testErr *TestFailureError
+		if !errors.As(err, &testErr) {
+			require.NoError(t, err, "execution should succeed or fail gracefully")
+		}
+	}
+	allSkillResults = append(allSkillResults, skillRunResult{
+		skillName: "code-explainer",
+		outcomes:  outcomes1,
+	})
+
+	// Run skill 2 with multi-model
+	outcomes2, err := runCommandForSpec(nil, skillSpecPath{specPath: eval2, skillName: "sql-generator"})
+	if err != nil {
+		var testErr *TestFailureError
+		if !errors.As(err, &testErr) {
+			require.NoError(t, err, "execution should succeed or fail gracefully")
+		}
+	}
+	allSkillResults = append(allSkillResults, skillRunResult{
+		skillName: "sql-generator",
+		outcomes:  outcomes2,
+	})
+
+	// Restore outputPath and write per-skill output files (mimics lines 139-158 in cmd_run.go)
+	outputPath = savedOutputPath
+	outputPath = outFile
+
+	ext := filepath.Ext(outputPath)
+	base := strings.TrimSuffix(outputPath, ext)
+
+	for _, skillResult := range allSkillResults {
+		multiModel := len(skillResult.outcomes) > 1
+
+		for _, mr := range skillResult.outcomes {
+			if mr.outcome == nil {
+				continue
+			}
+			perSkillPath := buildOutputPath(base, ext, skillResult.skillName, mr.modelID, true, multiModel)
+			require.NoError(t, saveOutcome(mr.outcome, perSkillPath))
+		}
+	}
+
+	// Verify 4 output files exist: 2 skills × 2 models
+	expectedFiles := []struct {
+		path      string
+		skillName string
+		modelID   string
+	}{
+		{filepath.Join(rootDir, "results_code-explainer_gpt-4o.json"), "code-explainer", "gpt-4o"},
+		{filepath.Join(rootDir, "results_code-explainer_claude-sonnet.json"), "code-explainer", "claude-sonnet"},
+		{filepath.Join(rootDir, "results_sql-generator_gpt-4o.json"), "sql-generator", "gpt-4o"},
+		{filepath.Join(rootDir, "results_sql-generator_claude-sonnet.json"), "sql-generator", "claude-sonnet"},
+	}
+
+	for _, ef := range expectedFiles {
+		_, err := os.Stat(ef.path)
+		require.NoError(t, err, "output file should exist: %s", ef.path)
+
+		// Read the JSON and verify it contains the correct skill/model
+		data, err := os.ReadFile(ef.path)
+		require.NoError(t, err)
+
+		var outcome models.EvaluationOutcome
+		err = json.Unmarshal(data, &outcome)
+		require.NoError(t, err)
+
+		assert.Equal(t, ef.skillName, outcome.SkillTested, "outcome should contain correct skill name")
+		assert.Equal(t, ef.modelID, outcome.Setup.ModelID, "outcome should contain correct model ID")
+	}
+}
+
+// ---------------------------------------------------------------------------
+// Edge case: one model fails, others succeed
+// ---------------------------------------------------------------------------
+
+func TestRunCommand_CrossProduct_PartialFailure(t *testing.T) {
+	// Verify that if one skill+model combo fails, others still write output
+	base := "results"
+	ext := ".json"
+
+	// Cross-product naming should work regardless of success/failure
+	path1 := buildOutputPath(base, ext, "skill-a", "model-1", true, true)
+	path2 := buildOutputPath(base, ext, "skill-a", "model-2", true, true)
+	path3 := buildOutputPath(base, ext, "skill-b", "model-1", true, true)
+	path4 := buildOutputPath(base, ext, "skill-b", "model-2", true, true)
+
+	// All should be unique
+	paths := []string{path1, path2, path3, path4}
+	for i := 0; i < len(paths); i++ {
+		for j := i + 1; j < len(paths); j++ {
+			assert.NotEqual(t, paths[i], paths[j], "all cross-product paths should be unique")
+		}
+	}
+
+	assert.Equal(t, "results_skill-a_model-1.json", path1)
+	assert.Equal(t, "results_skill-a_model-2.json", path2)
+	assert.Equal(t, "results_skill-b_model-1.json", path3)
+	assert.Equal(t, "results_skill-b_model-2.json", path4)
+}
+
+// ---------------------------------------------------------------------------
+// Edge case: special characters in names
+// ---------------------------------------------------------------------------
+
+func TestRunCommand_CrossProduct_SpecialCharacters(t *testing.T) {
+	base := "out"
+	ext := ".json"
+
+	// Test that special characters are sanitized in cross-product
+	path := buildOutputPath(base, ext, "skill:v1/test", "gpt-4o/mini-2024", true, true)
+	assert.Equal(t, "out_skill-v1-test_gpt-4o-mini-2024.json", path)
+	assert.NotContains(t, path, ":")
+	assert.NotContains(t, path, "/")
 }

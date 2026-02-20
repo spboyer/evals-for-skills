@@ -359,11 +359,14 @@ func runCommandForSpec(cmd *cobra.Command, sp skillSpecPath) ([]modelResult, err
 	}
 
 	// Save per-model results when --output is specified with multiple models
+	// Note: For multi-skill runs, this is skipped because outputPath is cleared
+	// and per-skill output happens in the multi-skill loop instead
 	if outputPath != "" && multiModel {
 		ext := filepath.Ext(outputPath)
 		base := strings.TrimSuffix(outputPath, ext)
 		for _, mr := range allResults {
-			perModelPath := fmt.Sprintf("%s_%s%s", base, sanitizePathSegment(mr.modelID), ext)
+			// Use buildOutputPath for consistency (multiSkill=false for single-skill context)
+			perModelPath := buildOutputPath(base, ext, "", mr.modelID, false, true)
 			if err := saveOutcome(mr.outcome, perModelPath); err != nil {
 				return nil, fmt.Errorf("failed to save output for model %s: %w", mr.modelID, err)
 			}
