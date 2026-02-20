@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"os"
+	"path/filepath"
 	"testing"
 	"time"
 )
@@ -590,5 +592,185 @@ func TestHandleRunDetailWithTranscriptAndDigest(t *testing.T) {
 	}
 	if len(task.SessionDigest.ToolsUsed) != 1 || task.SessionDigest.ToolsUsed[0] != "bash" {
 		t.Errorf("expected tools used [bash], got %v", task.SessionDigest.ToolsUsed)
+	}
+}
+
+func TestFileStoreRecursiveScanning(t *testing.T) {
+	dir := t.TempDir()
+
+	// Create nested directory structure
+	subdir1 := filepath.Join(dir, "code-explainer")
+	subdir2 := filepath.Join(dir, "code-reviewer")
+	if err := os.MkdirAll(subdir1, 0755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.MkdirAll(subdir2, 0755); err != nil {
+		t.Fatal(err)
+	}
+
+	// Create valid outcome files in subdirectories
+	outcome1 := `{
+		"eval_name": "code-explainer",
+		"timestamp": "2026-02-18T15:30:00Z",
+		"config": {"model_id": "gpt-4o"},
+		"summary": {"total_tests": 5, "succeeded": 5}
+	}`
+	outcome2 := `{
+		"eval_name": "code-reviewer",
+		"timestamp": "2026-02-18T16:30:00Z",
+		"config": {"model_id": "claude-4.6"},
+		"summary": {"total_tests": 3, "succeeded": 2}
+	}`
+
+	if err := os.WriteFile(filepath.Join(subdir1, "gpt-4o.json"), []byte(outcome1), 0644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(subdir2, "claude-4.6.json"), []byte(outcome2), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	store := NewFileStore(dir)
+	runs, err := store.ListRuns("", "")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if len(runs) != 2 {
+		t.Fatalf("expected 2 runs from nested dirs, got %d", len(runs))
+	}
+
+	// Verify RunIDs use relative paths
+	foundExplainer := false
+	foundReviewer := false
+	for _, run := range runs {
+		if run.ID == "code-explainer/gpt-4o" {
+			foundExplainer = true
+			if run.Spec != "code-explainer" {
+				t.Errorf("expected spec code-explainer, got %q", run.Spec)
+			}
+		}
+		if run.ID == "code-reviewer/claude-4.6" {
+			foundReviewer = true
+			if run.Spec != "code-reviewer" {
+				t.Errorf("expected spec code-reviewer, got %q", run.Spec)
+			}
+		}
+	}
+
+	if !foundExplainer {
+		t.Error("expected to find code-explainer/gpt-4o")
+	}
+	if !foundReviewer {
+		t.Error("expected to find code-reviewer/claude-4.6")
+	}
+}
+
+func TestFileStoreIgnoresSummaryJson(t *testing.T) {
+	dir := t.TempDir()
+
+	// Create a valid outcome
+	validOutcome := `{
+		"eval_name": "test-bench",
+		"timestamp": "2026-02-18T15:30:00Z",
+		"config": {"model_id": "gpt-4o"},
+		"summary": {"total_tests": 1, "succeeded": 1}
+	}`
+
+	// Create summary.json (should be ignored)
+	summaryJson := `{
+		"aggregate_pass_rate": 0.95,
+		"total_runs": 3
+	}`
+
+	if err := os.WriteFile(filepath.Join(dir, "gpt-4o.json"), []byte(validOutcome), 0644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(dir, "summary.json"), []byte(summaryJson), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	store := NewFileStore(dir)
+	runs, err := store.ListRuns("", "")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if len(runs) != 1 {
+		t.Fatalf("expected 1 run (summary.json should be ignored), got %d", len(runs))
+	}
+	if runs[0].Spec != "test-bench" {
+		t.Errorf("expected valid outcome, got %v", runs[0])
+	}
+}
+
+func TestFileStoreIgnoresInvalidJson(t *testing.T) {
+	dir := t.TempDir()
+
+	// Create files with various issues
+	validOutcome := `{
+		"eval_name": "valid",
+		"summary": {"total_tests": 1}
+	}`
+	invalidJson := `{ this is not valid json }`
+	emptyOutcome := `{}`
+	notJson := `Just some text`
+
+	files := map[string]string{
+		"valid.json":   validOutcome,
+		"invalid.json": invalidJson,
+		"empty.json":   emptyOutcome,
+		"text.json":    notJson,
+		"readme.txt":   "Should be skipped (not .json)",
+	}
+
+	for name, content := range files {
+		if err := os.WriteFile(filepath.Join(dir, name), []byte(content), 0644); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	store := NewFileStore(dir)
+	runs, err := store.ListRuns("", "")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if len(runs) != 1 {
+		t.Fatalf("expected 1 valid run, got %d", len(runs))
+	}
+	if runs[0].Spec != "valid" {
+		t.Errorf("expected valid spec, got %q", runs[0].Spec)
+	}
+}
+
+func TestFileStoreDeepNesting(t *testing.T) {
+	dir := t.TempDir()
+
+	// Create deeply nested structure
+	deepPath := filepath.Join(dir, "a", "b", "c")
+	if err := os.MkdirAll(deepPath, 0755); err != nil {
+		t.Fatal(err)
+	}
+
+	outcome := `{
+		"eval_name": "deep-test",
+		"summary": {"total_tests": 1, "succeeded": 1}
+	}`
+
+	if err := os.WriteFile(filepath.Join(deepPath, "result.json"), []byte(outcome), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	store := NewFileStore(dir)
+	runs, err := store.ListRuns("", "")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if len(runs) != 1 {
+		t.Fatalf("expected 1 run from deep nesting, got %d", len(runs))
+	}
+	if runs[0].ID != "a/b/c/result" {
+		t.Errorf("expected ID 'a/b/c/result', got %q", runs[0].ID)
 	}
 }

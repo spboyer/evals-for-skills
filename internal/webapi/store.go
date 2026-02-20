@@ -55,8 +55,8 @@ func (fs *FileStore) load() error {
 		return nil
 	}
 
-	entries, err := os.ReadDir(fs.dir)
-	if err != nil {
+	// Check if directory exists
+	if _, err := os.Stat(fs.dir); err != nil {
 		if os.IsNotExist(err) {
 			fs.loaded = true
 			return nil
@@ -65,27 +65,47 @@ func (fs *FileStore) load() error {
 		return err
 	}
 
-	for _, e := range entries {
-		if e.IsDir() {
-			continue
+	// Recursively walk directory tree to find all JSON files
+	err := filepath.WalkDir(fs.dir, func(path string, d os.DirEntry, err error) error {
+		if err != nil {
+			// Skip inaccessible paths
+			return nil
 		}
-		if !strings.HasSuffix(e.Name(), ".json") {
-			continue
+		if d.IsDir() {
+			// Continue walking into subdirectories
+			return nil
 		}
-		path := filepath.Join(fs.dir, e.Name())
+		if !strings.HasSuffix(d.Name(), ".json") {
+			return nil
+		}
+
 		data, err := os.ReadFile(path)
 		if err != nil {
-			continue
+			return nil
 		}
+
 		var outcome models.EvaluationOutcome
 		if err := json.Unmarshal(data, &outcome); err != nil {
-			continue
+			return nil
 		}
+
+		// Validate that this is a real EvaluationOutcome, not summary.json or other JSON
+		if outcome.BenchName == "" && outcome.Digest.TotalTests == 0 {
+			return nil
+		}
+
 		if outcome.RunID == "" {
-			// Use filename (without extension) as fallback ID.
-			outcome.RunID = strings.TrimSuffix(e.Name(), ".json")
+			// Use relative path (without extension) as fallback ID to avoid collisions
+			relPath, _ := filepath.Rel(fs.dir, path)
+			outcome.RunID = strings.TrimSuffix(filepath.ToSlash(relPath), ".json")
 		}
 		fs.runs[outcome.RunID] = &outcome
+		return nil
+	})
+
+	if err != nil {
+		fs.loadErr = err
+		return err
 	}
 
 	fs.loaded = true
