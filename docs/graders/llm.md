@@ -7,15 +7,16 @@ Uses an AI model to evaluate quality.
 ```yaml
 - type: llm
   name: quality_judge
-  model: gpt-4o-mini
-  rubric: |
-    Score the skill execution from 1-5:
+  config:
+    model: gpt-4o-mini
+    rubric: |
+      Score the skill execution from 1-5:
 
-    1. Correctness: Did it accomplish the task?
-    2. Completeness: Were all requirements addressed?
-    3. Quality: Was the approach appropriate?
+      1. Correctness: Did it accomplish the task?
+      2. Completeness: Were all requirements addressed?
+      3. Quality: Was the approach appropriate?
 
-    Return JSON: {"score": N, "reasoning": "...", "passed": true/false}
+      Return JSON: {"score": N, "reasoning": "...", "passed": true/false}
 ```
 
 **Options:**
