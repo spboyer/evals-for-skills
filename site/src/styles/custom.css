@@ -11,18 +11,17 @@
   color-scheme: dark;
 
   /* Gray scale — Starlight maps these to UI surfaces.
-     "white" = deepest bg, "black" = lightest text in dark mode.
-     This is Starlight's inverted naming: --sl-color-white is the
-     DARKEST color in dark mode. */
-  --sl-color-white: #09090b;      /* zinc-950 — deepest background */
-  --sl-color-gray-1: #f4f4f5;     /* zinc-100 — brightest text */
-  --sl-color-gray-2: #d4d4d8;     /* zinc-300 — secondary text */
-  --sl-color-gray-3: #a1a1aa;     /* zinc-400 — muted text */
+     --sl-color-white is always the lightest value (text in dark mode),
+     --sl-color-black is always the darkest value (backgrounds). */
+  --sl-color-white: #f4f4f5;      /* zinc-100 — lightest (text / headings) */
+  --sl-color-gray-1: #d4d4d8;     /* zinc-300 — secondary text */
+  --sl-color-gray-2: #a1a1aa;     /* zinc-400 — muted text */
+  --sl-color-gray-3: #71717a;     /* zinc-500 — dimmed text */
   --sl-color-gray-4: #52525b;     /* zinc-600 — subtle borders */
   --sl-color-gray-5: #27272a;     /* zinc-800 — elevated surfaces */
   --sl-color-gray-6: #18181b;     /* zinc-900 — main background */
   --sl-color-gray-7: #09090b;     /* zinc-950 — deepest wells */
-  --sl-color-black: #f4f4f5;      /* zinc-100 — lightest (text in dark) */
+  --sl-color-black: #09090b;      /* zinc-950 — darkest (background base) */
 
   /* Accent — emerald */
   --sl-color-accent-low: #064e3b;  /* emerald-900 */
@@ -63,9 +62,10 @@ starlight-theme-select,
   max-width: none !important;
 }
 
-/* The content-panel inside should still be readable width */
+/* The content-panel inside should still be readable width and centered */
 .content-panel {
   max-width: 75ch;
+  margin: 0 auto;
 }
 
 /* ─── Global surfaces ───────────────────────────────────────────────── */
