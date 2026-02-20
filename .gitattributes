@@ -3,3 +3,6 @@
 .ai-team/agents/*/history.md merge=union
 .ai-team/log/** merge=union
 .ai-team/orchestration-log/** merge=union
+
+# Set the default behavior, in case people don't have core.autocrlf set.
+* text=auto
