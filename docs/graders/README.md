@@ -297,7 +297,9 @@ should_not_trigger_prompts:
 
 **Fields:**
 
-| Field | Required | Description || `skill` | yes | Skill name to check for invocation |
+| Field | Required | Description |
+| -- | -- | --
+| `skill` | yes | Skill name to check for invocation |
 | `should_trigger_prompts` | at least one of the two prompt lists | Prompts where the skill should activate |
 | `should_not_trigger_prompts` | at least one of the two prompt lists | Prompts where the skill should stay silent |
 | `prompt` | yes | The test prompt text |
