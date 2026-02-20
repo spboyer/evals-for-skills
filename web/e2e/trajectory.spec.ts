@@ -17,8 +17,9 @@ test.describe("Trajectory Viewer", () => {
     // Click trajectory tab
     await trajectoryTab.click();
 
-    // Should show task selection prompt
-    await expect(page.getByText("Select a task to view its trajectory")).toBeVisible();
+    // Should show task list with column headers
+    await expect(page.getByText("Task", { exact: true })).toBeVisible();
+    await expect(page.getByText("Outcome", { exact: true })).toBeVisible();
   });
 
   test("task list shows in trajectory tab", async ({ page }) => {
@@ -58,12 +59,12 @@ test.describe("Trajectory Viewer", () => {
     await page.getByRole("button", { name: "Trajectory" }).click();
     await page.getByRole("button", { name: "explain-fibonacci" }).click();
 
-    // Tools Used section — scope to digest card to avoid matching timeline entries
-    const digestCard = page.locator("div").filter({ hasText: "Session Digest" }).first();
+    // Tools Used section — scope to digest card (the first card with SESSION DIGEST heading)
+    const digestCard = page.locator("div").filter({ has: page.getByText("SESSION DIGEST") }).first();
     await expect(digestCard.getByText("Tools Used")).toBeVisible();
-    // Tool badges in the digest card (span elements)
-    await expect(digestCard.locator("span").filter({ hasText: "read_file" })).toBeVisible();
-    await expect(digestCard.locator("span").filter({ hasText: "write_file" })).toBeVisible();
+    // Tool badges in the digest card (span elements in the tools-used section)
+    await expect(digestCard.locator("span.rounded").filter({ hasText: "read_file" })).toBeVisible();
+    await expect(digestCard.locator("span.rounded").filter({ hasText: "write_file" })).toBeVisible();
   });
 
   test("session digest shows errors", async ({ page }) => {
@@ -79,9 +80,14 @@ test.describe("Trajectory Viewer", () => {
   test("timeline renders tool call entries", async ({ page }) => {
     await page.goto("/#/runs/run-001");
     await page.getByRole("button", { name: "Trajectory" }).click();
+
+    // Click the first task (has transcript + digest)
     await page.getByRole("button", { name: "explain-fibonacci" }).click();
 
-    // Timeline should show event badges
+    // Switch to Events view to see event badges
+    await page.getByRole("button", { name: "Events" }).click();
+
+    // Events view should show event badges
     await expect(page.getByText("assistant turn")).toBeVisible();
     await expect(page.getByText("tool start").first()).toBeVisible();
     await expect(page.getByText("tool complete").first()).toBeVisible();
@@ -96,6 +102,9 @@ test.describe("Trajectory Viewer", () => {
     await page.getByRole("button", { name: "Trajectory" }).click();
     await page.getByRole("button", { name: "explain-fibonacci" }).click();
 
+    // Switch to Events view to see expandable items
+    await page.getByRole("button", { name: "Events" }).click();
+
     // Find a "Show details" button and click it
     const showDetailsBtn = page.getByRole("button", { name: "Show details" }).first();
     await expect(showDetailsBtn).toBeVisible();
@@ -109,6 +118,9 @@ test.describe("Trajectory Viewer", () => {
     await page.goto("/#/runs/run-001");
     await page.getByRole("button", { name: "Trajectory" }).click();
     await page.getByRole("button", { name: "explain-fibonacci" }).click();
+
+    // Switch to Events view to see event badges
+    await page.getByRole("button", { name: "Events" }).click();
 
     // The error badge should have red text class
     const errorBadge = page.locator("span").filter({ hasText: /^error$/ });
@@ -138,7 +150,8 @@ test.describe("Trajectory Viewer", () => {
     // Click back
     await page.getByText("Back to task list").click();
 
-    // Should see task list again
-    await expect(page.getByText("Select a task to view its trajectory")).toBeVisible();
+    // Should see task list column headers again
+    await expect(page.getByText("Task", { exact: true })).toBeVisible();
+    await expect(page.getByText("Outcome", { exact: true })).toBeVisible();
   });
 });

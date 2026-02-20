@@ -61,6 +61,61 @@ test.describe("Screenshots", () => {
     });
   });
 
+  test("dashboard-waterfall-pass", async ({ page }) => {
+    await page.goto("/#/runs/run-001");
+
+    // Navigate to trajectory for a task with transcript
+    await page.getByRole("button", { name: "Trajectory" }).click();
+    await page.getByRole("button", { name: "explain-fibonacci" }).click();
+
+    // Wait for waterfall header columns to render
+    await expect(page.getByText("Trace")).toBeVisible();
+    await expect(page.getByText("Tool Call", { exact: true })).toBeVisible();
+
+    await page.screenshot({
+      path: "../docs/images/dashboard-waterfall-pass.png",
+      fullPage: false,
+    });
+  });
+
+  test("dashboard-waterfall-detail", async ({ page }) => {
+    await page.goto("/#/runs/run-001");
+
+    // Navigate to trajectory for a task with transcript
+    await page.getByRole("button", { name: "Trajectory" }).click();
+    await page.getByRole("button", { name: "explain-fibonacci" }).click();
+
+    // Wait for waterfall and click first span row
+    await expect(page.getByText("Tool Call", { exact: true })).toBeVisible();
+    // Click the read_file span row in the waterfall
+    await page.locator("span.text-xs.font-mono").filter({ hasText: "read_file" }).first().click();
+
+    // Wait for detail panel
+    await expect(page.getByText("Input")).toBeVisible();
+
+    await page.screenshot({
+      path: "../docs/images/dashboard-waterfall-detail.png",
+      fullPage: false,
+    });
+  });
+
+  test("dashboard-waterfall-fail", async ({ page }) => {
+    await page.goto("/#/runs/run-002");
+
+    // Navigate to trajectory for a task with transcript
+    await page.getByRole("button", { name: "Trajectory" }).click();
+    await page.getByRole("button", { name: "explain-fibonacci" }).click();
+
+    // Wait for waterfall header columns to render
+    await expect(page.getByText("Trace")).toBeVisible();
+    await expect(page.getByText("Tool Call", { exact: true })).toBeVisible();
+
+    await page.screenshot({
+      path: "../docs/images/dashboard-waterfall-fail.png",
+      fullPage: false,
+    });
+  });
+
   test("trends", async ({ page }) => {
     await page.goto("/#/trends");
 

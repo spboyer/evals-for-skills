@@ -243,20 +243,46 @@ export default function RunDetail({ id }: { id: string }) {
       {activeTab === "trajectory" && (
         <div className="space-y-4">
           {!trajectoryTask ? (
-            <div className="space-y-2">
-              <p className="text-sm text-zinc-400">Select a task to view its trajectory:</p>
+            <div className="rounded-lg border border-zinc-700 overflow-hidden">
+              {/* Header row */}
+              <div className="flex items-center border-b border-zinc-700 bg-zinc-800/60 px-4 py-2">
+                <span className="flex-1 text-[10px] font-medium uppercase tracking-wider text-zinc-500">
+                  Task
+                </span>
+                <span className="w-28 text-[10px] font-medium uppercase tracking-wider text-zinc-500 text-right">
+                  Score
+                </span>
+                <span className="w-24 text-[10px] font-medium uppercase tracking-wider text-zinc-500 text-right">
+                  Duration
+                </span>
+                <span className="w-20 text-[10px] font-medium uppercase tracking-wider text-zinc-500 text-right">
+                  Outcome
+                </span>
+              </div>
               {data.tasks.map((task) => (
                 <button
                   key={task.name}
                   onClick={() => setTrajectoryTask(task)}
-                  className="flex w-full items-center justify-between rounded-lg border border-zinc-700 bg-zinc-800 px-4 py-3 text-left hover:bg-zinc-700/50 transition-colors"
+                  className="flex w-full items-center border-b border-zinc-700/40 last:border-b-0 bg-zinc-800 px-4 py-3 text-left hover:bg-zinc-700/40 transition-colors group"
                 >
-                  <span className="font-medium text-zinc-100">{task.name}</span>
-                  <OutcomeBadge outcome={task.outcome} />
+                  <span className="flex-1 text-sm font-medium text-zinc-100 truncate group-hover:text-white">
+                    {task.name}
+                  </span>
+                  <span className="w-28 text-xs tabular-nums text-zinc-400 text-right">
+                    {formatPercent(task.score)}
+                  </span>
+                  <span className="w-24 text-xs tabular-nums text-zinc-400 text-right">
+                    {formatDuration(task.duration)}
+                  </span>
+                  <span className="w-20 flex justify-end">
+                    <OutcomeBadge outcome={task.outcome} />
+                  </span>
                 </button>
               ))}
               {data.tasks.length === 0 && (
-                <p className="text-sm text-zinc-500">No tasks available.</p>
+                <div className="px-4 py-6 text-sm text-zinc-500 text-center">
+                  No tasks available.
+                </div>
               )}
             </div>
           ) : (

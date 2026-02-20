@@ -401,31 +401,38 @@ export default function TrajectoryViewer({ task }: { task: TaskResult }) {
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <h3 className="text-sm font-medium text-zinc-400">
-          Trajectory — {task.name}
-        </h3>
+      {/* Header bar — task name + view toggle */}
+      <div className="flex items-center justify-between gap-3 rounded-lg border border-zinc-700 bg-zinc-800/50 px-4 py-2.5">
+        <div className="flex items-center gap-2 min-w-0">
+          <span className="text-[10px] font-medium uppercase tracking-wider text-zinc-500 shrink-0">
+            Trace
+          </span>
+          <span className="text-zinc-600">/</span>
+          <span className="text-sm font-medium text-zinc-200 truncate">
+            {task.name}
+          </span>
+        </div>
 
         {/* View toggle (only when transcript has tool events) */}
         {hasToolEvents && (
-          <div className="flex rounded-lg border border-zinc-700 overflow-hidden">
+          <div className="flex shrink-0 rounded border border-zinc-700 overflow-hidden">
             <button
               onClick={() => setView("timeline")}
-              className={`flex items-center gap-1.5 px-3 py-1 text-xs font-medium transition-colors ${
+              className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium transition-colors ${
                 view === "timeline"
                   ? "bg-zinc-700 text-zinc-200"
-                  : "bg-zinc-800 text-zinc-500 hover:text-zinc-300"
+                  : "bg-zinc-800/50 text-zinc-500 hover:text-zinc-300"
               }`}
             >
               <BarChart3 className="h-3 w-3" />
-              Timeline
+              Waterfall
             </button>
             <button
               onClick={() => setView("events")}
-              className={`flex items-center gap-1.5 px-3 py-1 text-xs font-medium transition-colors ${
+              className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium transition-colors ${
                 view === "events"
                   ? "bg-zinc-700 text-zinc-200"
-                  : "bg-zinc-800 text-zinc-500 hover:text-zinc-300"
+                  : "bg-zinc-800/50 text-zinc-500 hover:text-zinc-300"
               }`}
             >
               <List className="h-3 w-3" />
