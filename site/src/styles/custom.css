@@ -1,145 +1,163 @@
 :root {
-	/* Force dark mode only */
-	color-scheme: dark;
+  color-scheme: dark;
 
-	/* Primary Colors - Zinc Palette */
-	--sl-color-bg: #18181b;
-	--sl-color-bg-nav: #18181b;
-	--sl-color-bg-sidebar: #18181b;
-	--sl-color-bg-inline-code: #27272a;
+  /* Backgrounds - Zinc Palette */
+  --sl-color-bg: #18181b;
+  --sl-color-bg-nav: #18181b;
+  --sl-color-bg-sidebar: #18181b;
+  --sl-color-bg-inline-code: #18181b;
 
-	/* Accent Colors - Emerald (matches dashboard) */
-	--sl-color-accent-low: #064e3b;
-	--sl-color-accent: #10b981;
-	--sl-color-accent-high: #34d399;
+  /* Accent Colors - Emerald */
+  --sl-color-accent-low: #059669;
+  --sl-color-accent: #10b981;
+  --sl-color-accent-high: #34d399;
 
-	/* Text Colors */
-	--sl-color-text: #f4f4f5;
-	--sl-color-text-accent: #10b981;
-	--sl-color-gray-1: #f4f4f5;
-	--sl-color-gray-2: #e4e4e7;
-	--sl-color-gray-3: #d4d4d8;
-	--sl-color-gray-4: #a1a1a6;
-	--sl-color-gray-5: #71717a;
-	--sl-color-gray-6: #52525b;
-	--sl-color-gray-7: #3f3f46;
+  /* Text Colors */
+  --sl-color-text: #d4d4d8;
+  --sl-color-text-accent: #34d399;
+  --sl-color-gray-1: #f4f4f5;
+  --sl-color-gray-2: #d4d4d8;
+  --sl-color-gray-3: #a1a1aa;
+  --sl-color-gray-4: #3f3f46;
+  --sl-color-gray-5: #27272a;
+  --sl-color-gray-6: #18181b;
+  --sl-color-gray-7: #09090b;
 
-	/* Borders */
-	--sl-color-hairline-light: #3f3f46;
-	--sl-color-hairline: #3f3f46;
-	--sl-color-divider: #3f3f46;
+  /* Borders */
+  --sl-color-hairline-light: #3f3f46;
+  --sl-color-hairline: #3f3f46;
+  --sl-color-divider: #3f3f46;
 
-	/* Success Color */
-	--sl-color-success: #22c55e;
+  /* Panels */
+  --sl-color-panel: #27272a;
+  --sl-color-panel-accent: #18181b;
 
-	/* Panels */
-	--sl-color-panel: #27272a;
-	--sl-color-panel-accent: #3b82f6;
+  /* Status Colors */
+  --sl-color-success: #10b981;
+  --sl-color-warning: #f59e0b;
+  --sl-color-danger: #f43f5e;
 
-	/* Font */
-	--sl-font: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
-		Roboto, "Helvetica Neue", Arial, "Noto Sans", sans-serif;
+  /* Font */
+  --sl-font: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
+    Roboto, "Helvetica Neue", Arial, "Noto Sans", sans-serif;
 
-	/* Override Starlight's light mode if enabled */
-	--sl-color-white: #18181b;
+  /* Override Starlight's light mode if enabled */
+  --sl-color-white: #18181b;
 }
 
 /* Force dark theme - hide light mode option */
 [data-theme='light'] {
-	--sl-color-bg: #18181b;
-	--sl-color-bg-nav: #18181b;
-	--sl-color-bg-sidebar: #18181b;
-	--sl-color-text: #f4f4f5;
-	--sl-color-accent: #10b981;
-	--sl-color-accent-low: #064e3b;
-	--sl-color-accent-high: #34d399;
-	--sl-color-gray-1: #f4f4f5;
-	--sl-color-gray-2: #e4e4e7;
-	--sl-color-gray-3: #d4d4d8;
-	--sl-color-gray-4: #a1a1a6;
-	--sl-color-gray-5: #71717a;
-	--sl-color-gray-6: #52525b;
-	--sl-color-gray-7: #3f3f46;
-	--sl-color-hairline: #3f3f46;
-	--sl-color-hairline-light: #3f3f46;
-	--sl-color-panel: #27272a;
-	--sl-color-panel-accent: #10b981;
+  --sl-color-bg: #18181b;
+  --sl-color-bg-nav: #18181b;
+  --sl-color-bg-sidebar: #18181b;
+  --sl-color-bg-inline-code: #18181b;
+  --sl-color-text: #d4d4d8;
+  --sl-color-text-accent: #34d399;
+  --sl-color-accent-low: #059669;
+  --sl-color-accent: #10b981;
+  --sl-color-accent-high: #34d399;
+  --sl-color-gray-1: #f4f4f5;
+  --sl-color-gray-2: #d4d4d8;
+  --sl-color-gray-3: #a1a1aa;
+  --sl-color-gray-4: #3f3f46;
+  --sl-color-gray-5: #27272a;
+  --sl-color-gray-6: #18181b;
+  --sl-color-gray-7: #09090b;
+  --sl-color-hairline: #3f3f46;
+  --sl-color-hairline-light: #3f3f46;
+  --sl-color-panel: #27272a;
+  --sl-color-panel-accent: #18181b;
+  --sl-color-success: #10b981;
+  --sl-color-warning: #f59e0b;
+  --sl-color-danger: #f43f5e;
 }
 
-/* Light mode toggle - hide it */
 .theme-toggle {
-	display: none !important;
+  display: none !important;
 }
 
-/* Card/surface styling */
+body {
+  background-color: #18181b;
+}
+
+header,
+nav {
+  background-color: #18181b;
+  border-color: #3f3f46;
+}
+
+.sidebar {
+  background-color: #18181b;
+  border-color: #3f3f46;
+}
+
+.sidebar a {
+  color: #d4d4d8;
+}
+
+.sidebar a:hover {
+  background-color: #27272a;
+  color: #f4f4f5;
+}
+
+.sidebar a[aria-current='page'] {
+  background-color: #27272a;
+  color: #34d399;
+  border-left: 2px solid #10b981;
+}
+
 .card,
-[class*='card'],
-.sl-container {
-	background-color: #27272a;
-	border-color: #3f3f46;
+.sl-panel,
+[class*='card'] {
+  background-color: #27272a;
+  border-color: #3f3f46;
 }
 
-/* Links */
 a {
-	color: #10b981;
+  color: #10b981;
 }
 
 a:hover {
-	color: #34d399;
+  color: #34d399;
 }
 
-/* Code blocks */
 code {
-	background-color: #27272a;
-	border-color: #3f3f46;
-	color: #f4f4f5;
+  background-color: #18181b;
+  border-color: #3f3f46;
+  color: #f4f4f5;
+}
+
+pre,
+.astro-code,
+.expressive-code {
+  background-color: #09090b;
+  border-color: #3f3f46;
+}
+
+pre code {
+  background-color: transparent;
+  border-color: transparent;
+}
+
+table {
+  border-color: #3f3f46;
+}
+
+table tbody tr:hover {
+  background-color: #27272a;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  color: #f4f4f5;
 }
 
 /* Remove gradients - flat colors only */
 body,
-.sl-container,
-.sidebar,
 nav,
+header,
+.sidebar,
 .card,
+.sl-panel,
 [class*='card'] {
-	background-image: none !important;
-}
-
-/* Starlight sidebar adjustment */
-.sidebar {
-	background-color: #18181b;
-}
-
-.sidebar .top-level > a:hover {
-	background-color: #27272a;
-}
-
-/* Navigation */
-nav {
-	background-color: #18181b;
-	border-color: #3f3f46;
-}
-
-/* Tables */
-table {
-	border-color: #3f3f46;
-}
-
-table tbody tr:hover {
-	background-color: #27272a;
-}
-
-/* Headings */
-h1, h2, h3, h4, h5, h6 {
-	color: #f4f4f5;
-}
-
-/* Buttons */
-button {
-	background-color: #10b981;
-	color: #f4f4f5;
-}
-
-button:hover {
-	background-color: #059669;
+  background-image: none !important;
 }
