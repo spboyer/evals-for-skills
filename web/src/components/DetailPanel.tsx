@@ -114,7 +114,7 @@ export default function DetailPanel({ span, onClose }: DetailPanelProps) {
         : JSON.stringify(span.toolResult, null, 2);
 
   return (
-    <div className="w-80 shrink-0 border-l border-zinc-700 bg-zinc-850 flex flex-col overflow-hidden">
+    <div className="w-80 shrink-0 border-l border-zinc-700 bg-zinc-900 flex flex-col overflow-hidden">
       {/* Header */}
       <div className="flex items-center justify-between gap-2 px-3 py-2.5 border-b border-zinc-700 bg-zinc-800">
         <div className="flex items-center gap-2 min-w-0">
