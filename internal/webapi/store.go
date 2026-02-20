@@ -96,7 +96,10 @@ func (fs *FileStore) load() error {
 
 		if outcome.RunID == "" {
 			// Use relative path (without extension) as fallback ID to avoid collisions
-			relPath, _ := filepath.Rel(fs.dir, path)
+			relPath, relErr := filepath.Rel(fs.dir, path)
+			if relErr != nil {
+				relPath = d.Name()
+			}
 			outcome.RunID = strings.TrimSuffix(filepath.ToSlash(relPath), ".json")
 		}
 		fs.runs[outcome.RunID] = &outcome
