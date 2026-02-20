@@ -34,13 +34,9 @@ jobs:
           curl -fsSL https://raw.githubusercontent.com/spboyer/waza/main/install.sh | bash
           echo "$HOME/bin" >> $GITHUB_PATH
       
-      - name: Set up credentials
+      - name: Run evaluations
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          export GITHUB_TOKEN
-      
-      - name: Run evaluations
         run: waza run -v -o results.json
       
       - name: Upload results

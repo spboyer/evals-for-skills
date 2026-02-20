@@ -96,7 +96,12 @@ code {
 }
 
 /* Remove gradients - flat colors only */
-* {
+body,
+.sl-container,
+.sidebar,
+nav,
+.card,
+[class*='card'] {
 	background-image: none !important;
 }
 

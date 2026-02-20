@@ -54,7 +54,7 @@ waza/
 ### Design Principles
 
 1. **Fixture Isolation** — Each task gets a fresh temp workspace. Original fixtures never modified.
-2. **Pluggable Validators** — 8 grader types, easily extended
+2. **Pluggable Validators** — 11 grader types, easily extended
 3. **Cross-Model Support** — Test skills against multiple LLM providers
 4. **Local-First** — Mock executor for development, real API for CI/CD
 5. **Observability** — Full transcripts, detailed metrics, dashboard visualization
@@ -76,16 +76,19 @@ graders:
       must_match: ["function", "parameter"]
 ```
 
-### 8 Built-In Validators
+### 11 Built-In Validators
 
 - **Code** — Python assertions
 - **Regex** — Pattern matching
-- **Model** — LLM-as-judge
-- **JSON** — Structured responses
-- **File** — Output file checking
 - **Keyword** — Keyword presence
-- **Script** — Custom Python logic
-- **Composite** — Combine multiple graders
+- **File** — Output file checking
+- **Diff** — Diff comparison
+- **JSON Schema** — JSON structure validation
+- **Prompt** — LLM-powered evaluation
+- **Behavior** — Agent behavior validation
+- **Action Sequence** — Tool call sequence validation
+- **Skill Invocation** — Skill invocation validation
+- **Program** — Program execution validation
 
 ### Multi-Model Comparison
 
@@ -218,7 +221,7 @@ Have questions or ideas? Join the conversation:
 - ✅ waza init — Scaffold projects
 - ✅ waza new — Create skills
 - ✅ waza compare — Cross-model comparison
-- ✅ All 8 grader types
+- ✅ All 11 grader types
 
 ### E2: Sensei Engine (🟡 In Progress)
 
