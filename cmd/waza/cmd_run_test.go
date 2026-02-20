@@ -8,6 +8,7 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+	"time"
 
 	"github.com/spboyer/waza/internal/models"
 	"github.com/stretchr/testify/assert"
@@ -1232,4 +1233,187 @@ func TestRunCommand_MultiSkillOutputDoesNotOverwrite(t *testing.T) {
 	assert.NotEqual(t, skill1Path, skill2Path, "different skills should get different output paths")
 	assert.Equal(t, "results_skill-one.json", skill1Path)
 	assert.Equal(t, "results_skill-two.json", skill2Path)
+}
+
+// Multi-skill summary (#273)
+// ---------------------------------------------------------------------------
+
+func TestBuildMultiSkillSummary_AggregatesCorrectly(t *testing.T) {
+	results := []skillRunResult{
+		{
+			skillName: "skill-a",
+			outcomes: []modelResult{
+				{
+					modelID: "gpt-4o",
+					outcome: &models.EvaluationOutcome{
+						Digest: models.OutcomeDigest{
+							TotalTests:     10,
+							Succeeded:      8,
+							AggregateScore: 0.85,
+						},
+					},
+				},
+			},
+		},
+		{
+			skillName: "skill-b",
+			outcomes: []modelResult{
+				{
+					modelID: "claude-sonnet",
+					outcome: &models.EvaluationOutcome{
+						Digest: models.OutcomeDigest{
+							TotalTests:     20,
+							Succeeded:      18,
+							AggregateScore: 0.90,
+						},
+					},
+				},
+			},
+		},
+	}
+
+	summary := buildMultiSkillSummary(results)
+
+	require.NotNil(t, summary)
+	assert.Len(t, summary.Skills, 2)
+
+	// Check skill-a metrics
+	skillA := summary.Skills[0]
+	assert.Equal(t, "skill-a", skillA.SkillName)
+	assert.Equal(t, []string{"gpt-4o"}, skillA.Models)
+	assert.InDelta(t, 0.8, skillA.PassRate, 0.001)
+	assert.InDelta(t, 0.85, skillA.AggregateScore, 0.001)
+
+	// Check skill-b metrics
+	skillB := summary.Skills[1]
+	assert.Equal(t, "skill-b", skillB.SkillName)
+	assert.Equal(t, []string{"claude-sonnet"}, skillB.Models)
+	assert.InDelta(t, 0.9, skillB.PassRate, 0.001)
+	assert.InDelta(t, 0.90, skillB.AggregateScore, 0.001)
+
+	// Check overall metrics
+	assert.Equal(t, 2, summary.Overall.TotalSkills)
+	assert.Equal(t, 2, summary.Overall.TotalModels)
+	assert.InDelta(t, 0.85, summary.Overall.AvgPassRate, 0.001)        // (0.8 + 0.9) / 2
+	assert.InDelta(t, 0.875, summary.Overall.AvgAggregateScore, 0.001) // (0.85 + 0.90) / 2
+}
+
+func TestBuildMultiSkillSummary_MultiModelPerSkill(t *testing.T) {
+	results := []skillRunResult{
+		{
+			skillName: "skill-a",
+			outcomes: []modelResult{
+				{
+					modelID: "gpt-4o",
+					outcome: &models.EvaluationOutcome{
+						Digest: models.OutcomeDigest{
+							TotalTests:     10,
+							Succeeded:      8,
+							AggregateScore: 0.80,
+						},
+					},
+				},
+				{
+					modelID: "claude-sonnet",
+					outcome: &models.EvaluationOutcome{
+						Digest: models.OutcomeDigest{
+							TotalTests:     10,
+							Succeeded:      9,
+							AggregateScore: 0.90,
+						},
+					},
+				},
+			},
+		},
+	}
+
+	summary := buildMultiSkillSummary(results)
+
+	require.NotNil(t, summary)
+	assert.Len(t, summary.Skills, 1)
+
+	skill := summary.Skills[0]
+	assert.Equal(t, "skill-a", skill.SkillName)
+	assert.Equal(t, []string{"gpt-4o", "claude-sonnet"}, skill.Models)
+
+	// Pass rate: (8+9) / (10+10) = 0.85
+	assert.InDelta(t, 0.85, skill.PassRate, 0.001)
+
+	// Aggregate score: (0.80 + 0.90) / 2 = 0.85
+	assert.InDelta(t, 0.85, skill.AggregateScore, 0.001)
+
+	// Overall: 1 skill, 2 unique models
+	assert.Equal(t, 1, summary.Overall.TotalSkills)
+	assert.Equal(t, 2, summary.Overall.TotalModels)
+}
+
+func TestBuildMultiSkillSummary_OutputFilesPaths(t *testing.T) {
+	// Set up the global outputPath to test file path construction
+	outputPath = "results.json"
+	defer func() { outputPath = "" }()
+
+	results := []skillRunResult{
+		{
+			skillName: "skill-a",
+			outcomes: []modelResult{
+				{modelID: "gpt-4o", outcome: &models.EvaluationOutcome{}},
+				{modelID: "claude-sonnet-4", outcome: &models.EvaluationOutcome{}},
+			},
+		},
+	}
+
+	summary := buildMultiSkillSummary(results)
+
+	require.NotNil(t, summary)
+	require.Len(t, summary.Skills, 1)
+
+	skill := summary.Skills[0]
+	assert.Equal(t, []string{
+		"results_gpt-4o.json",
+		"results_claude-sonnet-4.json",
+	}, skill.OutputFiles)
+}
+
+func TestRunCommand_NoSummaryFlag(t *testing.T) {
+	cmd := newRunCommand()
+	require.NoError(t, cmd.ParseFlags([]string{"--no-summary"}))
+
+	boolVal, err := cmd.Flags().GetBool("no-summary")
+	require.NoError(t, err)
+	assert.True(t, boolVal)
+}
+
+func TestSaveSummary_WritesValidJSON(t *testing.T) {
+	summary := &models.MultiSkillSummary{
+		Timestamp: time.Now(),
+		Skills: []models.SkillSummary{
+			{
+				SkillName:      "test-skill",
+				Models:         []string{"gpt-4o"},
+				PassRate:       0.8,
+				AggregateScore: 0.85,
+				OutputFiles:    []string{"results_gpt-4o.json"},
+			},
+		},
+		Overall: models.OverallSummary{
+			TotalSkills:       1,
+			TotalModels:       1,
+			AvgPassRate:       0.8,
+			AvgAggregateScore: 0.85,
+		},
+	}
+
+	outFile := filepath.Join(t.TempDir(), "summary.json")
+	err := saveSummary(summary, outFile)
+	require.NoError(t, err)
+
+	// Verify file exists and is valid JSON
+	data, err := os.ReadFile(outFile)
+	require.NoError(t, err)
+	assert.Greater(t, len(data), 0)
+
+	var result models.MultiSkillSummary
+	require.NoError(t, json.Unmarshal(data, &result))
+	assert.Equal(t, 1, result.Overall.TotalSkills)
+	assert.Equal(t, "test-skill", result.Skills[0].SkillName)
 }

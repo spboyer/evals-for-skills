@@ -43,6 +43,7 @@ var (
 	baselineFlag   bool
 	sessionLog     bool
 	sessionDir     string
+	noSummary      bool
 )
 
 // modelResult pairs a model identifier with its evaluation outcome.
@@ -88,6 +89,7 @@ You can also specify a skill name to run its eval:
 	cmd.Flags().BoolVar(&baselineFlag, "baseline", false, "Run A/B comparison: with skills vs without skills")
 	cmd.Flags().BoolVar(&sessionLog, "session-log", false, "Enable session event logging (NDJSON)")
 	cmd.Flags().StringVar(&sessionDir, "session-dir", "", "Directory for session log files (default: current directory)")
+	cmd.Flags().BoolVar(&noSummary, "no-summary", false, "Skip writing combined summary.json for multi-skill runs")
 
 	return cmd
 }
@@ -133,6 +135,19 @@ func runCommandE(cmd *cobra.Command, args []string) error {
 
 	if len(allSkillResults) > 1 {
 		printSkillRunSummary(allSkillResults)
+
+		// Write combined summary.json if --output is specified and --no-summary is not set
+		if outputPath != "" && !noSummary {
+			summary := buildMultiSkillSummary(allSkillResults)
+			ext := filepath.Ext(outputPath)
+			base := strings.TrimSuffix(outputPath, ext)
+			summaryPath := fmt.Sprintf("%s_summary%s", base, ext)
+
+			if err := saveSummary(summary, summaryPath); err != nil {
+				return fmt.Errorf("failed to save summary: %w", err)
+			}
+			fmt.Printf("Combined summary saved to: %s\n", summaryPath)
+		}
 	}
 
 	// Write per-skill output files when --output is specified
@@ -951,4 +966,86 @@ func printRecommendationSummary(rec *models.Recommendation, results []modelResul
 	fmt.Printf("  • Consistency (inverse stddev): %.0f%% weight\n", rec.Weights.Consistency*100)
 	fmt.Printf("  • Speed (inverse duration): %.0f%% weight\n", rec.Weights.Speed*100)
 	fmt.Println()
+}
+
+// buildMultiSkillSummary aggregates results from multiple skill runs into a summary.
+func buildMultiSkillSummary(results []skillRunResult) *models.MultiSkillSummary {
+	summary := &models.MultiSkillSummary{
+		Timestamp: time.Now(),
+		Skills:    make([]models.SkillSummary, 0, len(results)),
+	}
+
+	var totalPassRate, totalAggregateScore float64
+	var validSkills int
+	modelsMap := make(map[string]bool)
+
+	for _, r := range results {
+		skill := models.SkillSummary{
+			SkillName:   r.skillName,
+			Models:      make([]string, 0, len(r.outcomes)),
+			OutputFiles: make([]string, 0, len(r.outcomes)),
+		}
+
+		var totalPassed, totalTests int
+		var sumScore float64
+		var validOutcomes int
+
+		// Aggregate across all models for this skill
+		for _, mr := range r.outcomes {
+			skill.Models = append(skill.Models, mr.modelID)
+			modelsMap[mr.modelID] = true
+
+			if mr.outcome != nil {
+				totalPassed += mr.outcome.Digest.Succeeded
+				totalTests += mr.outcome.Digest.TotalTests
+				sumScore += mr.outcome.Digest.AggregateScore
+				validOutcomes++
+			}
+
+			// Build output file path (matches multi-model output naming)
+			if outputPath != "" {
+				ext := filepath.Ext(outputPath)
+				base := strings.TrimSuffix(outputPath, ext)
+				perModelPath := fmt.Sprintf("%s_%s%s", base, sanitizePathSegment(mr.modelID), ext)
+				skill.OutputFiles = append(skill.OutputFiles, perModelPath)
+			}
+		}
+
+		// Calculate skill-level metrics
+		if totalTests > 0 {
+			skill.PassRate = float64(totalPassed) / float64(totalTests)
+		}
+		if validOutcomes > 0 {
+			skill.AggregateScore = sumScore / float64(validOutcomes)
+		}
+
+		// Only count skills with valid outcomes for overall averages
+		if validOutcomes > 0 {
+			totalPassRate += skill.PassRate
+			totalAggregateScore += skill.AggregateScore
+			validSkills++
+		}
+
+		summary.Skills = append(summary.Skills, skill)
+	}
+
+	// Calculate overall metrics
+	summary.Overall.TotalSkills = len(results)
+	summary.Overall.TotalModels = len(modelsMap)
+	if validSkills > 0 {
+		summary.Overall.AvgPassRate = totalPassRate / float64(validSkills)
+		summary.Overall.AvgAggregateScore = totalAggregateScore / float64(validSkills)
+	}
+
+	return summary
+}
+
+// saveSummary writes a MultiSkillSummary to a JSON file.
+func saveSummary(summary *models.MultiSkillSummary, path string) error {
+	data, err := json.MarshalIndent(summary, "", "  ")
+	if err != nil {
+		return err
+	}
+
+	return os.WriteFile(path, data, 0644)
 }
