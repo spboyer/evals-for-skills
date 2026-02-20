@@ -7,7 +7,7 @@ Complete reference for all available grader types in waza.
 Graders evaluate skill execution and produce scores. Each grader returns:
 - `score`: 0.0 to 1.0
 - `passed`: boolean
-- `message`: human-readable result
+- `feedback`: human-readable result text
 - `details`: additional metadata
 
 ## Grader Types
