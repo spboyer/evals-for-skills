@@ -12,21 +12,25 @@ Graders evaluate skill execution and produce scores. Each grader returns:
 
 ## Grader Types
 
+- [`action_sequence` - Tool Call Sequence Validation](action_sequence.md)
+- [`behavior` - Agent Behavior Validation](behavior.md)
 - [`code` - Assertion-Based Grader](code.md)
-- [`regex` - Pattern Matching Grader](regex.md)
-- [`tool_calls` - Tool Usage Grader (not implemented)](tool_calls.md)
-- [`script` - External Script Grader (not implemented)](script.md)
 - [`diff` - Workspace File Comparison](diff.md)
-- [`llm` - LLM-as-Judge Grader (not implemented)](llm.md)
-- [`llm_comparison` - Reference Comparison Grader (not implemented)](llm_comparison.md)
+- [`file` - File Existence & Content Grader](file.md)
 - [`human` - Manual Review Grader (not implemented)](human.md)
 - [`human_calibration` - Calibration Grader (not implemented)](human_calibration.md)
-- [`behavior` - Agent Behavior Validation](behavior.md)
-- [`action_sequence` - Tool Call Sequence Validation](action_sequence.md)
-- [`skill_invocation` - Skill Invocation Sequence Validation](skill_invocation.md)
+- [`json_schema` - JSON Schema Validation Grader](json_schema.md)
+- [`keyword` - Keyword Matching Grader](keyword.md)
+- [`llm` - LLM-as-Judge Grader (not implemented)](llm.md)
+- [`llm_comparison` - Reference Comparison Grader (not implemented)](llm_comparison.md)
+- [`program` - External Program Grader](program.md)
 - [`prompt` - LLM-Based Evaluation](prompt.md)
+- [`regex` - Pattern Matching Grader](regex.md)
+- [`script` - External Script Grader (not implemented)](script.md)
+- [`skill_invocation` - Skill Invocation Sequence Validation](skill_invocation.md)
+- [`tool_calls` - Tool Usage Grader (not implemented)](tool_calls.md)
 
-## Inline vs Script Graders
+## Inline vs Program Graders
 
 Graders can be defined in two ways:
 
@@ -50,7 +54,7 @@ graders:
         - "deployed to .+"
 ```
 
-### Script Graders (in graders/ directory)
+### Program Graders (external scripts)
 
 Best for complex, multi-criteria evaluation logic:
 
@@ -65,20 +69,21 @@ my-skill/
 Reference in eval.yaml:
 ```yaml
 graders:
-  - type: script
+  - type: program
     name: quality_checker
     config:
-      script: graders/quality_checker.py
+      command: python3
+      args: ["graders/quality_checker.py"]
 ```
 
-**When to use script graders:**
+**When to use program graders:**
 - Multi-criteria scoring (5+ checks)
 - Domain-specific business logic
 - Reusable across multiple evals
 - Complex pattern matching or analysis
 - Integration with external services
 
-See the [code-explainer example](../../examples/code-explainer/graders/explanation_quality.py) for a complete script grader implementation.
+The program grader passes agent output via stdin and the workspace directory via the `WAZA_WORKSPACE_DIR` environment variable. Exit code 0 means pass, non-zero means fail. See the [program grader docs](program.md) for details.
 
 ## Azure ML Evaluator Integration
 
@@ -111,7 +116,7 @@ result = evaluator(query=query, response=response)
   name: relevance_check
   config:
     model: gpt-4o-mini
-    rubric: |
+    prompt: |
       Evaluate how relevant the agent's response is to the user's query.
 
       Query: [Available in the test case prompt; the agent's response is provided as 'output']
@@ -123,12 +128,8 @@ result = evaluator(query=query, response=response)
       4 - Very relevant
       5 - Perfectly relevant and comprehensive
 
-      Return JSON: {
-        "relevance_score": <1-5>,
-        "reasoning": "<explanation>",
-        "passed": <true if score >= 4>
-      }
-    threshold: 0.75
+      If the response scores 4 or above, call set_waza_grade_pass with a description and reason.
+      Otherwise, call set_waza_grade_fail with a description and reason.
 ```
 
 **Example: Custom Azure ML Evaluator → Waza Rubric**
@@ -147,7 +148,7 @@ evaluator = Prompty.load("security_evaluator.prompty")
   name: security_check
   config:
     model: gpt-4o
-    rubric: |
+    prompt: |
       Evaluate the code for security vulnerabilities:
 
       Criteria:
@@ -156,18 +157,8 @@ evaluator = Prompty.load("security_evaluator.prompty")
       3. Data Protection: Is sensitive data protected?
       4. Error Handling: Are errors handled securely?
 
-      For each criterion, rate 1-5 and provide specific findings.
-
-      Return JSON: {
-        "input_validation": <score>,
-        "authentication": <score>,
-        "data_protection": <score>,
-        "error_handling": <score>,
-        "overall_score": <average>,
-        "findings": ["<issue 1>", "<issue 2>", ...],
-        "passed": <true if overall >= 4>
-      }
-    threshold: 0.8
+      For each criterion, call set_waza_grade_pass if it is satisfied,
+      or set_waza_grade_fail with specific findings if it is not.
 ```
 
 ### Using Azure ML Prompt Flow Templates
@@ -175,8 +166,8 @@ evaluator = Prompty.load("security_evaluator.prompty")
 Azure ML Prompt Flow `.prompty` files can be adapted to Waza rubrics:
 
 1. **Extract the system prompt** from the `.prompty` file
-2. **Convert to YAML rubric** in your grader config
-3. **Map inputs** (context variables are available: `output`, `transcript`, `tool_calls`, etc.)
+2. **Convert to YAML prompt** in your grader config
+3. **Use tool calls** to signal pass/fail (call `set_waza_grade_pass` or `set_waza_grade_fail`)
 4. **Preserve scoring logic** from the original evaluator
 
 **Example Conversion:**
@@ -198,11 +189,12 @@ Becomes:
 - type: prompt
   name: code_quality
   config:
-    rubric: |
+    prompt: |
       Evaluate the code quality on a scale of 1-5...
       [evaluation criteria - copied from .prompty]
 
-      Return JSON: {"score": <1-5>, "reasoning": "..."}
+      If the code scores 4 or above, call set_waza_grade_pass.
+      Otherwise call set_waza_grade_fail with an explanation.
 ```
 
 ### Creating Custom LLM-as-Judge Graders
@@ -210,10 +202,9 @@ Becomes:
 To create graders that match Azure ML evaluator patterns:
 
 1. **Define clear criteria**: What aspects are you evaluating?
-2. **Use consistent scales**: 1-5 or 1-10 (Waza normalizes to 0-1)
-3. **Request chain-of-thought**: Ask the LLM to explain its reasoning
-4. **Structure output**: Use JSON for reliable parsing
-5. **Set appropriate thresholds**: Define what "passing" means for your criteria
+2. **Use tool calls**: Call `set_waza_grade_pass` or `set_waza_grade_fail` for each check
+3. **Request chain-of-thought**: Ask the LLM to explain its reasoning in the `reason` field
+4. **Use per-criterion calls for partial credit**: One pass/fail tool call per criterion gives partial scoring
 
 **Template:**
 
@@ -222,33 +213,23 @@ To create graders that match Azure ML evaluator patterns:
   name: my_custom_evaluator
   config:
     model: gpt-4o-mini
-    rubric: |
+    prompt: |
       Evaluate [what you're assessing] based on:
 
-      1. [Criterion 1] (1-5): [Description]
-      2. [Criterion 2] (1-5): [Description]
-      3. [Criterion 3] (1-5): [Description]
+      1. [Criterion 1]: [Description]
+      2. [Criterion 2]: [Description]
+      3. [Criterion 3]: [Description]
 
       For each criterion:
       - Consider [specific aspects]
       - Rate honestly and critically
       - Provide specific examples
 
-      Return JSON: {
-        "criterion1_score": <1-5>,
-        "criterion2_score": <1-5>,
-        "criterion3_score": <1-5>,
-        "overall_score": <average>,
-        "reasoning": "<detailed explanation>",
-        "passed": <true/false based on threshold>
-      }
+      For each criterion, call:
+      - set_waza_grade_pass if the criterion is met (include description and reason)
+      - set_waza_grade_fail if it is not (include description and reason)
 
-      Context available:
-      - output: The agent's final response
-      - tool_calls: List of tools the agent used
-      - duration_ms: Execution time
-    threshold: 0.7
-    score_type: normalized
+      Make exactly one call per criterion (3 total calls).
 ```
 
 ## Task-Level Graders
@@ -275,8 +256,8 @@ graders:
     name: basic_check
     # Default weight: 1.0
 
-  - type: llm
-    name: quality_check
+  - type: regex
+    name: format_check
     # Default weight: 1.0
 ```
 
@@ -366,27 +347,38 @@ distinguish engine failures from genuine misclassifications.
 
 ## Creating Custom Graders
 
-Extend the `Grader` base class:
+Implement the `Grader` interface in Go and register it in `internal/graders/grader.go`:
 
-```python
-from waza.graders.base import Grader, GraderContext, GraderType, GraderRegistry
-from waza.schemas.results import GraderResult
+```go
+// 1. Implement the Grader interface in internal/graders/
+type myCustomGrader struct {
+    name string
+}
 
-@GraderRegistry.register("my_custom")
-class MyCustomGrader(Grader):
-    @property
-    def grader_type(self) -> GraderType:
-        return GraderType.CODE
+func (g *myCustomGrader) Name() string            { return g.name }
+func (g *myCustomGrader) Kind() models.GraderKind { return "my_custom" }
 
-    def grade(self, context: GraderContext) -> GraderResult:
-        # Your logic here
-        return GraderResult(
-            name=self.name,
-            type=self.grader_type.value,
-            score=1.0,
-            passed=True,
-            message="Custom grading complete",
-        )
+func (g *myCustomGrader) Grade(ctx context.Context, gradingContext *Context) (*models.GraderResults, error) {
+    // Your logic here
+    return &models.GraderResults{
+        Name:     g.name,
+        Type:     "my_custom",
+        Score:    1.0,
+        Passed:   true,
+        Feedback: "Custom grading complete",
+    }, nil
+}
+```
+
+```go
+// 2. Add the new GraderKind constant in internal/models/outcome.go
+GraderKindMyCustom GraderKind = "my_custom"
+```
+
+```go
+// 3. Register in the Create function in internal/graders/grader.go
+case models.GraderKindMyCustom:
+    // decode params and create grader
 ```
 
 Then use in eval.yaml:

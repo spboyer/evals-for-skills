@@ -13,8 +13,8 @@ Validates agent behavior patterns like tool call counts, token usage, and execut
       - "bash"
       - "view"
     forbidden_tools:
-      - "rm -rf"
-      - "sudo"
+      - "create"
+      - "web_fetch"
 ```
 
 **Options:**

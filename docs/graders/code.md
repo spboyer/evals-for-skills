@@ -1,6 +1,6 @@
 ### `code` - Assertion-Based Grader
 
-Evaluates Python expressions against the execution context.
+Evaluates expressions against the execution context using an inline script runner.
 
 ```yaml
 - type: code
@@ -12,18 +12,27 @@ Evaluates Python expressions against the execution context.
       - "len(errors) == 0"
 ```
 
-**Available Context Variables:**
+**Options:**
+| Option | Type | Description |
+|--------|------|-------------|
+| `assertions` | list[str] | Expressions to evaluate |
+| `language` | string | Script language: `python` (default) or `javascript` |
+
+**Available Context Variables (Python):**
 | Variable | Type | Description |
 |----------|------|-------------|
 | `output` | str | Final skill output |
 | `outcome` | dict | Outcome state |
 | `transcript` | list | Full execution transcript |
 | `tool_calls` | list | Tool calls from transcript |
-| `errors` | list | Errors from transcript |
+| `errors` | list | Transcript events containing errors |
 | `duration_ms` | int | Execution duration |
 
-**Available Functions:**
+**Available Functions (Python):**
 `len`, `any`, `all`, `str`, `int`, `float`, `bool`, `list`, `dict`, `re` (regex module)
+
+**Available Context Variables (JavaScript):**
+The same variables (`output`, `outcome`, `transcript`, `tool_calls`, `errors`, `duration_ms`) are available, plus built-in JS globals: `Array`, `Object`, `String`, `Number`, `Boolean`, `Math`, `JSON`, `RegExp`, `parseInt`, `parseFloat`.
 
 **Scoring:** `passed_assertions / total_assertions`
 
