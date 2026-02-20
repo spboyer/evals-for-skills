@@ -20,6 +20,7 @@ import (
 func resetRunGlobals() {
 	contextDir = ""
 	outputPath = ""
+	outputDir = ""
 	verbose = false
 	taskFilters = nil
 	parallel = false
@@ -1600,4 +1601,163 @@ func TestRunCommand_CrossProduct_SpecialCharacters(t *testing.T) {
 	assert.Equal(t, "out_skill-v1-test_gpt-4o-mini-2024.json", path)
 	assert.NotContains(t, path, ":")
 	assert.NotContains(t, path, "/")
+}
+
+// ---------------------------------------------------------------------------
+// --output-dir flag tests
+// ---------------------------------------------------------------------------
+
+func TestRunCommand_OutputDirMutualExclusion(t *testing.T) {
+	resetRunGlobals()
+	defer resetRunGlobals()
+
+	cmd := newRunCommand()
+	specPath := createTestSpec(t, "mock")
+	cmd.SetArgs([]string{
+		"--output", "results.json",
+		"--output-dir", "results-dir",
+		specPath,
+	})
+
+	err := cmd.Execute()
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "--output and --output-dir are mutually exclusive")
+}
+
+func TestWriteOutputDir_SingleSkill(t *testing.T) {
+	dir := t.TempDir()
+
+	// Single skill with single model
+	results := []skillRunResult{
+		{
+			skillName: "code-explainer",
+			outcomes: []modelResult{
+				{
+					modelID: "gpt-4o",
+					outcome: &models.EvaluationOutcome{
+						Digest: models.OutcomeDigest{
+							TotalTests: 5,
+							Succeeded:  4,
+						},
+					},
+				},
+			},
+		},
+	}
+
+	err := writeOutputDir(dir, results)
+	require.NoError(t, err)
+
+	// Single-skill mode: files written directly to output dir
+	resultPath := filepath.Join(dir, "gpt-4o.json")
+	assert.FileExists(t, resultPath)
+
+	// Verify JSON content
+	data, err := os.ReadFile(resultPath)
+	require.NoError(t, err)
+	var outcome models.EvaluationOutcome
+	require.NoError(t, json.Unmarshal(data, &outcome))
+	assert.Equal(t, 5, outcome.Digest.TotalTests)
+	assert.Equal(t, 4, outcome.Digest.Succeeded)
+}
+
+func TestWriteOutputDir_MultiSkill(t *testing.T) {
+	dir := t.TempDir()
+
+	// Multi-skill with multiple models
+	results := []skillRunResult{
+		{
+			skillName: "code-explainer",
+			outcomes: []modelResult{
+				{
+					modelID: "gpt-4o",
+					outcome: &models.EvaluationOutcome{
+						Digest: models.OutcomeDigest{TotalTests: 5, Succeeded: 4},
+					},
+				},
+				{
+					modelID: "claude-sonnet",
+					outcome: &models.EvaluationOutcome{
+						Digest: models.OutcomeDigest{TotalTests: 5, Succeeded: 3},
+					},
+				},
+			},
+		},
+		{
+			skillName: "code-reviewer",
+			outcomes: []modelResult{
+				{
+					modelID: "gpt-4o",
+					outcome: &models.EvaluationOutcome{
+						Digest: models.OutcomeDigest{TotalTests: 3, Succeeded: 2},
+					},
+				},
+			},
+		},
+	}
+
+	err := writeOutputDir(dir, results)
+	require.NoError(t, err)
+
+	// Multi-skill mode: subdirectories created per skill
+	explainerDir := filepath.Join(dir, "code-explainer")
+	reviewerDir := filepath.Join(dir, "code-reviewer")
+
+	assert.DirExists(t, explainerDir)
+	assert.DirExists(t, reviewerDir)
+
+	// Verify files
+	assert.FileExists(t, filepath.Join(explainerDir, "gpt-4o.json"))
+	assert.FileExists(t, filepath.Join(explainerDir, "claude-sonnet.json"))
+	assert.FileExists(t, filepath.Join(reviewerDir, "gpt-4o.json"))
+
+	// Verify content
+	data, err := os.ReadFile(filepath.Join(explainerDir, "gpt-4o.json"))
+	require.NoError(t, err)
+	var outcome models.EvaluationOutcome
+	require.NoError(t, json.Unmarshal(data, &outcome))
+	assert.Equal(t, 5, outcome.Digest.TotalTests)
+	assert.Equal(t, 4, outcome.Digest.Succeeded)
+}
+
+func TestWriteOutputDir_SanitizesPaths(t *testing.T) {
+	dir := t.TempDir()
+
+	// Skill and model names with special chars
+	// Multi-skill to test subdirectory creation
+	results := []skillRunResult{
+		{
+			skillName: "code/explainer",
+			outcomes: []modelResult{
+				{
+					modelID: "gpt-4o:latest",
+					outcome: &models.EvaluationOutcome{
+						Digest: models.OutcomeDigest{TotalTests: 1, Succeeded: 1},
+					},
+				},
+			},
+		},
+		{
+			skillName: "code\\reviewer",
+			outcomes: []modelResult{
+				{
+					modelID: "claude sonnet",
+					outcome: &models.EvaluationOutcome{
+						Digest: models.OutcomeDigest{TotalTests: 1, Succeeded: 1},
+					},
+				},
+			},
+		},
+	}
+
+	err := writeOutputDir(dir, results)
+	require.NoError(t, err)
+
+	// Paths should be sanitized
+	explainerDir := filepath.Join(dir, "code-explainer")
+	reviewerDir := filepath.Join(dir, "code-reviewer")
+	assert.DirExists(t, explainerDir)
+	assert.DirExists(t, reviewerDir)
+	assert.FileExists(t, filepath.Join(explainerDir, "gpt-4o-latest.json"))
+	assert.FileExists(t, filepath.Join(reviewerDir, "claude-sonnet.json"))
 }

@@ -27,6 +27,7 @@ import (
 var (
 	contextDir     string
 	outputPath     string
+	outputDir      string
 	verbose        bool
 	transcriptDir  string
 	taskFilters    []string
@@ -73,6 +74,7 @@ You can also specify a skill name to run its eval:
 
 	cmd.Flags().StringVar(&contextDir, "context-dir", "", "Context directory for fixtures (default: ./fixtures relative to spec)")
 	cmd.Flags().StringVarP(&outputPath, "output", "o", "", "Output JSON file for results")
+	cmd.Flags().StringVar(&outputDir, "output-dir", "", "Directory for structured output (mutually exclusive with --output)")
 	cmd.Flags().BoolVarP(&verbose, "verbose", "v", false, "Verbose output with detailed progress")
 	cmd.Flags().StringVar(&transcriptDir, "transcript-dir", "", "Directory to save per-task transcript JSON files")
 	cmd.Flags().StringArrayVar(&taskFilters, "task", nil, "Filter tasks by name/ID glob pattern (can be repeated).")
@@ -95,6 +97,11 @@ You can also specify a skill name to run its eval:
 }
 
 func runCommandE(cmd *cobra.Command, args []string) error {
+	// Validate mutual exclusion
+	if outputPath != "" && outputDir != "" {
+		return fmt.Errorf("--output and --output-dir are mutually exclusive")
+	}
+
 	// Resolve spec path: explicit arg or workspace detection
 	specPaths, err := resolveSpecPaths(args)
 	if err != nil {
@@ -169,6 +176,13 @@ func runCommandE(cmd *cobra.Command, args []string) error {
 				}
 				fmt.Printf("Results saved to: %s\n", perSkillPath)
 			}
+		}
+	}
+
+	// Write structured directory output when --output-dir is specified
+	if outputDir != "" {
+		if err := writeOutputDir(outputDir, allSkillResults); err != nil {
+			return fmt.Errorf("failed to write output directory: %w", err)
 		}
 	}
 
@@ -1056,4 +1070,45 @@ func saveSummary(summary *models.MultiSkillSummary, path string) error {
 	}
 
 	return os.WriteFile(path, data, 0644)
+}
+
+// writeOutputDir writes results to a structured directory hierarchy.
+// For multi-skill runs: {outputDir}/{skillName}/{modelName}.json
+// For single-skill runs: {outputDir}/{modelName}.json
+func writeOutputDir(dir string, results []skillRunResult) error {
+	if err := os.MkdirAll(dir, 0755); err != nil {
+		return fmt.Errorf("create output directory: %w", err)
+	}
+
+	multiSkill := len(results) > 1
+
+	for _, skillResult := range results {
+		for _, mr := range skillResult.outcomes {
+			if mr.outcome == nil {
+				continue
+			}
+
+			var outPath string
+			if multiSkill {
+				// Multi-skill: create skill subdirectory
+				skillDir := filepath.Join(dir, sanitizePathSegment(skillResult.skillName))
+				if err := os.MkdirAll(skillDir, 0755); err != nil {
+					return fmt.Errorf("create skill directory %s: %w", skillDir, err)
+				}
+				modelFile := sanitizePathSegment(mr.modelID) + ".json"
+				outPath = filepath.Join(skillDir, modelFile)
+			} else {
+				// Single-skill: write directly to output dir
+				modelFile := sanitizePathSegment(mr.modelID) + ".json"
+				outPath = filepath.Join(dir, modelFile)
+			}
+
+			if err := saveOutcome(mr.outcome, outPath); err != nil {
+				return fmt.Errorf("save outcome to %s: %w", outPath, err)
+			}
+			fmt.Printf("Results saved to: %s\n", outPath)
+		}
+	}
+
+	return nil
 }
