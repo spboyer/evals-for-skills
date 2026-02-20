@@ -27,7 +27,7 @@ export function extractToolSpans(events: TranscriptEvent[]): ToolSpan[] {
 
   for (let i = 0; i < events.length; i++) {
     const ev = events[i];
-    if (!ev.toolCallId) continue;
+    if (!ev || !ev.toolCallId) continue;
 
     if (ev.type === "ToolExecutionStart") {
       starts.set(ev.toolCallId, {

@@ -58,7 +58,7 @@ func (te *TranscriptEvent) UnmarshalJSON(data []byte) error {
 		Success    *bool                    `json:"success,omitempty"`
 		ToolCallID *string                  `json:"tool_call_id,omitempty"`
 		ToolName   *string                  `json:"tool_name,omitempty"`
-		ToolResult *copilot.Result           `json:"tool_result,omitempty"`
+		ToolResult *copilot.Result          `json:"tool_result,omitempty"`
 	}
 
 	if err := json.Unmarshal(data, &v); err != nil {
