@@ -93,12 +93,14 @@ Waza's grader system is designed to be compatible with [Azure AI Evaluation SDK]
 
 The following Azure ML evaluator types map to Waza graders:
 
-| Azure ML Evaluator | Waza Grader | Description || `RelevanceEvaluator` | `prompt` | Uses LLM to judge response relevance |
-| `CoherenceEvaluator` | `prompt` | Evaluates logical flow and coherence |
-| `FluencyEvaluator` | `prompt` | Assesses natural language quality |
-| `GroundednessEvaluator` | `prompt` | Checks factual grounding |
-| `ContentSafetyEvaluator` | `prompt` | Validates content safety |
-| Custom evaluators | `prompt` | Any custom LLM-based evaluator |
+| Azure ML Evaluator       | Waza Grader | Description                               |
+| ------------------------ | ----------- | ----------------------------------------- |
+| `RelevanceEvaluator`     | `prompt`    | Uses LLM to judge response relevance      |
+| `CoherenceEvaluator`     | `prompt`    | Evaluates logical flow and coherence      |
+| `FluencyEvaluator`       | `prompt`    | Assesses natural language quality         |
+| `GroundednessEvaluator`  | `prompt`    | Checks factual grounding                  |
+| `ContentSafetyEvaluator` | `prompt`    | Validates content safety                  |
+| Custom evaluators        | `prompt`    | Any custom LLM-based evaluator            |
 
 ### Adapting Azure ML Evaluators as Waza Rubrics
 
@@ -172,15 +174,17 @@ Azure ML Prompt Flow `.prompty` files can be adapted to Waza rubrics:
 
 **Example Conversion:**
 
-```promptyname: CodeQualityEvaluator
+```prompty
+name: CodeQualityEvaluator
 description: Evaluates code quality
 inputs:
   code: string
 outputs:
   score: integer
-  reasoning: stringsystem:
-Evaluate the code quality on a scale of 1-5...
-[evaluation criteria]
+  reasoning: string
+system:
+  Evaluate the code quality on a scale of 1-5...
+  [evaluation criteria]
 ```
 
 Becomes:
@@ -317,11 +321,13 @@ one.
 
 Trigger tests produce standard classification metrics:
 
-| Metric | Description || **Accuracy** | (TP + TN) / total |
-| **Precision** | TP / (TP + FP) — how often activation was correct |
-| **Recall** | TP / (TP + FN) — how often it activated when it should have |
-| **F1** | Harmonic mean of precision and recall |
-| **Errors** | Prompts that failed to execute (counted as incorrect) |
+| Metric        | Description                                            |
+| ------------- | ------------------------------------------------------ |
+| **Accuracy**  | (TP + TN) / total                                     |
+| **Precision** | TP / (TP + FP) — how often activation was correct     |
+| **Recall**    | TP / (TP + FN) — how often it activated when it should have |
+| **F1**        | Harmonic mean of precision and recall                 |
+| **Errors**    | Prompts that failed to execute (counted as incorrect) |
 
 ### Using `trigger_accuracy` as a Metric
 

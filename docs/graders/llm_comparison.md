@@ -7,8 +7,8 @@ Compares output against a reference using LLM.
 ```yaml
 - type: llm_comparison
   name: reference_check
-  model: gpt-4o-mini
   config:
+    model: gpt-4o-mini
     reference: |
       Expected output should include:
       - Confirmation of deployment
