@@ -9,6 +9,10 @@ export default defineConfig({
 		starlight({
 			title: 'waza',
 			description: 'CLI tool for evaluating AI Agent Skills',
+			// Force dark mode only — no toggle
+			expressiveCode: {
+				themes: ['github-dark'],
+			},
 			social: [
 				{ icon: 'github', label: 'GitHub', href: 'https://github.com/spboyer/waza' }
 			],

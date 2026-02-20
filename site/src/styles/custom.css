@@ -1,163 +1,201 @@
-:root {
+/*
+ * waza docs — dark-only theme matching the waza serve dashboard
+ * Design reference: spboyer.github.io/sensei, microsoft.github.io/skills
+ * Palette: Tailwind zinc + emerald accents
+ */
+
+/* ─── Starlight color mapping (dark-only) ───────────────────────────── */
+:root,
+[data-theme='light'],
+[data-theme='dark'] {
   color-scheme: dark;
 
-  /* Backgrounds - Zinc Palette */
-  --sl-color-bg: #18181b;
-  --sl-color-bg-nav: #18181b;
-  --sl-color-bg-sidebar: #18181b;
-  --sl-color-bg-inline-code: #18181b;
+  /* Gray scale — Starlight maps these to UI surfaces.
+     "white" = deepest bg, "black" = lightest text in dark mode.
+     This is Starlight's inverted naming: --sl-color-white is the
+     DARKEST color in dark mode. */
+  --sl-color-white: #09090b;      /* zinc-950 — deepest background */
+  --sl-color-gray-1: #f4f4f5;     /* zinc-100 — brightest text */
+  --sl-color-gray-2: #d4d4d8;     /* zinc-300 — secondary text */
+  --sl-color-gray-3: #a1a1aa;     /* zinc-400 — muted text */
+  --sl-color-gray-4: #52525b;     /* zinc-600 — subtle borders */
+  --sl-color-gray-5: #27272a;     /* zinc-800 — elevated surfaces */
+  --sl-color-gray-6: #18181b;     /* zinc-900 — main background */
+  --sl-color-gray-7: #09090b;     /* zinc-950 — deepest wells */
+  --sl-color-black: #f4f4f5;      /* zinc-100 — lightest (text in dark) */
 
-  /* Accent Colors - Emerald */
-  --sl-color-accent-low: #059669;
-  --sl-color-accent: #10b981;
-  --sl-color-accent-high: #34d399;
+  /* Accent — emerald */
+  --sl-color-accent-low: #064e3b;  /* emerald-900 */
+  --sl-color-accent: #10b981;      /* emerald-500 */
+  --sl-color-accent-high: #34d399; /* emerald-400 */
 
-  /* Text Colors */
+  /* Text */
   --sl-color-text: #d4d4d8;
-  --sl-color-text-accent: #34d399;
-  --sl-color-gray-1: #f4f4f5;
-  --sl-color-gray-2: #d4d4d8;
-  --sl-color-gray-3: #a1a1aa;
-  --sl-color-gray-4: #3f3f46;
-  --sl-color-gray-5: #27272a;
-  --sl-color-gray-6: #18181b;
-  --sl-color-gray-7: #09090b;
+  --sl-color-text-accent: #10b981;
+
+  /* Backgrounds */
+  --sl-color-bg: #09090b;
+  --sl-color-bg-nav: #09090b;
+  --sl-color-bg-sidebar: #09090b;
+  --sl-color-bg-inline-code: #18181b;
 
   /* Borders */
-  --sl-color-hairline-light: #3f3f46;
-  --sl-color-hairline: #3f3f46;
-  --sl-color-divider: #3f3f46;
-
-  /* Panels */
-  --sl-color-panel: #27272a;
-  --sl-color-panel-accent: #18181b;
-
-  /* Status Colors */
-  --sl-color-success: #10b981;
-  --sl-color-warning: #f59e0b;
-  --sl-color-danger: #f43f5e;
+  --sl-color-hairline-light: #27272a;
+  --sl-color-hairline-shade: #18181b;
 
   /* Font */
-  --sl-font: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
-    Roboto, "Helvetica Neue", Arial, "Noto Sans", sans-serif;
-
-  /* Override Starlight's light mode if enabled */
-  --sl-color-white: #18181b;
+  --sl-font: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont,
+    'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
 }
 
-/* Force dark theme - hide light mode option */
-[data-theme='light'] {
-  --sl-color-bg: #18181b;
-  --sl-color-bg-nav: #18181b;
-  --sl-color-bg-sidebar: #18181b;
-  --sl-color-bg-inline-code: #18181b;
-  --sl-color-text: #d4d4d8;
-  --sl-color-text-accent: #34d399;
-  --sl-color-accent-low: #059669;
-  --sl-color-accent: #10b981;
-  --sl-color-accent-high: #34d399;
-  --sl-color-gray-1: #f4f4f5;
-  --sl-color-gray-2: #d4d4d8;
-  --sl-color-gray-3: #a1a1aa;
-  --sl-color-gray-4: #3f3f46;
-  --sl-color-gray-5: #27272a;
-  --sl-color-gray-6: #18181b;
-  --sl-color-gray-7: #09090b;
-  --sl-color-hairline: #3f3f46;
-  --sl-color-hairline-light: #3f3f46;
-  --sl-color-panel: #27272a;
-  --sl-color-panel-accent: #18181b;
-  --sl-color-success: #10b981;
-  --sl-color-warning: #f59e0b;
-  --sl-color-danger: #f43f5e;
-}
-
-.theme-toggle {
+/* ─── Hide theme toggle — dark only ─────────────────────────────────── */
+starlight-theme-select,
+[data-select-theme] {
   display: none !important;
 }
 
+/* ─── Kill the gray content band ────────────────────────────────────── */
+/* Starlight's .sl-container gets a gray bg from --sl-color-gray-5 and
+   max-width that creates a visible center column against the body.
+   Make it transparent and full-width so everything is edge-to-edge. */
+.sl-container {
+  background-color: transparent !important;
+  max-width: none !important;
+}
+
+/* The content-panel inside should still be readable width */
+.content-panel {
+  max-width: 75ch;
+}
+
+/* ─── Global surfaces ───────────────────────────────────────────────── */
+html,
 body {
-  background-color: #18181b;
-}
-
-header,
-nav {
-  background-color: #18181b;
-  border-color: #3f3f46;
-}
-
-.sidebar {
-  background-color: #18181b;
-  border-color: #3f3f46;
-}
-
-.sidebar a {
+  background-color: #09090b;
   color: #d4d4d8;
 }
 
-.sidebar a:hover {
-  background-color: #27272a;
+/* ─── Navigation ────────────────────────────────────────────────────── */
+header.header {
+  background-color: #09090b;
+  border-bottom: 1px solid #27272a;
+}
+
+nav.sidebar {
+  background-color: #09090b;
+  border-right: 1px solid #27272a;
+}
+
+/* Sidebar links */
+nav.sidebar a {
+  color: #a1a1aa;
+}
+nav.sidebar a:hover {
   color: #f4f4f5;
 }
-
-.sidebar a[aria-current='page'] {
-  background-color: #27272a;
-  color: #34d399;
-  border-left: 2px solid #10b981;
+nav.sidebar a[aria-current='page'],
+nav.sidebar a[aria-current='true'] {
+  color: #10b981;
+  font-weight: 600;
 }
 
-.card,
-.sl-panel,
-[class*='card'] {
-  background-color: #27272a;
-  border-color: #3f3f46;
+/* ─── Content typography ────────────────────────────────────────────── */
+h1, h2, h3, h4, h5, h6 {
+  color: #f4f4f5;
 }
 
 a {
   color: #10b981;
 }
-
 a:hover {
   color: #34d399;
 }
 
-code {
-  background-color: #18181b;
-  border-color: #3f3f46;
-  color: #f4f4f5;
+/* ─── Cards (feature cards, link cards) ─────────────────────────────── */
+.card,
+.sl-link-card,
+[class*='card'] {
+  background-color: #18181b !important;
+  border: 1px solid #27272a !important;
+  border-radius: 8px;
+}
+.card:hover,
+[class*='card']:hover {
+  border-color: #3f3f46 !important;
 }
 
-pre,
-.astro-code,
-.expressive-code {
-  background-color: #09090b;
-  border-color: #3f3f46;
+/* ─── Code blocks ───────────────────────────────────────────────────── */
+code:not(pre code) {
+  background-color: #18181b;
+  border: 1px solid #27272a;
+  color: #e4e4e7;
+  padding: 0.15em 0.35em;
+  border-radius: 4px;
+}
+
+.expressive-code,
+.expressive-code pre,
+pre {
+  background-color: #0a0a0a !important;
+  border: 1px solid #27272a !important;
 }
 
 pre code {
-  background-color: transparent;
-  border-color: transparent;
+  background-color: transparent !important;
+  border: none !important;
 }
 
+/* ─── Tables ────────────────────────────────────────────────────────── */
 table {
-  border-color: #3f3f46;
+  border-color: #27272a;
+}
+th {
+  background-color: #18181b;
+  color: #a1a1aa;
+  text-transform: uppercase;
+  font-size: 0.75rem;
+  letter-spacing: 0.05em;
+}
+tbody tr:hover {
+  background-color: #18181b;
 }
 
-table tbody tr:hover {
-  background-color: #27272a;
+/* ─── Hero section (landing page) ───────────────────────────────────── */
+.hero {
+  background-color: transparent !important;
 }
 
-h1, h2, h3, h4, h5, h6 {
-  color: #f4f4f5;
+/* ─── Search ────────────────────────────────────────────────────────── */
+[data-pagefind-ui] {
+  --pagefind-ui-primary: #10b981;
+  --pagefind-ui-background: #18181b;
+  --pagefind-ui-border: #27272a;
 }
 
-/* Remove gradients - flat colors only */
+/* ─── Banner / callouts ─────────────────────────────────────────────── */
+.sl-banner {
+  background-color: #18181b;
+  border-color: #27272a;
+}
+
+/* Remove any gradients/images — flat surfaces only */
 body,
-nav,
 header,
+nav,
 .sidebar,
-.card,
-.sl-panel,
-[class*='card'] {
+main,
+.hero,
+.sl-container,
+.content-panel {
   background-image: none !important;
+}
+
+/* ─── Mobile nav ────────────────────────────────────────────────────── */
+@media (max-width: 72rem) {
+  .sidebar {
+    background-color: #09090b;
+  }
+  .mobile-menu-toggle {
+    color: #d4d4d8;
+  }
 }
