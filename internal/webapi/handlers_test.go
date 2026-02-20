@@ -601,10 +601,10 @@ func TestFileStoreRecursiveScanning(t *testing.T) {
 	// Create nested directory structure
 	subdir1 := filepath.Join(dir, "code-explainer")
 	subdir2 := filepath.Join(dir, "code-reviewer")
-	if err := os.MkdirAll(subdir1, 0755); err != nil {
+	if err := os.MkdirAll(subdir1, 0o755); err != nil {
 		t.Fatal(err)
 	}
-	if err := os.MkdirAll(subdir2, 0755); err != nil {
+	if err := os.MkdirAll(subdir2, 0o755); err != nil {
 		t.Fatal(err)
 	}
 
@@ -622,10 +622,10 @@ func TestFileStoreRecursiveScanning(t *testing.T) {
 		"summary": {"total_tests": 3, "succeeded": 2}
 	}`
 
-	if err := os.WriteFile(filepath.Join(subdir1, "gpt-4o.json"), []byte(outcome1), 0644); err != nil {
+	if err := os.WriteFile(filepath.Join(subdir1, "gpt-4o.json"), []byte(outcome1), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	if err := os.WriteFile(filepath.Join(subdir2, "claude-4.6.json"), []byte(outcome2), 0644); err != nil {
+	if err := os.WriteFile(filepath.Join(subdir2, "claude-4.6.json"), []byte(outcome2), 0o644); err != nil {
 		t.Fatal(err)
 	}
 
@@ -682,10 +682,10 @@ func TestFileStoreIgnoresSummaryJson(t *testing.T) {
 		"total_runs": 3
 	}`
 
-	if err := os.WriteFile(filepath.Join(dir, "gpt-4o.json"), []byte(validOutcome), 0644); err != nil {
+	if err := os.WriteFile(filepath.Join(dir, "gpt-4o.json"), []byte(validOutcome), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	if err := os.WriteFile(filepath.Join(dir, "summary.json"), []byte(summaryJson), 0644); err != nil {
+	if err := os.WriteFile(filepath.Join(dir, "summary.json"), []byte(summaryJson), 0o644); err != nil {
 		t.Fatal(err)
 	}
 
@@ -724,7 +724,7 @@ func TestFileStoreIgnoresInvalidJson(t *testing.T) {
 	}
 
 	for name, content := range files {
-		if err := os.WriteFile(filepath.Join(dir, name), []byte(content), 0644); err != nil {
+		if err := os.WriteFile(filepath.Join(dir, name), []byte(content), 0o644); err != nil {
 			t.Fatal(err)
 		}
 	}
@@ -748,7 +748,7 @@ func TestFileStoreDeepNesting(t *testing.T) {
 
 	// Create deeply nested structure
 	deepPath := filepath.Join(dir, "a", "b", "c")
-	if err := os.MkdirAll(deepPath, 0755); err != nil {
+	if err := os.MkdirAll(deepPath, 0o755); err != nil {
 		t.Fatal(err)
 	}
 
@@ -757,7 +757,7 @@ func TestFileStoreDeepNesting(t *testing.T) {
 		"summary": {"total_tests": 1, "succeeded": 1}
 	}`
 
-	if err := os.WriteFile(filepath.Join(deepPath, "result.json"), []byte(outcome), 0644); err != nil {
+	if err := os.WriteFile(filepath.Join(deepPath, "result.json"), []byte(outcome), 0o644); err != nil {
 		t.Fatal(err)
 	}
 
