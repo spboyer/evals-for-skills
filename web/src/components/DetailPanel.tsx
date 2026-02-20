@@ -1,41 +1,87 @@
 import { useEffect, useState } from "react";
-import { X, CheckCircle2, XCircle, Clock, ChevronDown, ChevronRight } from "lucide-react";
+import {
+  X,
+  CheckCircle2,
+  XCircle,
+  Clock,
+  ChevronDown,
+  ChevronRight,
+  Hash,
+  AlignLeft,
+  Activity,
+} from "lucide-react";
 import type { ToolSpan } from "../types/trajectory";
 
-function JsonViewer({ label, data }: { label: string; data: unknown }) {
-  const [open, setOpen] = useState(false);
-  if (data === undefined || data === null) return null;
-
-  const text =
-    typeof data === "string" ? data : JSON.stringify(data, null, 2);
-
+function CollapsibleSection({
+  label,
+  icon: Icon,
+  children,
+  defaultOpen = false,
+}: {
+  label: string;
+  icon: React.ComponentType<{ className?: string }>;
+  children: React.ReactNode;
+  defaultOpen?: boolean;
+}) {
+  const [open, setOpen] = useState(defaultOpen);
   return (
-    <div>
+    <div className="border border-zinc-700 rounded-md overflow-hidden">
       <button
         onClick={() => setOpen(!open)}
-        className="flex items-center gap-1 text-xs text-zinc-500 hover:text-zinc-300"
+        className="flex w-full items-center gap-2 px-3 py-2 bg-zinc-800/60 hover:bg-zinc-700/60 transition-colors text-left"
       >
         {open ? (
-          <ChevronDown className="h-3 w-3" />
+          <ChevronDown className="h-3.5 w-3.5 text-zinc-400 shrink-0" />
         ) : (
-          <ChevronRight className="h-3 w-3" />
+          <ChevronRight className="h-3.5 w-3.5 text-zinc-400 shrink-0" />
         )}
-        {label}
+        <Icon className="h-3.5 w-3.5 text-zinc-400 shrink-0" />
+        <span className="text-xs font-medium text-zinc-300">{label}</span>
       </button>
       {open && (
-        <pre className="mt-1 max-h-64 overflow-auto rounded bg-zinc-900 p-2.5 text-xs text-zinc-300">
-          <code>{text}</code>
-        </pre>
+        <div className="bg-zinc-900 p-2.5">
+          {children}
+        </div>
       )}
     </div>
   );
 }
 
 const statusBadge: Record<ToolSpan["status"], string> = {
-  pass: "bg-green-500/10 text-green-400",
-  fail: "bg-red-500/10 text-red-400",
-  pending: "bg-blue-500/10 text-blue-400",
+  pass: "bg-green-500/15 text-green-400 border border-green-500/30",
+  fail: "bg-red-500/15 text-red-400 border border-red-500/30",
+  pending: "bg-yellow-500/15 text-yellow-400 border border-yellow-500/30",
 };
+
+const statusIcon: Record<
+  ToolSpan["status"],
+  React.ComponentType<{ className?: string }>
+> = {
+  pass: CheckCircle2,
+  fail: XCircle,
+  pending: Clock,
+};
+
+const statusLabel: Record<ToolSpan["status"], string> = {
+  pass: "Passed",
+  fail: "Failed",
+  pending: "In progress",
+};
+
+interface AttributeRowProps {
+  label: string;
+  value: React.ReactNode;
+}
+function AttributeRow({ label, value }: AttributeRowProps) {
+  return (
+    <div className="flex items-start justify-between gap-3 py-1.5 border-b border-zinc-700/50 last:border-b-0">
+      <span className="text-xs text-zinc-500 shrink-0">{label}</span>
+      <span className="text-xs text-zinc-300 text-right font-mono break-all">
+        {value}
+      </span>
+    </div>
+  );
+}
 
 interface DetailPanelProps {
   span: ToolSpan;
@@ -43,7 +89,6 @@ interface DetailPanelProps {
 }
 
 export default function DetailPanel({ span, onClose }: DetailPanelProps) {
-  // Escape key handler
   useEffect(() => {
     function handleKey(e: KeyboardEvent) {
       if (e.key === "Escape") onClose();
@@ -52,16 +97,41 @@ export default function DetailPanel({ span, onClose }: DetailPanelProps) {
     return () => window.removeEventListener("keydown", handleKey);
   }, [onClose]);
 
+  const Icon = statusIcon[span.status];
+
+  const argsText =
+    span.arguments === undefined
+      ? null
+      : typeof span.arguments === "string"
+        ? span.arguments
+        : JSON.stringify(span.arguments, null, 2);
+
+  const resultText =
+    span.toolResult === undefined
+      ? null
+      : typeof span.toolResult === "string"
+        ? span.toolResult
+        : JSON.stringify(span.toolResult, null, 2);
+
   return (
-    <div className="w-80 shrink-0 border-l border-zinc-700 bg-zinc-800 overflow-y-auto">
+    <div className="w-80 shrink-0 border-l border-zinc-700 bg-zinc-850 flex flex-col overflow-hidden">
       {/* Header */}
-      <div className="flex items-center justify-between p-3 border-b border-zinc-700">
-        <h4 className="text-sm font-medium text-zinc-200 truncate">
-          {span.toolName}
-        </h4>
+      <div className="flex items-center justify-between gap-2 px-3 py-2.5 border-b border-zinc-700 bg-zinc-800">
+        <div className="flex items-center gap-2 min-w-0">
+          <Icon className={`h-4 w-4 shrink-0 ${
+            span.status === "pass"
+              ? "text-green-400"
+              : span.status === "fail"
+                ? "text-red-400"
+                : "text-yellow-400"
+          }`} />
+          <h4 className="text-sm font-semibold text-zinc-100 truncate">
+            {span.toolName}
+          </h4>
+        </div>
         <button
           onClick={onClose}
-          className="p-1 rounded hover:bg-zinc-700 text-zinc-400 hover:text-zinc-200"
+          className="shrink-0 p-1 rounded hover:bg-zinc-700 text-zinc-400 hover:text-zinc-200 transition-colors"
           aria-label="Close detail panel"
         >
           <X className="h-4 w-4" />
@@ -69,48 +139,51 @@ export default function DetailPanel({ span, onClose }: DetailPanelProps) {
       </div>
 
       {/* Body */}
-      <div className="p-3 space-y-4">
-        {/* Status */}
-        <div className="flex items-center gap-2">
-          {span.status === "pass" ? (
-            <CheckCircle2 className="h-4 w-4 text-green-400" />
-          ) : span.status === "fail" ? (
-            <XCircle className="h-4 w-4 text-red-400" />
-          ) : (
-            <Clock className="h-4 w-4 text-blue-400" />
-          )}
+      <div className="flex-1 overflow-y-auto p-3 space-y-4">
+        {/* Status badge */}
+        <div>
           <span
-            className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${statusBadge[span.status]}`}
+            className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium ${statusBadge[span.status]}`}
           >
-            {span.status}
+            <Icon className="h-3 w-3" />
+            {statusLabel[span.status]}
           </span>
         </div>
 
-        {/* Metadata */}
-        <div className="space-y-2 text-xs">
-          <div className="flex justify-between">
-            <span className="text-zinc-500">Call ID</span>
-            <span className="font-mono text-zinc-300 truncate max-w-40">
-              {span.toolCallId}
-            </span>
-          </div>
-          <div className="flex justify-between">
-            <span className="text-zinc-500">Event range</span>
-            <span className="text-zinc-300">
-              {span.startIndex} → {span.endIndex}
-            </span>
-          </div>
-          <div className="flex justify-between">
-            <span className="text-zinc-500">Duration</span>
-            <span className="text-zinc-300">{span.duration} events</span>
-          </div>
-        </div>
+        {/* Attributes */}
+        <CollapsibleSection label="Attributes" icon={Activity} defaultOpen>
+          <AttributeRow label="Duration" value={`${span.duration} events`} />
+          <AttributeRow
+            label="Event range"
+            value={`${span.startIndex} → ${span.endIndex}`}
+          />
+          <AttributeRow
+            label="Call ID"
+            value={
+              <span className="truncate max-w-[160px] block">
+                {span.toolCallId}
+              </span>
+            }
+          />
+        </CollapsibleSection>
 
-        {/* Arguments & Result */}
-        <div className="space-y-2">
-          <JsonViewer label="Arguments" data={span.arguments} />
-          <JsonViewer label="Result" data={span.toolResult} />
-        </div>
+        {/* Arguments */}
+        {argsText !== null && (
+          <CollapsibleSection label="Arguments" icon={Hash} defaultOpen>
+            <pre className="text-xs text-zinc-300 overflow-auto max-h-48 whitespace-pre-wrap break-words">
+              <code>{argsText}</code>
+            </pre>
+          </CollapsibleSection>
+        )}
+
+        {/* Result */}
+        {resultText !== null && (
+          <CollapsibleSection label="Result" icon={AlignLeft} defaultOpen={span.status === "fail"}>
+            <pre className="text-xs text-zinc-300 overflow-auto max-h-48 whitespace-pre-wrap break-words">
+              <code>{resultText}</code>
+            </pre>
+          </CollapsibleSection>
+        )}
       </div>
     </div>
   );

@@ -61,9 +61,9 @@ test.describe("Trajectory Viewer", () => {
     // Tools Used section — scope to digest card to avoid matching timeline entries
     const digestCard = page.locator("div").filter({ hasText: "Session Digest" }).first();
     await expect(digestCard.getByText("Tools Used")).toBeVisible();
-    // Tool badges in the digest card (span elements)
-    await expect(digestCard.locator("span").filter({ hasText: "read_file" })).toBeVisible();
-    await expect(digestCard.locator("span").filter({ hasText: "write_file" })).toBeVisible();
+    // Tool badges in the digest card use blue-400 styling (distinct from waterfall rows)
+    await expect(digestCard.locator("span.text-blue-400").filter({ hasText: "read_file" })).toBeVisible();
+    await expect(digestCard.locator("span.text-blue-400").filter({ hasText: "write_file" })).toBeVisible();
   });
 
   test("session digest shows errors", async ({ page }) => {
@@ -81,7 +81,10 @@ test.describe("Trajectory Viewer", () => {
     await page.getByRole("button", { name: "Trajectory" }).click();
     await page.getByRole("button", { name: "explain-fibonacci" }).click();
 
-    // Timeline should show event badges
+    // Switch to the Events view to see individual event badges
+    await page.getByRole("button", { name: "Events" }).click();
+
+    // Events view should show event badges
     await expect(page.getByText("assistant turn")).toBeVisible();
     await expect(page.getByText("tool start").first()).toBeVisible();
     await expect(page.getByText("tool complete").first()).toBeVisible();
@@ -96,6 +99,9 @@ test.describe("Trajectory Viewer", () => {
     await page.getByRole("button", { name: "Trajectory" }).click();
     await page.getByRole("button", { name: "explain-fibonacci" }).click();
 
+    // Switch to the Events view which has expand/collapse rows
+    await page.getByRole("button", { name: "Events" }).click();
+
     // Find a "Show details" button and click it
     const showDetailsBtn = page.getByRole("button", { name: "Show details" }).first();
     await expect(showDetailsBtn).toBeVisible();
@@ -109,6 +115,9 @@ test.describe("Trajectory Viewer", () => {
     await page.goto("/#/runs/run-001");
     await page.getByRole("button", { name: "Trajectory" }).click();
     await page.getByRole("button", { name: "explain-fibonacci" }).click();
+
+    // Switch to the Events view to see individual event badges
+    await page.getByRole("button", { name: "Events" }).click();
 
     // The error badge should have red text class
     const errorBadge = page.locator("span").filter({ hasText: /^error$/ });
@@ -140,5 +149,39 @@ test.describe("Trajectory Viewer", () => {
 
     // Should see task list again
     await expect(page.getByText("Select a task to view its trajectory")).toBeVisible();
+  });
+
+  test("waterfall trace shows Aspire-style span rows with teal bars", async ({ page }) => {
+    await page.goto("/#/runs/run-001");
+    await page.getByRole("button", { name: "Trajectory" }).click();
+    await page.getByRole("button", { name: "explain-fibonacci" }).click();
+
+    // Trace header should show span count and tool summary
+    await expect(page.getByText(/\d+ spans/)).toBeVisible();
+    await expect(page.getByText("TRACE")).toBeVisible();
+
+    // Each tool should appear as its own clickable row
+    const readFileRow = page.locator("button").filter({ hasText: "read_file" }).first();
+    await expect(readFileRow).toBeVisible();
+    const writeFileRow = page.locator("button").filter({ hasText: "write_file" }).first();
+    await expect(writeFileRow).toBeVisible();
+  });
+
+  test("clicking a waterfall span opens the detail panel", async ({ page }) => {
+    await page.goto("/#/runs/run-001");
+    await page.getByRole("button", { name: "Trajectory" }).click();
+    await page.getByRole("button", { name: "explain-fibonacci" }).click();
+
+    // Click the read_file span row
+    await page.locator("button").filter({ hasText: "read_file" }).first().click();
+
+    // Detail panel should appear with tool name, status badge, and Attributes section
+    await expect(page.getByRole("button", { name: "Close detail panel" })).toBeVisible();
+    await expect(page.getByText("Passed")).toBeVisible();
+    await expect(page.getByText("Attributes")).toBeVisible();
+
+    // Escape key closes the panel
+    await page.keyboard.press("Escape");
+    await expect(page.getByRole("button", { name: "Close detail panel" })).not.toBeVisible();
   });
 });
