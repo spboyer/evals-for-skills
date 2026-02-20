@@ -105,6 +105,10 @@ func runCommandE(cmd *cobra.Command, args []string) error {
 	}
 
 	// Multi-skill run — run each eval sequentially
+	// Suppress per-skill output during the loop — we'll write it after
+	savedOutputPath := outputPath
+	outputPath = ""
+
 	var allSkillResults []skillRunResult
 	var lastErr error
 	for _, sp := range specPaths {
@@ -124,8 +128,33 @@ func runCommandE(cmd *cobra.Command, args []string) error {
 		allSkillResults = append(allSkillResults, result)
 	}
 
+	// Restore outputPath for per-skill output writing
+	outputPath = savedOutputPath
+
 	if len(allSkillResults) > 1 {
 		printSkillRunSummary(allSkillResults)
+	}
+
+	// Write per-skill output files when --output is specified
+	if outputPath != "" && len(allSkillResults) > 1 {
+		ext := filepath.Ext(outputPath)
+		base := strings.TrimSuffix(outputPath, ext)
+
+		for _, skillResult := range allSkillResults {
+			// For each skill, write per-model or single output
+			multiModel := len(skillResult.outcomes) > 1
+
+			for _, mr := range skillResult.outcomes {
+				if mr.outcome == nil {
+					continue
+				}
+				perSkillPath := buildOutputPath(base, ext, skillResult.skillName, mr.modelID, true, multiModel)
+				if err := saveOutcome(mr.outcome, perSkillPath); err != nil {
+					return fmt.Errorf("failed to save output for skill %s, model %s: %w", skillResult.skillName, mr.modelID, err)
+				}
+				fmt.Printf("Results saved to: %s\n", perSkillPath)
+			}
+		}
 	}
 
 	return lastErr
@@ -319,7 +348,7 @@ func runCommandForSpec(cmd *cobra.Command, sp skillSpecPath) ([]modelResult, err
 		ext := filepath.Ext(outputPath)
 		base := strings.TrimSuffix(outputPath, ext)
 		for _, mr := range allResults {
-			perModelPath := fmt.Sprintf("%s_%s%s", base, sanitizeModelName(mr.modelID), ext)
+			perModelPath := fmt.Sprintf("%s_%s%s", base, sanitizePathSegment(mr.modelID), ext)
 			if err := saveOutcome(mr.outcome, perModelPath); err != nil {
 				return nil, fmt.Errorf("failed to save output for model %s: %w", mr.modelID, err)
 			}
@@ -641,10 +670,24 @@ func printModelComparison(results []modelResult) {
 	fmt.Println()
 }
 
-// sanitizeModelName replaces characters that are invalid in filenames.
-func sanitizeModelName(name string) string {
+// sanitizePathSegment replaces characters that are invalid in filenames.
+func sanitizePathSegment(name string) string {
 	r := strings.NewReplacer("/", "-", "\\", "-", ":", "-", " ", "-")
 	return r.Replace(name)
+}
+
+// buildOutputPath constructs the output file path based on multi-skill and multi-model context.
+func buildOutputPath(base, ext, skillName, modelID string, multiSkill, multiModel bool) string {
+	switch {
+	case multiSkill && multiModel:
+		return fmt.Sprintf("%s_%s_%s%s", base, sanitizePathSegment(skillName), sanitizePathSegment(modelID), ext)
+	case multiSkill:
+		return fmt.Sprintf("%s_%s%s", base, sanitizePathSegment(skillName), ext)
+	case multiModel:
+		return fmt.Sprintf("%s_%s%s", base, sanitizePathSegment(modelID), ext)
+	default:
+		return base + ext
+	}
 }
 
 func verboseProgressListener(event orchestration.ProgressEvent) {
