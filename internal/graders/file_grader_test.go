@@ -6,6 +6,7 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"runtime"
 	"testing"
 
 	"github.com/spboyer/waza/internal/models"
@@ -371,7 +372,12 @@ func TestFileGrader_Grade(t *testing.T) {
 	t.Run("absolute path outside workspace is rejected", func(t *testing.T) {
 		tmpDir := t.TempDir()
 
-		g, err := NewFileGrader(FileGraderArgs{Name: "test", MustExist: []string{"/etc/passwd"}})
+		absPath := "/etc/passwd"
+		if runtime.GOOS == "windows" {
+			absPath = `C:\Windows\System32\drivers\etc\hosts`
+		}
+
+		g, err := NewFileGrader(FileGraderArgs{Name: "test", MustExist: []string{absPath}})
 		require.NoError(t, err)
 
 		_, err = g.Grade(context.Background(), &Context{

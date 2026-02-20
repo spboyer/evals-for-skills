@@ -157,8 +157,8 @@ func TestNopLogger(t *testing.T) {
 
 func TestDefaultLogPath(t *testing.T) {
 	p := DefaultLogPath("/tmp/sessions")
-	if filepath.Dir(p) != "/tmp/sessions" {
-		t.Errorf("dir = %q, want /tmp/sessions", filepath.Dir(p))
+	if filepath.Dir(p) != filepath.FromSlash("/tmp/sessions") {
+		t.Errorf("dir = %q, want %s", filepath.Dir(p), filepath.FromSlash("/tmp/sessions"))
 	}
 	if ext := filepath.Ext(p); ext != ".jsonl" {
 		t.Errorf("ext = %q, want .jsonl", ext)

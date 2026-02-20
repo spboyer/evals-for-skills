@@ -3,6 +3,7 @@ package orchestration
 import (
 	"os"
 	"path/filepath"
+	"runtime"
 	"testing"
 
 	"github.com/spboyer/waza/internal/config"
@@ -11,7 +12,15 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+func testAbsRoot() string {
+	if runtime.GOOS == "windows" {
+		return `C:\`
+	}
+	return "/"
+}
+
 func TestBuildExecutionRequest_SkillPaths(t *testing.T) {
+	root := testAbsRoot()
 	tests := []struct {
 		name          string
 		specDir       string
@@ -21,30 +30,30 @@ func TestBuildExecutionRequest_SkillPaths(t *testing.T) {
 	}{
 		{
 			name:          "no skill paths",
-			specDir:       "/home/user/evals",
+			specDir:       filepath.Join(root, "home", "user", "evals"),
 			skillPaths:    nil,
 			expectedPaths: []string{},
 			description:   "empty skill paths should result in empty list",
 		},
 		{
 			name:          "absolute paths",
-			specDir:       "/home/user/evals",
-			skillPaths:    []string{"/absolute/path/one", "/absolute/path/two"},
-			expectedPaths: []string{"/absolute/path/one", "/absolute/path/two"},
+			specDir:       filepath.Join(root, "home", "user", "evals"),
+			skillPaths:    []string{filepath.Join(root, "absolute", "path", "one"), filepath.Join(root, "absolute", "path", "two")},
+			expectedPaths: []string{filepath.Join(root, "absolute", "path", "one"), filepath.Join(root, "absolute", "path", "two")},
 			description:   "absolute paths should be passed through unchanged",
 		},
 		{
 			name:          "relative paths",
-			specDir:       "/home/user/evals",
+			specDir:       filepath.Join(root, "home", "user", "evals"),
 			skillPaths:    []string{"skills", "../shared-skills"},
-			expectedPaths: []string{"/home/user/evals/skills", "/home/user/shared-skills"},
+			expectedPaths: []string{filepath.Join(root, "home", "user", "evals", "skills"), filepath.Join(root, "home", "user", "shared-skills")},
 			description:   "relative paths should be resolved relative to spec directory",
 		},
 		{
 			name:          "mixed paths",
-			specDir:       "/home/user/evals",
-			skillPaths:    []string{"/absolute/skills", "relative/skills"},
-			expectedPaths: []string{"/absolute/skills", "/home/user/evals/relative/skills"},
+			specDir:       filepath.Join(root, "home", "user", "evals"),
+			skillPaths:    []string{filepath.Join(root, "absolute", "skills"), "relative/skills"},
+			expectedPaths: []string{filepath.Join(root, "absolute", "skills"), filepath.Join(root, "home", "user", "evals", "relative", "skills")},
 			description:   "mixed absolute and relative paths should be handled correctly",
 		},
 	}
