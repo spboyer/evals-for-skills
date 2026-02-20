@@ -3,7 +3,6 @@ package orchestration
 import (
 	"os"
 	"path/filepath"
-	"runtime"
 	"testing"
 
 	"github.com/spboyer/waza/internal/config"
@@ -12,15 +11,13 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func testAbsRoot() string {
-	if runtime.GOOS == "windows" {
-		return `C:\`
-	}
-	return "/"
-}
-
 func TestBuildExecutionRequest_SkillPaths(t *testing.T) {
-	root := testAbsRoot()
+	root := t.TempDir()
+	specDir := filepath.Join(root, "home", "user", "evals")
+	abs1 := filepath.Join(root, "absolute", "path", "one")
+	abs2 := filepath.Join(root, "absolute", "path", "two")
+	absSkills := filepath.Join(root, "absolute", "skills")
+
 	tests := []struct {
 		name          string
 		specDir       string
@@ -30,30 +27,30 @@ func TestBuildExecutionRequest_SkillPaths(t *testing.T) {
 	}{
 		{
 			name:          "no skill paths",
-			specDir:       filepath.Join(root, "home", "user", "evals"),
+			specDir:       specDir,
 			skillPaths:    nil,
 			expectedPaths: []string{},
 			description:   "empty skill paths should result in empty list",
 		},
 		{
 			name:          "absolute paths",
-			specDir:       filepath.Join(root, "home", "user", "evals"),
-			skillPaths:    []string{filepath.Join(root, "absolute", "path", "one"), filepath.Join(root, "absolute", "path", "two")},
-			expectedPaths: []string{filepath.Join(root, "absolute", "path", "one"), filepath.Join(root, "absolute", "path", "two")},
+			specDir:       specDir,
+			skillPaths:    []string{abs1, abs2},
+			expectedPaths: []string{abs1, abs2},
 			description:   "absolute paths should be passed through unchanged",
 		},
 		{
 			name:          "relative paths",
-			specDir:       filepath.Join(root, "home", "user", "evals"),
+			specDir:       specDir,
 			skillPaths:    []string{"skills", "../shared-skills"},
-			expectedPaths: []string{filepath.Join(root, "home", "user", "evals", "skills"), filepath.Join(root, "home", "user", "shared-skills")},
+			expectedPaths: []string{filepath.Join(specDir, "skills"), filepath.Join(root, "home", "user", "shared-skills")},
 			description:   "relative paths should be resolved relative to spec directory",
 		},
 		{
 			name:          "mixed paths",
-			specDir:       filepath.Join(root, "home", "user", "evals"),
-			skillPaths:    []string{filepath.Join(root, "absolute", "skills"), "relative/skills"},
-			expectedPaths: []string{filepath.Join(root, "absolute", "skills"), filepath.Join(root, "home", "user", "evals", "relative", "skills")},
+			specDir:       specDir,
+			skillPaths:    []string{absSkills, "relative/skills"},
+			expectedPaths: []string{absSkills, filepath.Join(specDir, "relative", "skills")},
 			description:   "mixed absolute and relative paths should be handled correctly",
 		},
 	}

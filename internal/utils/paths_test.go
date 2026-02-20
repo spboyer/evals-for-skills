@@ -2,21 +2,18 @@ package utils
 
 import (
 	"path/filepath"
-	"runtime"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 )
 
-func testAbsRoot() string {
-	if runtime.GOOS == "windows" {
-		return `C:\`
-	}
-	return "/"
-}
-
 func TestResolvePaths(t *testing.T) {
-	root := testAbsRoot()
+	root := t.TempDir()
+	abs1 := filepath.Join(root, "abs", "path1")
+	abs2 := filepath.Join(root, "abs", "path2")
+	baseDir := filepath.Join(root, "base")
+	baseSub := filepath.Join(root, "base", "sub")
+
 	tests := []struct {
 		name     string
 		paths    []string
@@ -26,32 +23,32 @@ func TestResolvePaths(t *testing.T) {
 		{
 			name:     "empty list",
 			paths:    []string{},
-			baseDir:  filepath.Join(root, "base"),
+			baseDir:  baseDir,
 			expected: nil,
 		},
 		{
 			name:     "nil list",
 			paths:    nil,
-			baseDir:  filepath.Join(root, "base"),
+			baseDir:  baseDir,
 			expected: nil,
 		},
 		{
 			name:     "absolute paths unchanged",
-			paths:    []string{filepath.Join(root, "abs", "path1"), filepath.Join(root, "abs", "path2")},
-			baseDir:  filepath.Join(root, "base"),
-			expected: []string{filepath.Join(root, "abs", "path1"), filepath.Join(root, "abs", "path2")},
+			paths:    []string{abs1, abs2},
+			baseDir:  baseDir,
+			expected: []string{abs1, abs2},
 		},
 		{
 			name:     "relative paths resolved",
 			paths:    []string{"rel1", "rel2/sub"},
-			baseDir:  filepath.Join(root, "base"),
-			expected: []string{filepath.Join(root, "base", "rel1"), filepath.Join(root, "base", "rel2", "sub")},
+			baseDir:  baseDir,
+			expected: []string{filepath.Join(baseDir, "rel1"), filepath.Join(baseDir, "rel2", "sub")},
 		},
 		{
 			name:     "mixed paths",
-			paths:    []string{filepath.Join(root, "abs"), "rel", "../parent"},
-			baseDir:  filepath.Join(root, "base", "sub"),
-			expected: []string{filepath.Join(root, "abs"), filepath.Join(root, "base", "sub", "rel"), filepath.Join(root, "base", "parent")},
+			paths:    []string{abs1, "rel", "../parent"},
+			baseDir:  baseSub,
+			expected: []string{abs1, filepath.Join(baseSub, "rel"), filepath.Join(root, "base", "parent")},
 		},
 	}
 
