@@ -1,0 +1,463 @@
+---
+title: Validators & Graders
+description: Complete reference for all 8 validator types and configuration options.
+---
+
+A complete reference for all validator types available in waza.
+
+## Overview
+
+Graders validate skill execution and produce scores. Each grader returns:
+- `score`: 0.0 to 1.0
+- `passed`: boolean
+- `message`: human-readable result
+- `details`: additional metadata
+
+## Code Grader
+
+### `code` - Assertion-Based Validation
+
+Evaluates Python expressions against the execution context.
+
+```yaml
+- type: code
+  name: my_grader
+  config:
+    assertions:
+      - "len(output) > 0"
+      - "'success' in output.lower()"
+      - "len(errors) == 0"
+```
+
+**Available Context Variables:**
+
+| Variable | Type | Description |
+|----------|------|-------------|
+| `output` | str | Final skill output |
+| `outcome` | dict | Outcome state |
+| `transcript` | list | Full execution transcript |
+| `tool_calls` | list | Tool calls from transcript |
+| `errors` | list | Errors from transcript |
+| `duration_ms` | int | Execution duration |
+
+**Available Functions:** `len`, `any`, `all`, `str`, `int`, `float`, `bool`, `list`, `dict`, `re`
+
+**Scoring:** `passed_assertions / total_assertions`
+
+### ⚠️ Important: No Generator Expressions
+
+Generator expressions don't work with Python's `eval()` in restricted scope:
+
+```yaml
+# ❌ WRONG - fails
+assertions:
+  - "any(kw in output for kw in ['azure', 'deploy'])"
+
+# ✅ CORRECT - use explicit or chains
+assertions:
+  - "'azure' in output.lower() or 'deploy' in output.lower()"
+```
+
+## Regex Grader
+
+### `regex` - Pattern Matching
+
+Matches output against regex patterns.
+
+```yaml
+- type: regex
+  name: format_checker
+  config:
+    must_match:
+      - "deployed to https?://.+"
+      - "Resource group: .+"
+    must_not_match:
+      - "error|failed|exception"
+      - "permission denied"
+```
+
+**Options:**
+
+| Option | Type | Description |
+|--------|------|-------------|
+| `must_match` | list[str] | Patterns that MUST appear |
+| `must_not_match` | list[str] | Patterns that MUST NOT appear |
+
+**Scoring:** `passed_checks / total_checks`
+
+**Example:**
+
+```yaml
+- type: regex
+  name: code_quality
+  config:
+    must_match:
+      - "def \\w+\\(.*\\):"  # Function definition
+      - "return .+"          # Return statement
+    must_not_match:
+      - "TODO|FIXME"         # No incomplete work
+      - "print\\("           # No debug print
+```
+
+## Tool Calls Grader
+
+### `tool_calls` - Tool Usage Validation
+
+Validates which tools were called and how.
+
+```yaml
+- type: tool_calls
+  name: tool_validator
+  config:
+    required:
+      - pattern: "git commit"
+      - pattern: "git push"
+    forbidden:
+      - pattern: "rm -rf"
+      - pattern: "sudo"
+    max_calls: 20
+```
+
+**Options:**
+
+| Option | Type | Description |
+|--------|------|-------------|
+| `required` | list | Tool patterns that MUST be called |
+| `forbidden` | list | Tool patterns that MUST NOT be called |
+| `max_calls` | int | Maximum allowed tool calls |
+
+## Script Grader
+
+### `script` - Custom Python Validation
+
+Runs custom Python code for complex validation logic.
+
+```yaml
+- type: script
+  name: custom_logic
+  config:
+    script: graders/my_grader.py
+```
+
+**Script Format:**
+
+Create `graders/my_grader.py`:
+
+```python
+#!/usr/bin/env python3
+import json
+import sys
+
+def grade(context: dict) -> dict:
+    output = context.get("output", "")
+    
+    # Your custom logic
+    score = 1.0 if len(output) > 100 else 0.5
+    
+    return {
+        "score": score,
+        "passed": score >= 0.5,
+        "message": "Grading complete",
+        "details": {"custom_field": "value"}
+    }
+
+if __name__ == "__main__":
+    context = json.load(sys.stdin)
+    print(json.dumps(grade(context)))
+```
+
+**Context Available to Script:**
+
+```json
+{
+  "output": "agent response text",
+  "transcript": [
+    {"type": "user", "content": "..."},
+    {"type": "assistant", "content": "..."}
+  ],
+  "tool_calls": ["tool1", "tool2"],
+  "errors": [],
+  "duration_ms": 5000
+}
+```
+
+**Best For:**
+- Multi-criteria scoring (5+ checks)
+- Domain-specific business logic
+- Reusable across multiple evals
+- Complex pattern analysis
+- Integration with external services
+
+## Diff Grader
+
+### `diff` - File Content Validation
+
+Compares post-execution workspace files against expected output.
+
+```yaml
+- type: diff
+  name: config_update
+  config:
+    expected_files:
+      - path: "src/config.json"
+        snapshot: "expected/config.json"
+      - path: "README.md"
+        contains:
+          - "+## Installation"
+          - "+npm install"
+          - "-pip install"
+```
+
+**Options:**
+
+Each file entry supports:
+
+| Option | Type | Description |
+|--------|------|-------------|
+| `path` | string | Workspace-relative file path |
+| `snapshot` | string | Expected file (exact match) |
+| `contains` | list[str] | Content fragments (presence/absence) |
+
+**Contains Prefix Rules:**
+
+| Prefix | Meaning |
+|--------|---------|
+| `+` | Fragment must be present |
+| `-` | Fragment must be absent |
+| *(none)* | Fragment must be present |
+
+**Example: Fragment Checking**
+
+```yaml
+- type: diff
+  name: code_edits
+  config:
+    expected_files:
+      - path: "src/main.py"
+        contains:
+          - "+def new_function():"
+          - "+    return 42"
+          - "-def old_function():"
+      - path: "requirements.txt"
+        contains:
+          - "requests>=2.28"
+```
+
+**Example: Exact Snapshot Matching**
+
+```yaml
+- type: diff
+  name: exact_output
+  config:
+    expected_files:
+      - path: "output/result.txt"
+        snapshot: "snapshots/expected_result.txt"
+```
+
+**Scoring:** `passed_checks / total_checks`
+
+## Keyword Grader
+
+### `keyword` - Keyword Presence
+
+Validates presence or absence of keywords.
+
+```yaml
+- type: keyword
+  name: checks_concepts
+  config:
+    keywords:
+      - algorithm
+      - optimization
+      - efficiency
+    must_include_all: true  # All keywords required
+    case_sensitive: false
+```
+
+**Options:**
+
+| Option | Type | Description |
+|--------|------|-------------|
+| `keywords` | list[str] | Keywords to check |
+| `must_include_all` | bool | All keywords required (default: false) |
+| `case_sensitive` | bool | Case-sensitive matching (default: false) |
+
+**Scoring:** `present_keywords / total_keywords`
+
+## JSON Grader
+
+### `json` - JSON Structure Validation
+
+Validates structured JSON responses.
+
+```yaml
+- type: json
+  name: response_structure
+  config:
+    required_fields:
+      - path: "status"
+        type: "string"
+      - path: "data.items"
+        type: "array"
+    schema: "schemas/response.json"
+```
+
+**Options:**
+
+| Option | Type | Description |
+|--------|------|-------------|
+| `required_fields` | list | Fields that must exist |
+| `schema` | string | JSON Schema file (optional) |
+
+**Example:**
+
+```yaml
+- type: json
+  name: api_response
+  config:
+    required_fields:
+      - path: "success"
+        type: "boolean"
+      - path: "message"
+        type: "string"
+      - path: "data.id"
+        type: "integer"
+```
+
+## Composite Grader
+
+### `composite` - Combine Multiple Graders
+
+Combine multiple graders into a single scoring rule.
+
+```yaml
+- type: composite
+  name: comprehensive_check
+  config:
+    graders:
+      - type: regex
+        config:
+          must_match: ["success"]
+      - type: code
+        config:
+          assertions:
+            - "len(output) > 50"
+    require_all: true  # All must pass
+    weight:
+      regex: 0.5
+      code: 0.5
+```
+
+## Using Graders in Tasks
+
+Define graders once in `eval.yaml`, then apply to tasks:
+
+```yaml
+graders:
+  - type: regex
+    name: format_check
+    config:
+      must_match: ["^[A-Z]"]
+  
+  - type: code
+    name: length_check
+    config:
+      assertions:
+        - "len(output) > 100"
+
+tasks:
+  - id: task-001
+    inputs:
+      prompt: "Explain this code"
+    expected:
+      # Apply graders to this task
+      graders:
+        - format_check
+        - length_check
+```
+
+Or inline:
+
+```yaml
+tasks:
+  - id: task-001
+    inputs:
+      prompt: "Explain this code"
+    expected:
+      graders:
+        - type: regex
+          config:
+            must_match: ["function"]
+```
+
+## Best Practices
+
+1. **Simple graders** — Use inline graders for straightforward checks
+2. **Complex logic** — Use script graders for domain-specific validation
+3. **Reuse** — Define graders once, apply across multiple tasks
+4. **Clear names** — Use descriptive names (`checks_logic`, not `check1`)
+5. **Progressive strictness** — Start simple, add checks as needed
+6. **Test graders** — Verify they work before running full evals
+
+## Examples
+
+### Basic Code Explanation
+
+```yaml
+graders:
+  - type: regex
+    name: explains_concepts
+    config:
+      must_match:
+        - "function"
+        - "parameter"
+        - "return"
+  
+  - type: code
+    name: minimum_length
+    config:
+      assertions:
+        - "len(output) > 200"
+```
+
+### API Response Validation
+
+```yaml
+graders:
+  - type: json
+    name: response_format
+    config:
+      required_fields:
+        - path: "status"
+          type: "string"
+        - path: "data"
+          type: "object"
+  
+  - type: regex
+    name: valid_status
+    config:
+      must_match: ["status.*success"]
+```
+
+### Complex File Editing
+
+```yaml
+graders:
+  - type: diff
+    name: code_changes
+    config:
+      expected_files:
+        - path: "src/main.py"
+          contains:
+            - "+import os"
+            - "+def process():"
+        - path: "tests/test_main.py"
+          contains:
+            - "+def test_process():"
+```
+
+## Next Steps
+
+- **[Writing Eval Specs](/guides/eval-yaml/)** — Task and fixture setup
+- **[Web Dashboard](/guides/dashboard/)** — View evaluation results
+- **[CLI Reference](/reference/cli/)** — All commands and flags
