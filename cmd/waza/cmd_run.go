@@ -199,22 +199,19 @@ func printSkillRunSummary(results []skillRunResult) {
 	fmt.Println()
 	fmt.Printf("%-25s %-10s %-15s %-15s\n", "Skill", "Status", "Pass Rate", "Avg Score")
 	fmt.Println(strings.Repeat("─", 70))
-	
+
 	for _, r := range results {
 		status := "✅ Passed"
 		passRate := "-"
 		avgScore := "-"
-		
 		if r.err != nil {
 			status = "❌ Failed"
 		}
-		
 		// Calculate aggregate pass rate and score across all models for this skill
 		if len(r.outcomes) > 0 {
 			var totalPassed, totalTests int
 			var sumScore float64
 			validOutcomes := 0
-			
 			for _, mr := range r.outcomes {
 				if mr.outcome != nil {
 					totalPassed += mr.outcome.Digest.Succeeded
@@ -223,7 +220,6 @@ func printSkillRunSummary(results []skillRunResult) {
 					validOutcomes++
 				}
 			}
-			
 			if totalTests > 0 {
 				passRate = fmt.Sprintf("%.1f%%", float64(totalPassed)/float64(totalTests)*100)
 			}
@@ -231,7 +227,6 @@ func printSkillRunSummary(results []skillRunResult) {
 				avgScore = fmt.Sprintf("%.2f", sumScore/float64(validOutcomes))
 			}
 		}
-		
 		fmt.Printf("%-25s %-10s %-15s %-15s\n", r.skillName, status, passRate, avgScore)
 	}
 	fmt.Println()

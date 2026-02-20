@@ -944,7 +944,6 @@ func TestSkillRunResult_CapturesOutcomes(t *testing.T) {
 	result := skillRunResult{
 		skillName: "test-skill",
 		outcomes:  []modelResult{{modelID: "gpt-4o", outcome: outcome}},
-		err:       nil,
 	}
 
 	require.Equal(t, "test-skill", result.skillName)
@@ -953,4 +952,84 @@ func TestSkillRunResult_CapturesOutcomes(t *testing.T) {
 	assert.Equal(t, 10, result.outcomes[0].outcome.Digest.TotalTests)
 	assert.Equal(t, 8, result.outcomes[0].outcome.Digest.Succeeded)
 	assert.Equal(t, 0.8, result.outcomes[0].outcome.Digest.SuccessRate)
+}
+
+func TestSkillRunResult_MultipleModelOutcomesAggregated(t *testing.T) {
+	// Test aggregation across multiple models including edge case with zeros
+	outcome1 := &models.EvaluationOutcome{
+		Digest: models.OutcomeDigest{
+			TotalTests:     10,
+			Succeeded:      8,
+			Failed:         2,
+			SuccessRate:    0.8,
+			AggregateScore: 0.85,
+		},
+	}
+	outcome2 := &models.EvaluationOutcome{
+		Digest: models.OutcomeDigest{
+			TotalTests:     5,
+			Succeeded:      5,
+			Failed:         0,
+			SuccessRate:    1.0,
+			AggregateScore: 0.95,
+		},
+	}
+	outcome3 := &models.EvaluationOutcome{
+		Digest: models.OutcomeDigest{
+			TotalTests:     0,
+			Succeeded:      0,
+			Failed:         0,
+			SuccessRate:    0.0,
+			AggregateScore: 0.0,
+		},
+	}
+
+	result := skillRunResult{
+		skillName: "multi-model-skill",
+		outcomes: []modelResult{
+			{modelID: "gpt-4o", outcome: outcome1},
+			{modelID: "gpt-4-turbo", outcome: outcome2},
+			{modelID: "gpt-3.5", outcome: outcome3},
+		},
+	}
+
+	require.Equal(t, "multi-model-skill", result.skillName)
+	require.Len(t, result.outcomes, 3)
+	// Verify all three outcomes are captured
+	assert.Equal(t, 10, result.outcomes[0].outcome.Digest.TotalTests)
+	assert.Equal(t, 5, result.outcomes[1].outcome.Digest.TotalTests)
+	assert.Equal(t, 0, result.outcomes[2].outcome.Digest.TotalTests)
+	// Aggregation: 8+5+0=13 passed out of 10+5+0=15 total
+	// Average score: (0.85+0.95+0.0)/3 = 0.6
+}
+
+func TestSkillRunResult_MixedNilAndValidOutcomes(t *testing.T) {
+	// Test edge case where some modelResult entries have nil outcomes
+	outcome := &models.EvaluationOutcome{
+		Digest: models.OutcomeDigest{
+			TotalTests:     8,
+			Succeeded:      6,
+			Failed:         2,
+			SuccessRate:    0.75,
+			AggregateScore: 0.80,
+		},
+	}
+
+	result := skillRunResult{
+		skillName: "mixed-outcome-skill",
+		outcomes: []modelResult{
+			{modelID: "gpt-4o", outcome: outcome},
+			{modelID: "gpt-4-turbo", outcome: nil}, // nil outcome
+			{modelID: "gpt-3.5", outcome: outcome},
+		},
+	}
+
+	require.Equal(t, "mixed-outcome-skill", result.skillName)
+	require.Len(t, result.outcomes, 3)
+	// First and third have valid outcomes
+	assert.NotNil(t, result.outcomes[0].outcome)
+	assert.Nil(t, result.outcomes[1].outcome)
+	assert.NotNil(t, result.outcomes[2].outcome)
+	// Aggregation should skip nil: 6+6=12 passed out of 8+8=16 total
+	// Average score: (0.80+0.80)/2 = 0.80 (skips nil)
 }
