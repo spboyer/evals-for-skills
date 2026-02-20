@@ -9,6 +9,7 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/spboyer/waza/internal/models"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -922,4 +923,34 @@ func TestRunCommand_DuplicateModelRejected(t *testing.T) {
 	err := cmd.Execute()
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "duplicate --model value")
+}
+
+// ---------------------------------------------------------------------------
+// skillRunResult captures outcomes (#272)
+// ---------------------------------------------------------------------------
+
+func TestSkillRunResult_CapturesOutcomes(t *testing.T) {
+	// Test the enhanced skillRunResult struct captures EvaluationOutcome data
+	outcome := &models.EvaluationOutcome{
+		Digest: models.OutcomeDigest{
+			TotalTests:     10,
+			Succeeded:      8,
+			Failed:         2,
+			SuccessRate:    0.8,
+			AggregateScore: 0.85,
+		},
+	}
+
+	result := skillRunResult{
+		skillName: "test-skill",
+		outcomes:  []modelResult{{modelID: "gpt-4o", outcome: outcome}},
+		err:       nil,
+	}
+
+	require.Equal(t, "test-skill", result.skillName)
+	require.Len(t, result.outcomes, 1)
+	require.NotNil(t, result.outcomes[0].outcome)
+	assert.Equal(t, 10, result.outcomes[0].outcome.Digest.TotalTests)
+	assert.Equal(t, 8, result.outcomes[0].outcome.Digest.Succeeded)
+	assert.Equal(t, 0.8, result.outcomes[0].outcome.Digest.SuccessRate)
 }

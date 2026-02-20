@@ -100,7 +100,8 @@ func runCommandE(cmd *cobra.Command, args []string) error {
 	}
 
 	if len(specPaths) == 1 {
-		return runCommandForSpec(cmd, specPaths[0])
+		_, err := runCommandForSpec(cmd, specPaths[0])
+		return err
 	}
 
 	// Multi-skill run — run each eval sequentially
@@ -109,7 +110,9 @@ func runCommandE(cmd *cobra.Command, args []string) error {
 	for _, sp := range specPaths {
 		fmt.Printf("\n=== %s ===\n\n", sp.skillName)
 		result := skillRunResult{skillName: sp.skillName}
-		if err := runCommandForSpec(cmd, sp); err != nil {
+		outcomes, err := runCommandForSpec(cmd, sp)
+		result.outcomes = outcomes
+		if err != nil {
 			var testErr *TestFailureError
 			if errors.As(err, &testErr) {
 				result.err = err
@@ -135,6 +138,7 @@ type skillSpecPath struct {
 
 type skillRunResult struct {
 	skillName string
+	outcomes  []modelResult // per-model outcomes for this skill
 	err       error
 }
 
@@ -193,26 +197,54 @@ func printSkillRunSummary(results []skillRunResult) {
 	fmt.Println(" MULTI-SKILL RUN SUMMARY")
 	fmt.Println("═══════════════════════════════════════════════")
 	fmt.Println()
-	fmt.Printf("%-25s %s\n", "Skill", "Status")
-	fmt.Println(strings.Repeat("─", 40))
+	fmt.Printf("%-25s %-10s %-15s %-15s\n", "Skill", "Status", "Pass Rate", "Avg Score")
+	fmt.Println(strings.Repeat("─", 70))
+	
 	for _, r := range results {
 		status := "✅ Passed"
+		passRate := "-"
+		avgScore := "-"
+		
 		if r.err != nil {
 			status = "❌ Failed"
 		}
-		fmt.Printf("%-25s %s\n", r.skillName, status)
+		
+		// Calculate aggregate pass rate and score across all models for this skill
+		if len(r.outcomes) > 0 {
+			var totalPassed, totalTests int
+			var sumScore float64
+			validOutcomes := 0
+			
+			for _, mr := range r.outcomes {
+				if mr.outcome != nil {
+					totalPassed += mr.outcome.Digest.Succeeded
+					totalTests += mr.outcome.Digest.TotalTests
+					sumScore += mr.outcome.Digest.AggregateScore
+					validOutcomes++
+				}
+			}
+			
+			if totalTests > 0 {
+				passRate = fmt.Sprintf("%.1f%%", float64(totalPassed)/float64(totalTests)*100)
+			}
+			if validOutcomes > 0 {
+				avgScore = fmt.Sprintf("%.2f", sumScore/float64(validOutcomes))
+			}
+		}
+		
+		fmt.Printf("%-25s %-10s %-15s %-15s\n", r.skillName, status, passRate, avgScore)
 	}
 	fmt.Println()
 }
 
 // runCommandForSpec runs the evaluation for a single spec path.
-func runCommandForSpec(cmd *cobra.Command, sp skillSpecPath) error {
+func runCommandForSpec(cmd *cobra.Command, sp skillSpecPath) ([]modelResult, error) {
 	specPath := sp.specPath
 
 	// Load spec
 	spec, err := models.LoadBenchmarkSpec(specPath)
 	if err != nil {
-		return fmt.Errorf("failed to load spec: %w", err)
+		return nil, fmt.Errorf("failed to load spec: %w", err)
 	}
 
 	// CLI flags override spec config
@@ -237,7 +269,7 @@ func runCommandForSpec(cmd *cobra.Command, sp skillSpecPath) error {
 		seen := make(map[string]bool, len(modelsToRun))
 		for _, m := range modelsToRun {
 			if seen[m] {
-				return fmt.Errorf("duplicate --model value: %q (each model must be unique)", m)
+				return nil, fmt.Errorf("duplicate --model value: %q (each model must be unique)", m)
 			}
 			seen[m] = true
 		}
@@ -262,7 +294,7 @@ func runCommandForSpec(cmd *cobra.Command, sp skillSpecPath) error {
 				lastErr = err
 				continue
 			}
-			return err
+			return nil, err
 		}
 		allResults = append(allResults, modelResult{modelID: modelID, outcome: outcome})
 	}
@@ -294,17 +326,17 @@ func runCommandForSpec(cmd *cobra.Command, sp skillSpecPath) error {
 		for _, mr := range allResults {
 			perModelPath := fmt.Sprintf("%s_%s%s", base, sanitizeModelName(mr.modelID), ext)
 			if err := saveOutcome(mr.outcome, perModelPath); err != nil {
-				return fmt.Errorf("failed to save output for model %s: %w", mr.modelID, err)
+				return nil, fmt.Errorf("failed to save output for model %s: %w", mr.modelID, err)
 			}
 			fmt.Printf("Results saved to: %s\n", perModelPath)
 		}
 	}
 
 	if lastErr != nil {
-		return lastErr
+		return allResults, lastErr
 	}
 
-	return nil
+	return allResults, nil
 }
 
 // runSingleModel executes a benchmark for one model and returns the outcome.
