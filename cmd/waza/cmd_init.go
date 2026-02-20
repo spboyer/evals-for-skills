@@ -497,19 +497,19 @@ jobs:
           azd ext source add -n waza -t url -l https://raw.githubusercontent.com/spboyer/waza/main/registry.json
           azd ext install microsoft.azd.waza
       - name: Run evaluations
-        run: azd waza run --output results.json
+        run: azd waza run --output-dir ./results
       - name: Upload results
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: eval-results
-          path: results.json
+          path: ./results
           retention-days: 30
 `
 }
 
 func initGitignore() string {
-	return `results.json
+	return `results/
 .waza-cache/
 coverage.txt
 *.exe

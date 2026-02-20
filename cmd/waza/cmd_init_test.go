@@ -209,7 +209,7 @@ func TestInitCommand_GitignoreContent(t *testing.T) {
 	data, err := os.ReadFile(filepath.Join(dir, ".gitignore"))
 	require.NoError(t, err)
 	content := string(data)
-	assert.Contains(t, content, "results.json")
+	assert.Contains(t, content, "results/")
 	assert.Contains(t, content, ".waza-cache/")
 	assert.Contains(t, content, "coverage.txt")
 	assert.Contains(t, content, "*.exe")
