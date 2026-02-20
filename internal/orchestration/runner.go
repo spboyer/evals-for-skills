@@ -19,6 +19,7 @@ import (
 	"github.com/spboyer/waza/internal/hooks"
 	"github.com/spboyer/waza/internal/models"
 	"github.com/spboyer/waza/internal/template"
+	"github.com/spboyer/waza/internal/transcript"
 	"github.com/spboyer/waza/internal/utils"
 )
 
@@ -697,7 +698,9 @@ func (r *TestRunner) runSequential(ctx context.Context, testCases []*models.Test
 			TotalTests: len(testCases),
 		})
 
+		taskStart := time.Now()
 		outcome, wasCached := r.runTest(ctx, tc, i+1, len(testCases))
+		r.writeTaskTranscript(tc, outcome, taskStart)
 		outcomes = append(outcomes, outcome)
 
 		// Run after_task hooks
@@ -785,7 +788,9 @@ func (r *TestRunner) runConcurrent(ctx context.Context, testCases []*models.Test
 				TotalTests: len(testCases),
 			})
 
+			taskStart := time.Now()
 			outcome, wasCached := r.runTest(ctx, test, idx+1, len(testCases))
+			r.writeTaskTranscript(test, outcome, taskStart)
 			resultChan <- result{index: idx, outcome: outcome}
 
 			// Run after_task hooks
@@ -853,6 +858,18 @@ func (r *TestRunner) runTest(ctx context.Context, tc *models.TestCase, testNum, 
 
 	// No cache or cache key generation failed
 	return r.runTestUncached(ctx, tc, testNum, totalTests), false
+}
+
+func (r *TestRunner) writeTaskTranscript(tc *models.TestCase, outcome models.TestOutcome, startTime time.Time) {
+	transcriptDir := r.cfg.TranscriptDir()
+	if transcriptDir == "" {
+		return
+	}
+
+	taskTranscript := transcript.BuildTaskTranscript(tc, outcome, startTime)
+	if _, err := transcript.Write(transcriptDir, taskTranscript); err != nil {
+		fmt.Fprintf(os.Stderr, "[WARN] Failed to write transcript for %q: %v\n", tc.DisplayName, err)
+	}
 }
 
 func (r *TestRunner) runTestUncached(ctx context.Context, tc *models.TestCase, testNum, totalTests int) models.TestOutcome {

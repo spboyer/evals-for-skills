@@ -22,13 +22,22 @@ func resetRunGlobals() {
 	outputPath = ""
 	outputDir = ""
 	verbose = false
+	transcriptDir = ""
 	taskFilters = nil
+	tagFilters = nil
 	parallel = false
 	workers = 0
 	interpret = false
 	format = "default"
+	enableCache = false
+	disableCache = false
+	runCacheDir = ".waza-cache"
 	modelOverrides = nil
 	recommendFlag = false
+	baselineFlag = false
+	sessionLog = false
+	sessionDir = ""
+	noSummary = false
 }
 
 // helper creates a valid minimal eval spec YAML in a temp dir,
@@ -269,6 +278,33 @@ func TestRunCommand_ContextDirFlag(t *testing.T) {
 	// This will succeed because the mock engine doesn't need real fixture files.
 	err := cmd.Execute()
 	assert.NoError(t, err)
+}
+
+func TestRunCommand_TranscriptDirWritesTaskFile(t *testing.T) {
+	resetRunGlobals()
+
+	specPath := createTestSpec(t, "mock")
+	transcriptOutDir := filepath.Join(t.TempDir(), "transcripts")
+
+	cmd := newRunCommand()
+	cmd.SetArgs([]string{specPath, "--transcript-dir", transcriptOutDir})
+	cmd.SetOut(io.Discard)
+	cmd.SetErr(io.Discard)
+
+	err := cmd.Execute()
+	require.NoError(t, err)
+
+	files, err := filepath.Glob(filepath.Join(transcriptOutDir, "*.json"))
+	require.NoError(t, err)
+	require.Len(t, files, 1)
+
+	content, err := os.ReadFile(files[0])
+	require.NoError(t, err)
+
+	var taskTranscript map[string]any
+	require.NoError(t, json.Unmarshal(content, &taskTranscript))
+	assert.Equal(t, "test-task-001", taskTranscript["task_id"])
+	assert.Equal(t, "Test Task", taskTranscript["task_name"])
 }
 
 // ---------------------------------------------------------------------------
