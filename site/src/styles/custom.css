@@ -8,14 +8,14 @@
 	--sl-color-bg-sidebar: #18181b;
 	--sl-color-bg-inline-code: #27272a;
 
-	/* Accent Colors - Blue */
-	--sl-color-accent-low: #1e40af;
-	--sl-color-accent: #3b82f6;
-	--sl-color-accent-high: #60a5fa;
+	/* Accent Colors - Emerald (matches dashboard) */
+	--sl-color-accent-low: #064e3b;
+	--sl-color-accent: #10b981;
+	--sl-color-accent-high: #34d399;
 
 	/* Text Colors */
 	--sl-color-text: #f4f4f5;
-	--sl-color-text-accent: #3b82f6;
+	--sl-color-text-accent: #10b981;
 	--sl-color-gray-1: #f4f4f5;
 	--sl-color-gray-2: #e4e4e7;
 	--sl-color-gray-3: #d4d4d8;
@@ -50,9 +50,9 @@
 	--sl-color-bg-nav: #18181b;
 	--sl-color-bg-sidebar: #18181b;
 	--sl-color-text: #f4f4f5;
-	--sl-color-accent: #3b82f6;
-	--sl-color-accent-low: #1e40af;
-	--sl-color-accent-high: #60a5fa;
+	--sl-color-accent: #10b981;
+	--sl-color-accent-low: #064e3b;
+	--sl-color-accent-high: #34d399;
 	--sl-color-gray-1: #f4f4f5;
 	--sl-color-gray-2: #e4e4e7;
 	--sl-color-gray-3: #d4d4d8;
@@ -63,7 +63,7 @@
 	--sl-color-hairline: #3f3f46;
 	--sl-color-hairline-light: #3f3f46;
 	--sl-color-panel: #27272a;
-	--sl-color-panel-accent: #3b82f6;
+	--sl-color-panel-accent: #10b981;
 }
 
 /* Light mode toggle - hide it */
@@ -81,11 +81,11 @@
 
 /* Links */
 a {
-	color: #3b82f6;
+	color: #10b981;
 }
 
 a:hover {
-	color: #60a5fa;
+	color: #34d399;
 }
 
 /* Code blocks */
@@ -136,10 +136,10 @@ h1, h2, h3, h4, h5, h6 {
 
 /* Buttons */
 button {
-	background-color: #3b82f6;
+	background-color: #10b981;
 	color: #f4f4f5;
 }
 
 button:hover {
-	background-color: #2563eb;
+	background-color: #059669;
 }
