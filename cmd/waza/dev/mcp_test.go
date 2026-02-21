@@ -198,9 +198,9 @@ func TestContainsInvokes(t *testing.T) {
 
 func TestComputeMcpSubScore(t *testing.T) {
 	tests := []struct {
-		name  string
-		r     McpResult
-		want  int
+		name string
+		r    McpResult
+		want int
 	}{
 		{"all pass", McpResult{ToolsTablePresent: true, PrereqsDocumented: true, CliFallbackDescribed: true}, 4},
 		{"no collisions only", McpResult{}, 1},

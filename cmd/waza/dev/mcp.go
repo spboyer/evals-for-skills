@@ -31,13 +31,13 @@ var toolsTablePattern = regexp.MustCompile(`(?im)^\|.*tool.*\|\s*\n\|[\s\-:|]+\|
 
 // McpResult holds the output from MCP integration checks.
 type McpResult struct {
-	HasInvokes          bool
-	ToolsTablePresent   bool
-	PrereqsDocumented   bool
+	HasInvokes           bool
+	ToolsTablePresent    bool
+	PrereqsDocumented    bool
 	CliFallbackDescribed bool
-	NameCollisions      []string
-	Issues              []Issue
-	SubScore            int // 0–4
+	NameCollisions       []string
+	Issues               []Issue
+	SubScore             int // 0–4
 }
 
 // McpScorer evaluates MCP integration documentation quality for skills
