@@ -56,6 +56,7 @@ type OutcomeSetup struct {
 	ModelID     string `json:"model_id"`
 	EngineType  string `json:"engine_type"`
 	TimeoutSec  int    `json:"timeout_sec"`
+	JudgeModel  string `json:"judge_model,omitempty"`
 }
 
 type OutcomeDigest struct {

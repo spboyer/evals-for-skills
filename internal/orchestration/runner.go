@@ -1411,6 +1411,7 @@ func (r *TestRunner) buildOutcome(testOutcomes []models.TestOutcome, startTime t
 			ModelID:     spec.Config.ModelID,
 			EngineType:  spec.Config.EngineType,
 			TimeoutSec:  spec.Config.TimeoutSec,
+			JudgeModel:  spec.Config.JudgeModel,
 		},
 		Digest:       digest,
 		Measures:     make(map[string]models.MeasureResult),

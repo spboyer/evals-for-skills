@@ -11,6 +11,7 @@ export interface RunSummary {
   id: string;
   spec: string;
   model: string;
+  judgeModel?: string;
   outcome: string;
   passCount: number;
   taskCount: number;

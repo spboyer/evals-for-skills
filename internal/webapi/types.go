@@ -4,16 +4,17 @@ import "time"
 
 // RunSummary is the API response for a single run in the list.
 type RunSummary struct {
-	ID        string    `json:"id"`
-	Spec      string    `json:"spec"`
-	Model     string    `json:"model"`
-	Outcome   string    `json:"outcome"`
-	PassCount int       `json:"passCount"`
-	TaskCount int       `json:"taskCount"`
-	Tokens    int       `json:"tokens"`
-	Cost      float64   `json:"cost"`
-	Duration  float64   `json:"duration"`
-	Timestamp time.Time `json:"timestamp"`
+	ID         string    `json:"id"`
+	Spec       string    `json:"spec"`
+	Model      string    `json:"model"`
+	JudgeModel string    `json:"judgeModel,omitempty"`
+	Outcome    string    `json:"outcome"`
+	PassCount  int       `json:"passCount"`
+	TaskCount  int       `json:"taskCount"`
+	Tokens     int       `json:"tokens"`
+	Cost       float64   `json:"cost"`
+	Duration   float64   `json:"duration"`
+	Timestamp  time.Time `json:"timestamp"`
 }
 
 // RunDetail is the API response for a single run with per-task results.

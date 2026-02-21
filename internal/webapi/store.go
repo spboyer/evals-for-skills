@@ -146,16 +146,17 @@ func outcomeToSummary(o *models.EvaluationOutcome) RunSummary {
 	}
 
 	return RunSummary{
-		ID:        o.RunID,
-		Spec:      o.BenchName,
-		Model:     o.Setup.ModelID,
-		Outcome:   outcome,
-		PassCount: o.Digest.Succeeded,
-		TaskCount: o.Digest.TotalTests,
-		Tokens:    tokens,
-		Cost:      estimateCost(tokens),
-		Duration:  float64(o.Digest.DurationMs) / 1000.0,
-		Timestamp: o.Timestamp,
+		ID:         o.RunID,
+		Spec:       o.BenchName,
+		Model:      o.Setup.ModelID,
+		JudgeModel: o.Setup.JudgeModel,
+		Outcome:    outcome,
+		PassCount:  o.Digest.Succeeded,
+		TaskCount:  o.Digest.TotalTests,
+		Tokens:     tokens,
+		Cost:       estimateCost(tokens),
+		Duration:   float64(o.Digest.DurationMs) / 1000.0,
+		Timestamp:  o.Timestamp,
 	}
 }
 

@@ -63,9 +63,17 @@ export default function RunsTable({ data }: { data: RunSummary[] }) {
       }),
       col.accessor("model", {
         header: "Model",
-        cell: (info) => (
-          <span className="text-zinc-300">{info.getValue()}</span>
-        ),
+        cell: (info) => {
+          const row = info.row.original;
+          return (
+            <span className="text-zinc-300">
+              {info.getValue()}
+              {row.judgeModel && row.judgeModel !== info.getValue() && (
+                <span className="ml-1.5 text-xs text-purple-400" title={`Judge: ${row.judgeModel}`}>⚖</span>
+              )}
+            </span>
+          );
+        },
       }),
       col.display({
         id: "passRate",

@@ -191,6 +191,11 @@ export default function RunDetail({ id }: { id: string }) {
         <h1 className="text-2xl font-semibold text-zinc-100">{data.spec}</h1>
         <OutcomeBadge outcome={data.outcome} />
         <span className="text-sm text-zinc-400">{data.model}</span>
+        {data.judgeModel && (
+          <span className="inline-flex items-center gap-1 rounded-full bg-purple-500/10 px-2 py-0.5 text-xs font-medium text-purple-400" data-testid="judge-model-badge">
+            Judge: {data.judgeModel}
+          </span>
+        )}
         <span className="text-sm text-zinc-500">
           {formatRelativeTime(data.timestamp)}
         </span>

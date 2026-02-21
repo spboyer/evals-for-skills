@@ -32,6 +32,7 @@ export const RUNS = [
     id: "run-002",
     spec: "skill-checker",
     model: "claude-sonnet-4",
+    judgeModel: "claude-opus-4.6",
     outcome: "fail",
     passCount: 2,
     taskCount: 5,
