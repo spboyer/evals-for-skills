@@ -280,13 +280,25 @@ waza tokens profile [skill-name | path]
 
 **Flags:** `--format text|json`, `--tokenizer bpe|estimate`
 
-**Example:**
+**Output format (one-liner):**
 ```
-📊 my-skill: 1,722 tokens (detailed ✓), 8 sections, 4 code blocks
-   ⚠️  no workflow steps detected
+📊 my-skill: 1,722 tokens (detailed ✓), 8 sections, 4 code blocks, 5 workflow steps
 ```
 
-**Warnings:** no workflow steps, >2,500 tokens, <3 sections.
+**Examples:**
+
+```bash
+# Profile a single skill
+waza tokens profile code-explainer
+
+# Profile entire skills directory
+waza tokens profile ./skills
+
+# JSON output for automation
+waza tokens profile code-explainer --format json
+```
+
+**Warnings:** no workflow steps, >2,500 tokens, <code>&lt;3</code> sections.
 
 ### waza tokens suggest
 
@@ -317,8 +329,11 @@ waza dev [skill-name | skill-path]
 | `--max-iterations` | Max improvement loops (default: 5) |
 | `--auto` | Auto-apply without prompting |
 | `--fast` | Skip integration tests |
+| `--all` | Process all skills in workspace (batch mode) |
+| `--filter` | Filter by compliance level: `low`, `medium`, `high` (with `--all`) |
+| `--judge-model` | Override the judge model for advisory checks |
 
-### Workflow
+### Single skill workflow
 
 ```bash
 waza dev code-explainer --target high --auto
@@ -331,6 +346,49 @@ Iteratively:
 4. Applies changes
 5. Re-scores
 6. Repeats until target reached
+
+### Batch processing
+
+Process multiple skills in one command:
+
+```bash
+# All skills in workspace
+waza dev --all --target high --auto
+
+# Filter by compliance level (e.g., only low-compliance skills)
+waza dev --all --filter low --target medium
+
+# Multiple skills
+waza dev code-explainer bash-expert python-optimizer --target high
+```
+
+**Batch output** shows a summary table:
+
+```
+Skill                      Status     Current    Target    Iterations
+─────────────────────────────────────────────────────────────────────
+code-explainer             ✅ Done   High       High      2
+bash-expert                🔄 Work   Medium     High      5
+python-optimizer           ⏳ Queued Low        Medium    —
+documentation-writer       ⏭️ Waiting Medium   Medium    —
+```
+
+### Advisory checks
+
+The SkillsBench advisory system performs 5 checks on each skill:
+
+| Check | Level | Indicator | Description |
+|-------|-------|-----------|-------------|
+| **Module Count** | ⚠️ | Module entropy too high or too low — complexity balance issue |
+| **Complexity** | ✅ | Cognitive load analysis — are instructions clear? |
+| **Negative Delta** | ✅ | Did skill improve from last iteration? |
+| **Procedural** | ℹ️ | Does skill have clear workflow steps? |
+| **Over-specificity** | ⚠️ | Is skill too narrow/specialized? |
+
+**Legend:**
+- ✅ = Passing (optimized)
+- ⚠️ = Warning (needs attention)
+- ℹ️ = Info (advisory only)
 
 ## waza serve
 

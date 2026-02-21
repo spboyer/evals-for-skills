@@ -260,9 +260,22 @@ make test
 ```
 
 ### Key CLI flags
+
+**Execution:**
 - `-v, --verbose` - Verbose output
 - `-o, --output` - Save results JSON
 - `--context-dir` - Fixtures directory
+- `--judge-model` - Override the judge model (used in `waza dev` advisory checks)
+- `--reporter junit` - Output JUnit XML for CI integration
+
+**Batch processing:**
+- `waza dev --all` - Process all skills in workspace
+- `waza dev --all --filter low` - Filter by compliance level
+- `waza dev --scaffold-triggers` - Auto-generate skill triggers
+
+**Token management:**
+- `waza tokens profile [skill]` - Structural analysis with 📊 one-liner format
+  - Example: `📊 my-skill: 1,722 tokens (detailed ✓), 8 sections, 4 code blocks`
 
 ## Epics and Priorities
 

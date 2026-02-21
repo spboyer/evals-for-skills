@@ -1,0 +1,283 @@
+---
+title: Batch Processing & Skill Advisory
+description: Guide to waza dev batch mode and the SkillsBench advisory system for skill compliance.
+---
+
+import { Aside, Tabs, TabItem } from '@astrojs/starlight/components';
+
+The `waza dev` command supports **batch processing** to improve multiple skills at scale, combined with **SkillsBench advisory checks** that provide real-time compliance guidance.
+
+## Batch Mode
+
+Run `waza dev` on multiple skills in a single command.
+
+### Single skill (iterative improvement)
+
+```bash
+waza dev code-explainer --target high --auto
+```
+
+This runs the interactive skill improvement loop:
+1. Analyzes current skill compliance
+2. Identifies issues via advisory checks
+3. Suggests specific improvements
+4. Applies changes to SKILL.md
+5. Re-evaluates compliance
+6. Repeats until `--target` is reached
+
+### All skills in workspace
+
+Process every skill in your project:
+
+```bash
+waza dev --all --target high --auto
+```
+
+### Filter by compliance level
+
+Only improve skills below a certain threshold:
+
+```bash
+# Improve only low-compliance skills to medium
+waza dev --all --filter low --target medium --auto
+
+# Focus on medium-compliance skills
+waza dev --all --filter medium --target high
+```
+
+### Multiple skills (explicit list)
+
+```bash
+waza dev code-explainer bash-expert python-optimizer \
+  --target high --auto --max-iterations 3
+```
+
+### Batch output
+
+The summary table shows progress across all skills:
+
+```
+Skill                      Status     Current    Target    Iterations
+─────────────────────────────────────────────────────────────────────
+code-explainer             ✅ Done   High       High      2
+bash-expert                🔄 Work   Medium     High      5
+python-optimizer           ⏳ Queued Low        Medium    —
+documentation-writer       ⏭️ Waiting Medium   Medium    —
+```
+
+**Status meanings:**
+- `✅ Done` — Target reached
+- `🔄 Work` — Currently improving
+- `⏳ Queued` — Waiting to start
+- `⏭️ Waiting` — Already at target
+
+## SkillsBench Advisory System
+
+The advisory system performs **5 automated checks** on each skill during `waza dev` execution. These checks provide real-time feedback without requiring manual code review.
+
+### The 5 Advisory Checks
+
+| # | Check | Level | Indicator | What It Measures |
+|---|-------|-------|-----------|------------------|
+| 1 | **Module Count** | Warning | ⚠️ | Semantic module entropy — are concepts balanced? |
+| 2 | **Complexity** | Pass | ✅ | Cognitive load — can users understand the skill? |
+| 3 | **Negative Delta** | Pass | ✅ | Did this iteration improve over the last? |
+| 4 | **Procedural** | Info | ℹ️ | Clear workflow steps — is there a runnable process? |
+| 5 | **Over-specificity** | Warning | ⚠️ | Scope — is the skill too narrow or too specialized? |
+
+### Output Format
+
+After running `waza dev`, you'll see advisory output like:
+
+```
+🔍 Skill Advisory Report: code-explainer
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+✅ Complexity          Cognitive load within range (8.2 / 10.0)
+⚠️  Module Count       Consider reducing module entropy (0.78)
+ℹ️  Procedural         5 workflow steps detected
+✅ Negative Delta      Improved since last iteration (+0.15 score)
+⚠️  Over-specificity   Scope may be too narrow for some users
+```
+
+### Understanding Each Check
+
+#### 1. Module Count (⚠️ Warning Level)
+
+Measures **semantic entropy** — whether concepts are evenly distributed across modules/sections.
+
+- **High entropy:** Concepts scattered unevenly (too many small sections)
+- **Low entropy:** Concepts well-organized (balanced module structure)
+- **Goal:** Aim for ~0.5–0.7 entropy for optimal readability
+
+**How to fix:**
+- Combine small sections into cohesive topics
+- Split overly broad sections
+- Group related procedures together
+
+#### 2. Complexity (✅ Pass Level)
+
+Measures **cognitive load** — the mental effort required to understand the skill.
+
+Analyzes:
+- Sentence length and vocabulary difficulty
+- Number of concepts per section
+- Code example density
+- Procedural steps clarity
+
+**How to improve:**
+- Use shorter sentences (< 20 words)
+- Define technical terms on first use
+- Limit 3–5 concepts per section
+- Add visual examples for complex ideas
+
+#### 3. Negative Delta (✅ Pass Level)
+
+Tracks **improvement trajectory** — did this iteration make the skill better?
+
+Compares:
+- Token count (efficient rewriting)
+- Section count (organization)
+- Code block quality
+- Readability metrics
+
+**What triggers a warning:**
+- Score decreased from previous iteration
+- Token count increased significantly
+- Readability degraded
+
+#### 4. Procedural (ℹ️ Info Level)
+
+Detects **workflow steps** — whether the skill includes a clear, executable process.
+
+Looks for:
+- Numbered lists (1. 2. 3. …)
+- Step phrases ("First," "Then," "Finally")
+- Conditional branches ("If … then …")
+- Tool invocation sequences
+
+**Why it matters:**
+Skills with clear workflows are more actionable and trustworthy.
+
+**Examples detected:**
+```markdown
+## Workflow
+
+1. Analyze the input
+2. Generate initial response
+3. Review for quality
+4. Refine and return
+```
+
+#### 5. Over-specificity (⚠️ Warning Level)
+
+Measures **scope breadth** — whether the skill is too narrow.
+
+Analyzes:
+- Number of constraints/conditions
+- Specific tools mentioned
+- Platform-specific language
+- Domain vocabulary density
+
+**How to broaden:**
+- Use "agent" instead of "Copilot" where generic
+- Replace tool names with action descriptions
+- Add examples from multiple domains
+- Emphasize general principles over specific details
+
+### Example: Before & After Advisory
+
+**Before improvement:**
+
+```
+⚠️  Module Count       Entropy too high (0.92) — fragmented structure
+🔴 Complexity         Too dense (9.4 / 10.0) — simplify language
+⚠️  Negative Delta     Score decreased (-0.08) — regression detected
+ℹ️  Procedural         4 workflow steps detected
+⚠️  Over-specificity   Scope narrower than target (5 constraints)
+```
+
+**After improvements:**
+
+```
+✅ Module Count       Well-balanced structure (0.63)
+✅ Complexity         Optimal cognitive load (7.1 / 10.0)
+✅ Negative Delta     Improved significantly (+0.22)
+ℹ️  Procedural         8 clear workflow steps
+✅ Over-specificity   Good scope breadth (2 constraints)
+```
+
+## Running Batch Improvements
+
+### Full workflow
+
+```bash
+# 1. Assess all skills
+waza dev --all --target high --verbose
+
+# 2. Improve only low-compliance ones
+waza dev --all --filter low --target medium --auto --max-iterations 5
+
+# 3. Validate after improvement
+waza check --all
+```
+
+### With custom judge model
+
+Override the LLM used for advisory checks:
+
+```bash
+waza dev code-explainer --target high --judge-model gpt-4o --auto
+```
+
+### Dry-run (assessment only)
+
+See what would be improved without applying changes:
+
+```bash
+waza dev --all --verbose
+# Review suggestions, then run with --auto to apply
+```
+
+## CI/CD Integration
+
+Batch mode is ideal for automated skill quality gates:
+
+```bash
+# Fail if any skill drops below "high"
+waza dev --all --filter low --target high --auto || exit 1
+
+# Report advisory status
+waza dev --all --verbose --output-format json > advisory-report.json
+```
+
+Add to `.github/workflows/skill-quality.yml`:
+
+```yaml
+- name: Batch Skill Improvement
+  run: |
+    waza dev --all --target high --auto
+    waza check --all --verbose
+```
+
+## Best Practices
+
+<Aside type="tip">
+- Start with `--filter low` to focus on worst-performing skills first
+- Use `--max-iterations 3–5` to balance quality and execution time
+- Run `waza check --all` after batch improvements to validate results
+- Review advisory warnings before merging changes
+</Aside>
+
+<Aside type="caution">
+- Advisory checks are heuristic-based and may not catch all issues
+- Always review changes before committing in production
+- Module count warnings may be false positives for genuinely specialized skills
+- Over-specificity detection depends on domain; some skills benefit from narrow scope
+</Aside>
+
+## Next Steps
+
+- **[CLI Reference](../reference/cli/)** — All `waza dev` flags and options
+- **[Writing Skills](../guides/skill-authoring/)** — Best practices for skill SKILL.md structure
+- **[CI/CD Integration](../guides/ci-cd/)** — Automated skill quality pipelines
