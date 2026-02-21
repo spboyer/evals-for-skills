@@ -41,6 +41,7 @@ waza run [eval.yaml | skill-name]
 | `--task` | `-t` | string | | Filter tasks by name (repeatable) |
 | `--tags` | | string | | Filter tasks by tags (repeatable) |
 | `--model` | `-m` | string | | Override model (repeatable) |
+| `--judge-model` | | string | | Model for LLM-as-judge graders (overrides execution model) |
 | `--cache` | | bool | false | Enable result caching |
 | `--cache-dir` | | string | `.waza-cache` | Cache directory path |
 | `--format` | `-f` | string | `default` | Output format: `default`, `github-comment` |
@@ -67,6 +68,9 @@ waza run eval.yaml --task "basic*" --task "edge*"
 
 # Multiple models (parallel)
 waza run eval.yaml --model gpt-4o --model claude-sonnet-4.6
+
+# Use a different judge model for LLM-as-judge graders
+waza run eval.yaml --model gpt-4o --judge-model claude-opus-4.6
 
 # Parallel execution with 8 workers
 waza run eval.yaml --parallel --workers 8
@@ -286,7 +290,7 @@ waza tokens profile [skill-name | path]
    ⚠️  no workflow steps detected
 ```
 
-**Warnings:** no workflow steps, >2,500 tokens, <3 sections.
+**Warnings:** no workflow steps, >2,500 tokens, fewer than 3 sections.
 
 ### waza tokens suggest
 
