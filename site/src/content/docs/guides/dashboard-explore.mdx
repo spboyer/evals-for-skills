@@ -1,0 +1,115 @@
+---
+title: Explore the Dashboard
+description: A visual tour of every waza dashboard view — runs overview, task detail, trajectory, comparison, trends, and live monitoring.
+---
+
+The waza dashboard gives you a complete picture of your AI agent skill evaluations. Launch it with a single command and explore every view described below.
+
+```bash
+waza serve --results-dir ./results
+```
+
+## Eval Runs Overview
+
+The landing page shows all evaluation runs at a glance. Six KPI cards summarize your total runs, tasks, pass rate, token usage, cost, and duration. Below the cards, a sortable table lists every run with its spec, model, pass rate, weighted score, task count, tokens, cost, duration, and relative timestamp.
+
+![Eval Runs overview showing KPI cards and sortable runs table](/waza/images/explore/runs-overview.png)
+
+- **KPI cards** — Total Runs, Total Tasks, Pass Rate, Avg Tokens, Avg Cost, and Avg Duration update in real time as results load
+- **Sortable columns** — click any column header (Spec, Model, Tasks, Tokens, Cost, Duration, When) to sort ascending or descending
+- **Judge model indicator** — a ⚖ icon next to the model name indicates a separate judge model was used for grading
+- **Export CSV** — download the full runs table as a CSV file for offline analysis
+- **Click any row** to drill into that run's detail view
+
+## Run Detail — Tasks
+
+Clicking a run opens its detail page. The Tasks tab shows every task in the evaluation with its outcome, raw score, weighted score, and duration. Expand any row to see individual grader results.
+
+![Run detail showing the Tasks tab with outcome badges and scores](/waza/images/explore/run-detail-tasks.png)
+
+- **Outcome badges** — green `pass` and red `fail` badges make it easy to spot problems
+- **Score vs. W. Score** — the raw grader score and the weighted aggregate score are shown side by side
+- **Statistical confidence** — tasks with weighted scores display significance badges (✓ significant / ⚠ not significant) and confidence interval ranges
+- **Export CSV** — export task-level results for the current run
+
+## Run Detail — Trajectory
+
+Switch to the Trajectory tab to see the agent's execution path for each task. The task selector lists every task with its outcome badge so you can quickly jump between them.
+
+![Trajectory tab showing the task selector with pass/fail badges](/waza/images/explore/run-detail-trajectory.png)
+
+- **Task selector** — every task is listed as a clickable card with its outcome badge
+- **Color-coded cards** — passing tasks have a green accent, failing tasks have a red accent
+- **Quick navigation** — click any task card to load its trajectory detail
+
+## Waterfall Timeline
+
+After selecting a task, the trajectory view shows a session digest and a waterfall of execution spans. Each span represents a reasoning step or tool call made by the agent.
+
+![Waterfall timeline showing session digest and execution spans](/waza/images/explore/waterfall-timeline.png)
+
+- **Session digest** — Turns, Tool Calls, Tokens In, Tokens Out, and Tokens Total summarize the agent's session
+- **Span types** — `reasoning` spans (pink) show the agent's thinking; `tool call` spans (blue) show function invocations
+- **Grader results** — each span shows which grader evaluated it and the behavior it tested
+- **Show details** — expand any span to see the full grader output and raw agent response
+
+## Compare Runs
+
+The Compare view lets you select any two runs and see their differences side by side. Select runs from the dropdowns and the comparison appears instantly.
+
+![Compare view showing side-by-side metrics and per-task comparison](/waza/images/explore/compare-runs.png)
+
+- **Run cards** — each selected run shows its spec, model, and timestamp
+- **Metrics comparison** — Pass Rate, Tokens, Cost, and Duration are compared with delta indicators (↑ increase in red, ↓ decrease in green)
+- **Pass rate bars** — horizontal bar chart visually compares pass rates
+- **Per-task comparison** — a table shows each task's outcome, score, and duration for both runs, with Δ Score and Δ Duration columns highlighting differences
+- **Click any row** to view a trajectory diff between the two runs
+
+## Trends
+
+The Trends page charts your evaluation metrics over time. Four line charts show Pass Rate, Tokens per Run, Cost per Run, and Duration per Run across all runs, ordered chronologically.
+
+![Trends page with pass rate, tokens, cost, and duration charts](/waza/images/explore/trends.png)
+
+- **Pass Rate** — track whether your agent skills are improving or regressing
+- **Tokens per Run** — monitor token consumption trends to catch runaway prompts
+- **Cost per Run** — visualize spending patterns across evaluation runs
+- **Duration per Run** — spot performance regressions in execution time
+- **Model filter** — use the "Model" dropdown (top-right) to filter charts to a specific model (e.g., only gpt-4o runs)
+
+## Live Monitoring
+
+The Live view connects to the waza server via WebSocket to show real-time evaluation progress. When no evaluation is running, it shows a disconnected state with instructions to start one.
+
+![Live view showing disconnected state with WebSocket status](/waza/images/explore/live-view.png)
+
+- **WebSocket status** — a red "Disconnected" badge (top-right) shows the current connection state; it turns green when an evaluation is running
+- **Start prompt** — when idle, the view shows a `waza run` command hint to start a new evaluation
+- **Real-time updates** — during an active run, tasks and grader results stream in as they complete
+
+```bash
+# Start a live evaluation and watch it in the dashboard
+waza serve --results-dir ./results &
+waza run eval.yaml --context-dir ./fixtures --live
+```
+
+## Weighted Scores
+
+The W. Score column in the Tasks table shows the weighted aggregate score for each task. When graders have different weights configured in the eval YAML, the weighted score reflects their relative importance.
+
+![Full task table showing weighted scores and confidence intervals](/waza/images/explore/weighted-scores.png)
+
+- **W. Score column** — appears in both the Runs overview and Run Detail views
+- **Per-grader weights** — configure weights in your eval YAML under each grader's `weight` field
+- **Dash (—)** for runs without weighted scoring configured — the column shows a dash when weights are not defined
+
+## Statistical Confidence
+
+Tasks with weighted scores display statistical significance indicators. These help you determine whether score differences between models or runs are meaningful or just noise.
+
+![Task rows showing significance badges and confidence interval ranges](/waza/images/explore/statistical-confidence.png)
+
+- **✓ significant** (green) — the score is statistically significant with tight confidence intervals (e.g., [82.0%, 85.0%])
+- **⚠ not significant** (yellow) — the score has wide confidence intervals (e.g., [45.0%, 90.0%]), meaning more data is needed
+- **Confidence intervals** — shown as [lower%, upper%] ranges below the weighted score
+- **Actionable insight** — significant scores validate your skill's behavior; non-significant scores suggest you need more test cases or the grader criteria need refinement

@@ -30,6 +30,7 @@ export default defineConfig({
 						{ label: 'Writing Eval Specs', slug: 'guides/eval-yaml' },
 						{ label: 'Validators & Graders', slug: 'guides/graders' },
 						{ label: 'Web Dashboard', slug: 'guides/dashboard' },
+						{ label: 'Explore the Dashboard', slug: 'guides/dashboard-explore' },
 						{ label: 'CI/CD Integration', slug: 'guides/ci-cd' },
 					],
 				},
