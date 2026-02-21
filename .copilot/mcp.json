@@ -1,0 +1,9 @@
+{
+  "mcpServers": {
+    "waza": {
+      "command": "waza",
+      "args": ["serve", "--no-browser"],
+      "env": {}
+    }
+  }
+}

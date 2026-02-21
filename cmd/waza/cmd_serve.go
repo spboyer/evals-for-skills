@@ -9,6 +9,7 @@ import (
 	"syscall"
 
 	"github.com/spboyer/waza/internal/jsonrpc"
+	"github.com/spboyer/waza/internal/mcp"
 	"github.com/spboyer/waza/internal/webserver"
 	"github.com/spf13/cobra"
 )
@@ -50,10 +51,16 @@ JSON-RPC methods (when using --tcp or stdin/stdout):
 				return runJSONRPC(tcpAddr, tcpAllowRemote, logger)
 			}
 
-			// HTTP mode (default)
+			// HTTP mode (default) — also start MCP on stdio.
 			if httpMode || !cmd.Flags().Changed("tcp") {
 				ctx, stop := signal.NotifyContext(cmd.Context(), os.Interrupt, syscall.SIGTERM)
 				defer stop()
+
+				// Start MCP server on stdio in the background.
+				go func() {
+					logger.Info("MCP server running on stdio")
+					mcp.ServeStdio(ctx, os.Stdin, os.Stdout, logger)
+				}()
 
 				srv, err := webserver.New(webserver.Config{
 					Port:       httpPort,
