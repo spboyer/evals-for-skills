@@ -237,7 +237,9 @@ func TestHandleResultsSummary(t *testing.T) {
 	}
 	data, _ := json.Marshal(resp.Result)
 	var result toolsCallResult
-	json.Unmarshal(data, &result)
+	if err := json.Unmarshal(data, &result); err != nil {
+		t.Fatalf("failed to unmarshal result: %v", err)
+	}
 	if result.IsError {
 		t.Fatalf("tool returned error: %s", result.Content[0].Text)
 	}
@@ -262,7 +264,9 @@ func TestHandleResultsRuns(t *testing.T) {
 	}
 	data, _ := json.Marshal(resp.Result)
 	var result toolsCallResult
-	json.Unmarshal(data, &result)
+	if err := json.Unmarshal(data, &result); err != nil {
+		t.Fatalf("failed to unmarshal result: %v", err)
+	}
 	if result.IsError {
 		t.Fatalf("tool returned error: %s", result.Content[0].Text)
 	}
