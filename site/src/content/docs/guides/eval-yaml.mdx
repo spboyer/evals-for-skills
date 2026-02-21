@@ -72,6 +72,7 @@ Graders validate task outputs. Define once, reuse across tasks:
 graders:
   - type: regex
     name: checks_logic
+    weight: 2.0
     config:
       pattern: "(?i)(function|variable|parameter)"
       
@@ -88,6 +89,8 @@ graders:
       keywords: ["algorithm", "optimization"]
       must_include_all: true
 ```
+
+Each grader accepts an optional `weight` (default `1.0`) that controls its influence on the composite score. See **[Validators & Graders](../graders/#weighted-scoring)** for details.
 
 All graders return:
 - `score`: 0.0 to 1.0

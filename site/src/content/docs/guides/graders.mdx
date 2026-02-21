@@ -20,7 +20,7 @@ Graders are the scoring engine behind every waza evaluation. After an agent exec
 | `feedback` | `string` | Human-readable explanation |
 | `details` | `object` | Structured metadata for debugging |
 
-You can attach graders **globally** (applied to every task) or **per-task** in your eval YAML.
+You can attach graders **globally** (applied to every task) or **per-task** in your eval YAML. Each grader also accepts an optional **`weight`** field that controls its influence on the composite score (see [Weighted Scoring](#weighted-scoring) below).
 
 ---
 
@@ -587,6 +587,46 @@ tasks:
                 contains:
                   - "+from fastapi import FastAPI"
 ```
+
+---
+
+## Weighted Scoring
+
+By default every grader counts equally toward the composite score. Add a `weight` field to shift importance:
+
+```yaml
+graders:
+  - type: regex
+    name: critical_check
+    weight: 3.0          # Counts 3×
+    config:
+      must_match: ["deployed"]
+
+  - type: keyword
+    name: nice_to_have
+    weight: 0.5          # Counts 0.5×
+    config:
+      must_contain: [summary]
+
+  - type: code
+    name: basic_length
+    # weight omitted → defaults to 1.0
+    config:
+      assertions:
+        - "len(output) > 50"
+```
+
+| Option | Type | Default | Description |
+|--------|------|---------|-------------|
+| `weight` | `float` | `1.0` | Relative importance of this grader in the composite score |
+
+**Formula:** `(score₁ × weight₁ + score₂ × weight₂ + …) / (weight₁ + weight₂ + …)`
+
+With the config above and scores of `1.0`, `0.0`, and `1.0`, the composite score is `(1.0×3 + 0.0×0.5 + 1.0×1) / (3+0.5+1) = 0.89`.
+
+<Aside type="tip" title="When to use weights">
+Weight critical checks (correctness, security) higher and cosmetic checks (style, formatting) lower. A task still passes only when **all** graders pass — weights affect the composite score, not the pass/fail verdict.
+</Aside>
 
 ---
 
