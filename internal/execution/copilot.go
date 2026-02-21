@@ -13,13 +13,65 @@ import (
 	"github.com/spboyer/waza/internal/utils"
 )
 
+type copilotSession interface {
+	On(copilot.SessionEventHandler) func()
+	Send(context.Context, copilot.MessageOptions) (string, error)
+	SessionID() string
+}
+
+type copilotClient interface {
+	Start(context.Context) error
+	Stop() error
+	CreateSession(context.Context, *copilot.SessionConfig) (copilotSession, error)
+}
+
+type sdkSession struct {
+	session *copilot.Session
+}
+
+func (s *sdkSession) On(handler copilot.SessionEventHandler) func() {
+	return s.session.On(handler)
+}
+
+func (s *sdkSession) Send(ctx context.Context, options copilot.MessageOptions) (string, error) {
+	return s.session.Send(ctx, options)
+}
+
+func (s *sdkSession) SessionID() string {
+	return s.session.SessionID
+}
+
+type sdkClient struct {
+	client *copilot.Client
+}
+
+func (c *sdkClient) Start(ctx context.Context) error {
+	return c.client.Start(ctx)
+}
+
+func (c *sdkClient) Stop() error {
+	return c.client.Stop()
+}
+
+func (c *sdkClient) CreateSession(ctx context.Context, config *copilot.SessionConfig) (copilotSession, error) {
+	session, err := c.client.CreateSession(ctx, config)
+	if err != nil {
+		return nil, err
+	}
+	return &sdkSession{session: session}, nil
+}
+
+var newCopilotClient = func(opts *copilot.ClientOptions) copilotClient {
+	return &sdkClient{client: copilot.NewClient(opts)}
+}
+
 // CopilotEngine integrates with GitHub Copilot SDK
 type CopilotEngine struct {
 	modelID string
 
 	// Mutex to protect concurrent access to workspace and client
 	mu     sync.Mutex
-	client *copilot.Client
+	client copilotClient
 
 	workspace     string
 	oldWorkspaces []string // previous workspaces to clean up at Shutdown
@@ -86,7 +138,7 @@ func (e *CopilotEngine) Execute(ctx context.Context, req *ExecutionRequest) (*Ex
 		}
 	}
 
-	client := copilot.NewClient(&copilot.ClientOptions{
+	client := newCopilotClient(&copilot.ClientOptions{
 		Cwd:      e.workspace,
 		LogLevel: "error",
 	})
@@ -181,7 +233,7 @@ func (e *CopilotEngine) Execute(ctx context.Context, req *ExecutionRequest) (*Ex
 		ErrorMsg:         errorMsg,
 		Success:          errorMsg == "",
 		WorkspaceDir:     e.workspace,
-		SessionID:        session.SessionID,
+		SessionID:        session.SessionID(),
 	}
 
 	return resp, nil
