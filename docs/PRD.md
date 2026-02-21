@@ -155,10 +155,10 @@ Package waza as an Azure Developer CLI extension.
 ```mermaid
 flowchart TD
     subgraph DW["DEVELOPER WORKFLOW"]
-        CLI["WAZA CLI (Go)\ninit → generate → dev → run → compare"]
-        CLI --> SE["Sensei Engine\n(Compliance)"]
-        CLI --> EF["Eval Framework\n(Testing/Metrics)"]
-        CLI --> WS["Waza Skill\n(Guidance)"]
+        CLI["WAZA CLI (Go)<br/>init → generate → dev → run → compare"]
+        CLI --> SE["Sensei Engine<br/>(Compliance)"]
+        CLI --> EF["Eval Framework<br/>(Testing/Metrics)"]
+        CLI --> WS["Waza Skill<br/>(Guidance)"]
     end
 ```
 

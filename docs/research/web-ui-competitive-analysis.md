@@ -437,10 +437,10 @@ The dashboard is the **second step** — you've already run your evals, collecte
 
 ```mermaid
 flowchart TD
-    CLI["CLI\nwaza run eval.yaml\nProduces: results.json + session logs"]
-    Results["Results\nJSON + logs\nData accumulated locally"]
-    Dashboard["Dashboard\nwaza serve :3000\nSingle binary, embedded SPA\nVisualize and analyze results"]
-    Iterate["Iterate\nRun new evals with improvements\nTrack trends over time"]
+    CLI["CLI<br/>waza run eval.yaml<br/>Produces: results.json + session logs"]
+    Results["Results<br/>JSON + logs<br/>Data accumulated locally"]
+    Dashboard["Dashboard<br/>waza serve :3000<br/>Single binary, embedded SPA<br/>Visualize and analyze results"]
+    Iterate["Iterate<br/>Run new evals with improvements<br/>Track trends over time"]
 
     CLI --> Results
     Results --> Dashboard
