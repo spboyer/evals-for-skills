@@ -131,19 +131,27 @@ Each task execution gets a **fresh temp workspace** with fixtures copied in:
 | `waza-go/README.md` | Go implementation details | Go code changes |
 | `docs/PRD.md` | Product requirements | Feature scope changes |
 | `AGENTS.md` | Agent coding guidelines | Process/pattern changes |
+| `site/` (GitHub Pages) | Public docs site (spboyer.github.io/waza) | Any feature add/change |
 
 ### Documentation Checklist
 
-When adding a new CLI command:
-- [ ] Update `waza-go/README.md` usage section
+When adding or updating any feature:
+- [ ] Check if `site/src/content/docs/` pages need updating (graders, CLI reference, guides, eval YAML)
 - [ ] Update `README.md` if user-facing
+- [ ] Update `waza-go/README.md` usage section if CLI changes
+- [ ] Build the docs site to verify: `cd site && npm run build`
 - [ ] Add example in appropriate docs
 - [ ] Update tracking issue #66 if related to roadmap
+
+When adding a new CLI command or flag:
+- [ ] Add to `site/src/content/docs/reference/cli.mdx`
+- [ ] Add to `site/src/content/docs/guides/` if it needs a guide
+- [ ] Update `README.md` Commands section
 
 When completing a feature:
 - [ ] Close related GitHub issue with comment
 - [ ] Update tracking issue #66 checkbox
-- [ ] Update docs as needed
+- [ ] Verify GitHub Pages site reflects the change (pages deploy on merge to main)
 
 ## Documentation Maintenance
 
@@ -153,11 +161,12 @@ Documentation must be updated in real-time as features change. This is enforced 
 
 | Change Type | Required Doc Updates |
 |---|---|
-| New CLI command or flag | README.md Commands section, docs/GUIDE.md |
-| Changed CLI behavior | README.md, docs/GUIDE.md, affected tutorials |
-| New/changed dashboard view | docs/GUIDE.md Dashboard section, regenerate screenshots, docs/DEMO-GUIDE.md |
-| Changed eval YAML schema | README.md YAML section, docs/GUIDE.md, example files |
-| New validator/grader | README.md Validators section, docs/GUIDE.md |
+| New CLI command or flag | README.md Commands section, `site/` CLI reference, docs/GUIDE.md |
+| Changed CLI behavior | README.md, `site/` guides, docs/GUIDE.md, affected tutorials |
+| New/changed dashboard view | `site/` dashboard guide, regenerate screenshots, docs/DEMO-GUIDE.md |
+| Changed eval YAML schema | README.md YAML section, `site/` eval-yaml reference, example files |
+| New validator/grader | README.md Validators section, `site/` graders page, docs/GUIDE.md |
+| New sensei/dev feature | `site/` sensei guide, README.md |
 
 ### Screenshot Maintenance
 

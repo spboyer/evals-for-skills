@@ -104,18 +104,18 @@ func TestIsSignificant(t *testing.T) {
 
 func TestNormalizedGain(t *testing.T) {
 	tests := []struct {
-		name     string
+		name      string
 		pre, post float64
-		want     float64
+		want      float64
 	}{
-		{"basic gain", 0.4, 0.7, 0.5},                // (0.7-0.4)/(1-0.4) = 0.3/0.6 = 0.5
+		{"basic gain", 0.4, 0.7, 0.5}, // (0.7-0.4)/(1-0.4) = 0.3/0.6 = 0.5
 		{"no change", 0.5, 0.5, 0.0},
 		{"full gain", 0.5, 1.0, 1.0},
 		{"pre at ceiling", 1.0, 1.0, 0.0},
-		{"low to high", 0.0, 0.5, 0.5},               // (0.5-0.0)/(1-0.0) = 0.5
-		{"high pre small gain", 0.9, 0.95, 0.5},       // (0.95-0.9)/(1-0.9) = 0.05/0.1 = 0.5
+		{"low to high", 0.0, 0.5, 0.5},          // (0.5-0.0)/(1-0.0) = 0.5
+		{"high pre small gain", 0.9, 0.95, 0.5}, // (0.95-0.9)/(1-0.9) = 0.05/0.1 = 0.5
 		{"zero to one", 0.0, 1.0, 1.0},
-		{"negative gain", 0.5, 0.3, -0.4},              // (0.3-0.5)/(1-0.5) = -0.2/0.5 = -0.4
+		{"negative gain", 0.5, 0.3, -0.4}, // (0.3-0.5)/(1-0.5) = -0.2/0.5 = -0.4
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
