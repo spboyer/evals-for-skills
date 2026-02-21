@@ -39,11 +39,11 @@ type TaskResult struct {
 
 // TaskStatsResponse holds per-task statistical data.
 type TaskStatsResponse struct {
-	PassRate    float64              `json:"passRate"`
-	AvgScore    float64              `json:"avgScore"`
-	StdDev      float64              `json:"stdDev"`
-	BootstrapCI *ConfidenceIntervalResponse `json:"bootstrapCI,omitempty"`
-	IsSignificant *bool              `json:"isSignificant,omitempty"`
+	PassRate      float64                     `json:"passRate"`
+	AvgScore      float64                     `json:"avgScore"`
+	StdDev        float64                     `json:"stdDev"`
+	BootstrapCI   *ConfidenceIntervalResponse `json:"bootstrapCI,omitempty"`
+	IsSignificant *bool                       `json:"isSignificant,omitempty"`
 }
 
 // ConfidenceIntervalResponse holds bootstrap CI bounds.
