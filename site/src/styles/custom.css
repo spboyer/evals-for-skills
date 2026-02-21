@@ -95,8 +95,10 @@ nav.sidebar a:hover {
 }
 nav.sidebar a[aria-current='page'],
 nav.sidebar a[aria-current='true'] {
-  color: #10b981;
+  background-color: transparent !important;
+  color: #10b981 !important;
   font-weight: 600;
+  box-shadow: inset 2px 0 0 0 #10b981;
 }
 
 /* ─── Content typography ────────────────────────────────────────────── */
