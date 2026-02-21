@@ -18,6 +18,7 @@ export interface RunSummary {
   cost: number;
   duration: number;
   timestamp: string;
+  weightedScore?: number;
 }
 
 export interface GraderResult {
@@ -25,6 +26,7 @@ export interface GraderResult {
   type: string;
   passed: boolean;
   score: number;
+  weight?: number;
   message: string;
 }
 
@@ -53,6 +55,7 @@ export interface TaskResult {
   name: string;
   outcome: string;
   score: number;
+  weightedScore?: number;
   duration: number;
   graderResults: GraderResult[];
   transcript?: TranscriptEvent[];

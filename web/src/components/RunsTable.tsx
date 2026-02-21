@@ -76,6 +76,18 @@ export default function RunsTable({ data }: { data: RunSummary[] }) {
           return <span className="text-zinc-300">{formatPercent(rate)}</span>;
         },
       }),
+      col.display({
+        id: "weightedScore",
+        header: "W. Score",
+        cell: (info) => {
+          const row = info.row.original;
+          return (
+            <span className="text-zinc-300">
+              {row.weightedScore != null ? formatPercent(row.weightedScore) : "—"}
+            </span>
+          );
+        },
+      }),
       col.accessor("taskCount", {
         header: "Tasks",
         cell: (info) => (

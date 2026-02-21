@@ -25,6 +25,7 @@ export const RUNS = [
     tokens: 12400,
     cost: 1.24,
     duration: 38,
+    weightedScore: 0.92,
     timestamp: new Date(Date.now() - 3600_000).toISOString(), // 1 hour ago
   },
   {
@@ -37,6 +38,7 @@ export const RUNS = [
     tokens: 18100,
     cost: 1.81,
     duration: 55,
+    weightedScore: 0.45,
     timestamp: new Date(Date.now() - 7200_000).toISOString(), // 2 hours ago
   },
   {
@@ -60,6 +62,7 @@ export const RUN_DETAIL = {
       name: "explain-fibonacci",
       outcome: "pass",
       score: 1.0,
+      weightedScore: 1.0,
       duration: 12,
       graderResults: [
         {
@@ -67,6 +70,7 @@ export const RUN_DETAIL = {
           type: "code",
           passed: true,
           score: 1.0,
+          weight: 1.0,
           message: "Output file found",
         },
         {
@@ -74,6 +78,7 @@ export const RUN_DETAIL = {
           type: "regex",
           passed: true,
           score: 1.0,
+          weight: 2.0,
           message: 'Matched pattern "recursion|recursive"',
         },
       ],
@@ -99,6 +104,7 @@ export const RUN_DETAIL = {
       name: "explain-quicksort",
       outcome: "pass",
       score: 1.0,
+      weightedScore: 1.0,
       duration: 10,
       graderResults: [
         {
@@ -106,6 +112,7 @@ export const RUN_DETAIL = {
           type: "code",
           passed: true,
           score: 1.0,
+          weight: 1.0,
           message: "Output file found",
         },
       ],
@@ -114,6 +121,7 @@ export const RUN_DETAIL = {
       name: "explain-binary-search",
       outcome: "fail",
       score: 0.0,
+      weightedScore: 0.33,
       duration: 8,
       graderResults: [
         {
@@ -121,6 +129,7 @@ export const RUN_DETAIL = {
           type: "code",
           passed: true,
           score: 1.0,
+          weight: 1.0,
           message: "Output file found",
         },
         {
@@ -128,6 +137,7 @@ export const RUN_DETAIL = {
           type: "regex",
           passed: false,
           score: 0.0,
+          weight: 2.0,
           message: "Pattern not matched",
         },
       ],
@@ -136,6 +146,7 @@ export const RUN_DETAIL = {
       name: "explain-merge-sort",
       outcome: "pass",
       score: 1.0,
+      weightedScore: 1.0,
       duration: 8,
       graderResults: [
         {
@@ -143,6 +154,7 @@ export const RUN_DETAIL = {
           type: "code",
           passed: true,
           score: 1.0,
+          weight: 1.0,
           message: "Output file found",
         },
       ],
@@ -157,6 +169,7 @@ export const RUN_DETAIL_B = {
       name: "explain-fibonacci",
       outcome: "pass",
       score: 1.0,
+      weightedScore: 1.0,
       duration: 15,
       graderResults: [
         {
@@ -164,6 +177,7 @@ export const RUN_DETAIL_B = {
           type: "code",
           passed: true,
           score: 1.0,
+          weight: 1.0,
           message: "Output file found",
         },
       ],
@@ -190,6 +204,7 @@ export const RUN_DETAIL_B = {
       name: "explain-quicksort",
       outcome: "fail",
       score: 0.0,
+      weightedScore: 0.0,
       duration: 20,
       graderResults: [
         {
@@ -197,6 +212,7 @@ export const RUN_DETAIL_B = {
           type: "code",
           passed: false,
           score: 0.0,
+          weight: 1.0,
           message: "Output file not found",
         },
       ],

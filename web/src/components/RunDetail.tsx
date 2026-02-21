@@ -20,6 +20,23 @@ import {
 import { exportRunDetailToCSV } from "../lib/export";
 import TrajectoryViewer from "./TrajectoryViewer";
 
+/** Compute weighted score from grader results when not provided by backend. */
+function computeWeightedScore(task: TaskResult): number | null {
+  if (task.weightedScore != null) return task.weightedScore;
+  const graders = task.graderResults;
+  if (!graders || graders.length === 0) return null;
+  const hasWeights = graders.some((g) => g.weight != null && g.weight !== 0);
+  if (!hasWeights) return null;
+  let totalWeight = 0;
+  let weightedSum = 0;
+  for (const g of graders) {
+    const w = g.weight ?? 1;
+    weightedSum += g.score * w;
+    totalWeight += w;
+  }
+  return totalWeight > 0 ? weightedSum / totalWeight : null;
+}
+
 function OutcomeBadge({ outcome }: { outcome: string }) {
   if (outcome.startsWith("pass"))
     return (
@@ -65,6 +82,9 @@ function GraderRow({ grader }: { grader: GraderResult }) {
       <td className="px-4 py-2 text-zinc-300">
         {formatPercent(grader.score)}
       </td>
+      <td className="px-4 py-2 text-zinc-400">
+        {grader.weight != null ? `×${grader.weight}` : "—"}
+      </td>
       <td className="px-4 py-2 text-zinc-400">{grader.message}</td>
     </tr>
   );
@@ -72,6 +92,7 @@ function GraderRow({ grader }: { grader: GraderResult }) {
 
 function TaskRow({ task }: { task: TaskResult }) {
   const [expanded, setExpanded] = useState(false);
+  const ws = computeWeightedScore(task);
 
   return (
     <>
@@ -94,6 +115,9 @@ function TaskRow({ task }: { task: TaskResult }) {
         </td>
         <td className="px-4 py-3 text-zinc-300">
           {formatPercent(task.score)}
+        </td>
+        <td className="px-4 py-3 text-zinc-300">
+          {ws != null ? formatPercent(ws) : "—"}
         </td>
         <td className="px-4 py-3 text-zinc-300">
           {formatDuration(task.duration)}
@@ -222,6 +246,9 @@ export default function RunDetail({ id }: { id: string }) {
               </th>
               <th className="px-4 py-3 text-xs font-medium text-zinc-400 uppercase">
                 Score
+              </th>
+              <th className="px-4 py-3 text-xs font-medium text-zinc-400 uppercase">
+                W. Score
               </th>
               <th className="px-4 py-3 text-xs font-medium text-zinc-400 uppercase">
                 Duration
