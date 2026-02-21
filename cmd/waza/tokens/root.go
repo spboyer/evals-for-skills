@@ -17,6 +17,7 @@ func NewCommand() *cobra.Command {
 	cmd.AddCommand(newCheckCmd())
 	cmd.AddCommand(newCompareCmd())
 	cmd.AddCommand(newCountCmd())
+	cmd.AddCommand(newProfileCmd())
 	cmd.AddCommand(newSuggestCmd())
 	return cmd
 }

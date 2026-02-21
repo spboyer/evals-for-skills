@@ -266,6 +266,24 @@ waza tokens check code-explainer
 # ✅ Within budget
 ```
 
+### waza tokens profile
+
+Structural analysis of SKILL.md files — reports token count, section count, code block count, and workflow step detection.
+
+```bash
+waza tokens profile [skill-name | path]
+```
+
+**Flags:** `--format text|json`, `--tokenizer bpe|estimate`
+
+**Example:**
+```
+📊 my-skill: 1,722 tokens (detailed ✓), 8 sections, 4 code blocks
+   ⚠️  no workflow steps detected
+```
+
+**Warnings:** no workflow steps, >2,500 tokens, <3 sections.
+
 ### waza tokens suggest
 
 Get optimization suggestions.

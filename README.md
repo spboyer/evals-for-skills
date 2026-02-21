@@ -350,6 +350,21 @@ Count tokens in markdown files. Paths may be files or directories (scanned recur
 | `--min-tokens <n>` | Filter files below n tokens |
 | `--no-total` | Hide total row in table output |
 
+### `waza tokens profile [skill-name | path]`
+
+Structural analysis of SKILL.md files — reports token count, section count, code block count, and workflow step detection with a one-line summary and warnings.
+
+| Flag | Description |
+|------|-------------|
+| `--format <fmt>` | Output format: `text` or `json` (default: `text`) |
+| `--tokenizer <t>` | Tokenizer: `bpe` or `estimate` (default: `bpe`) |
+
+**Example output:**
+```
+📊 my-skill: 1,722 tokens (detailed ✓), 8 sections, 4 code blocks
+   ⚠️  no workflow steps detected
+```
+
 ### `waza tokens suggest [paths...]`
 
 Suggest ways to reduce token usage in markdown files. Paths may be files or
