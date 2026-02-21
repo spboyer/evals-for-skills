@@ -64,3 +64,12 @@
 ## 📌 Team update (2026-02-20): Model policy overhaul
 
 All code roles now use `claude-opus-4.6`. Docs/Scribe/diversity use `gemini-3-pro-preview`. Heavy code gen uses `gpt-5.2-codex`. Decided by Scott Boyer. See decisions.md for full details.
+
+### Batch Skill Processing (PR #317)
+- **Branch:** `squad/317-batch-dev`
+- **Feature:** `waza dev` now supports batch processing: multiple skill names, `--all`, and `--filter <level>`
+- **Implementation:** Added `runDevBatch()` in `loop.go`, `DisplayBatchSummary()` in `display.go`, new flags in `root.go`
+- **Reuses:** `internal/workspace` skill discovery (same as `waza check`)
+- **Gotcha:** Untracked files from concurrent branches (e.g. `spec.go`) can cause build failures — always verify `git status` for stray files before testing
+- **Test count:** 8 new batch tests in `batch_test.go`, all passing alongside existing 40+ dev tests
+- **Pattern:** Batch summary table uses `batchSkillResult` struct to track before/after state per skill — emoji status indicators: ✅ unchanged, 📈 improved, ❌ error

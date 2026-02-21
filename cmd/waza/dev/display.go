@@ -125,3 +125,31 @@ func DisplayTargetReached(w io.Writer, level AdherenceLevel) {
 func DisplayMaxIterations(w io.Writer, currentLevel AdherenceLevel) {
 	fprintf(w, "\n⏱️  Max iterations reached. Current level: %s\n", currentLevel)
 }
+
+// DisplayBatchSummary shows the batch summary table with before/after for each skill.
+func DisplayBatchSummary(w io.Writer, results []batchSkillResult) {
+	fprintf(w, "\n")
+	fprintf(w, "═══════════════════════════════════════════════════════════════\n")
+	fprintf(w, " BATCH SUMMARY\n")
+	fprintf(w, "═══════════════════════════════════════════════════════════════\n\n")
+	fprintf(w, "%-25s %-15s %-15s %s\n", "Skill", "Before", "After", "Status")
+	fprintf(w, "%s\n", strings.Repeat("─", 63))
+
+	for _, r := range results {
+		name := r.Name
+		if name == "" {
+			name = "unnamed"
+		}
+		if len([]rune(name)) > 24 {
+			name = string([]rune(name)[:21]) + "..."
+		}
+		status := "✅"
+		if r.Err != nil {
+			status = "❌"
+		} else if r.AfterLevel != r.BeforeLevel {
+			status = "📈"
+		}
+		fprintf(w, "%-25s %-15s %-15s %s\n", name, r.BeforeLevel, r.AfterLevel, status)
+	}
+	fprintf(w, "\n")
+}

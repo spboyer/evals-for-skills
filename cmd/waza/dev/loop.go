@@ -38,6 +38,15 @@ func runDev(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return err
 	}
+	allMode, err := cmd.Flags().GetBool("all")
+	if err != nil {
+		return err
+	}
+	filterStr, err := cmd.Flags().GetString("filter")
+	if err != nil {
+		return err
+	}
+
 	if copilotMode {
 		if cmd.Flags().Changed("target") {
 			return errors.New("--target is not valid with --copilot")
@@ -50,6 +59,10 @@ func runDev(cmd *cobra.Command, args []string) error {
 		}
 	} else if cmd.Flags().Changed("model") {
 		return errors.New("--model is valid only with --copilot")
+	}
+
+	if filterStr != "" && !allMode {
+		return errors.New("--filter requires --all")
 	}
 
 	target := AdherenceMediumHigh
@@ -76,6 +89,16 @@ func runDev(cmd *cobra.Command, args []string) error {
 		if err != nil {
 			return err
 		}
+	}
+
+	// Batch mode: --all or multiple skill name args
+	if allMode || len(args) > 1 {
+		return runDevBatch(cmd, args, allMode, filterStr, copilotMode, modelID, target, maxIter, auto)
+	}
+
+	// Single skill mode (original behavior)
+	if len(args) == 0 {
+		return errors.New("skill name or path required (or use --all)")
 	}
 
 	skillDir := args[0]
@@ -124,6 +147,145 @@ func runDev(cmd *cobra.Command, args []string) error {
 	} else {
 		return runDevLoop(cfg)
 	}
+}
+
+// batchSkillResult holds before/after state for the batch summary table.
+type batchSkillResult struct {
+	Name         string
+	BeforeLevel  AdherenceLevel
+	AfterLevel   AdherenceLevel
+	BeforeTokens int
+	AfterTokens  int
+	Err          error
+}
+
+func runDevBatch(cmd *cobra.Command, args []string, allMode bool, filterStr string, copilotMode bool, modelID string, target AdherenceLevel, maxIter int, auto bool) error {
+	wd, err := os.Getwd()
+	if err != nil {
+		return fmt.Errorf("getting working directory: %w", err)
+	}
+	ctx, err := workspace.DetectContext(wd)
+	if err != nil {
+		return fmt.Errorf("detecting workspace: %w", err)
+	}
+	if ctx.Type == workspace.ContextNone {
+		return errors.New("no skills detected in workspace")
+	}
+
+	var skills []workspace.SkillInfo
+	if allMode {
+		skills = ctx.Skills
+	} else {
+		// Resolve each arg as a skill name
+		for _, name := range args {
+			si, findErr := workspace.FindSkill(ctx, name)
+			if findErr != nil {
+				return findErr
+			}
+			skills = append(skills, *si)
+		}
+	}
+
+	if len(skills) == 0 {
+		return errors.New("no skills found in workspace")
+	}
+
+	// Apply adherence level filter if specified
+	if filterStr != "" {
+		filterLevel, parseErr := ParseAdherenceLevel(filterStr)
+		if parseErr != nil {
+			return parseErr
+		}
+		scorer := &HeuristicScorer{}
+		var filtered []workspace.SkillInfo
+		for _, si := range skills {
+			sk, readErr := readSkillFile(si.SkillPath)
+			if readErr != nil {
+				continue
+			}
+			result := scorer.Score(sk)
+			if result.Level == filterLevel {
+				filtered = append(filtered, si)
+			}
+		}
+		skills = filtered
+		if len(skills) == 0 {
+			fprintf(cmd.OutOrStdout(), "No skills at %s adherence level.\n", filterLevel)
+			return nil
+		}
+	}
+
+	w := cmd.OutOrStdout()
+	fprintf(w, "\n📦 Batch processing %d skill(s)\n", len(skills))
+	fprintf(w, "═══════════════════════════════════════════════\n\n")
+
+	var results []batchSkillResult
+
+	for i, si := range skills {
+		if i > 0 {
+			fprintf(w, "\n")
+		}
+		fprintf(w, "─── [%d/%d] %s ───\n", i+1, len(skills), si.Name)
+
+		cfg := &devConfig{
+			SkillDir:      si.Dir,
+			ModelID:       modelID,
+			Copilot:       copilotMode,
+			Context:       cmd.Context(),
+			Target:        target,
+			MaxIterations: maxIter,
+			Auto:          auto,
+			Out:           w,
+			Err:           cmd.ErrOrStderr(),
+			In:            cmd.InOrStdin(),
+			Scorer:        &HeuristicScorer{},
+		}
+
+		// Capture before state
+		sk, readErr := readSkillFile(filepath.Join(si.Dir, "SKILL.md"))
+		if readErr != nil {
+			results = append(results, batchSkillResult{Name: si.Name, Err: readErr})
+			fprintf(w, "  ❌ Error: %s\n", readErr)
+			continue
+		}
+		beforeScore := cfg.Scorer.Score(sk)
+		beforeTokens := sk.Tokens
+
+		// Run the loop
+		var loopErr error
+		if cfg.Copilot {
+			loopErr = runDevCopilot(cfg)
+		} else {
+			loopErr = runDevLoop(cfg)
+		}
+
+		// Capture after state
+		sk, readErr = readSkillFile(filepath.Join(si.Dir, "SKILL.md"))
+		afterLevel := beforeScore.Level
+		afterTokens := beforeTokens
+		if readErr == nil {
+			afterScore := cfg.Scorer.Score(sk)
+			afterLevel = afterScore.Level
+			afterTokens = sk.Tokens
+		}
+
+		results = append(results, batchSkillResult{
+			Name:         si.Name,
+			BeforeLevel:  beforeScore.Level,
+			AfterLevel:   afterLevel,
+			BeforeTokens: beforeTokens,
+			AfterTokens:  afterTokens,
+			Err:          loopErr,
+		})
+
+		if loopErr != nil {
+			fprintf(w, "  ⚠️  Error processing %s: %s\n", si.Name, loopErr)
+		}
+	}
+
+	// Print batch summary table
+	DisplayBatchSummary(w, results)
+	return nil
 }
 
 func runDevLoop(cfg *devConfig) error {
