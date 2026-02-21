@@ -3,6 +3,8 @@ package models
 import (
 	"math"
 	"time"
+
+	"github.com/spboyer/waza/internal/statistics"
 )
 
 // Status represents the outcome status of a test or run.
@@ -70,6 +72,9 @@ type OutcomeDigest struct {
 	StdDev         float64      `json:"std_dev"`
 	DurationMs     int64        `json:"duration_ms"`
 	Groups         []GroupStats `json:"groups,omitempty"`
+
+	// Statistical summary populated when trials_per_task > 1
+	Statistics *StatisticalSummary `json:"statistics,omitempty"`
 }
 
 type MeasureResult struct {
@@ -149,6 +154,17 @@ type TestStats struct {
 	CI95Hi           float64 `json:"ci95_hi"`
 	Flaky            bool    `json:"flaky"`
 	AvgDurationMs    int64   `json:"avg_duration_ms"`
+
+	// Bootstrap confidence interval over weighted scores (populated when trials > 1)
+	BootstrapCI   *statistics.ConfidenceInterval `json:"bootstrap_ci,omitempty"`
+	IsSignificant *bool                          `json:"is_significant,omitempty"`
+}
+
+// StatisticalSummary holds aggregate statistical data for the digest when trials > 1.
+type StatisticalSummary struct {
+	BootstrapCI    statistics.ConfidenceInterval `json:"bootstrap_ci"`
+	IsSignificant  bool                          `json:"is_significant"`
+	NormalizedGain *float64                      `json:"normalized_gain,omitempty"`
 }
 
 // SkillImpactMetric represents A/B comparison for a single task

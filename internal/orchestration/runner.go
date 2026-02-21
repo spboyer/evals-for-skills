@@ -18,6 +18,7 @@ import (
 	"github.com/spboyer/waza/internal/graders"
 	"github.com/spboyer/waza/internal/hooks"
 	"github.com/spboyer/waza/internal/models"
+	"github.com/spboyer/waza/internal/statistics"
 	"github.com/spboyer/waza/internal/template"
 	"github.com/spboyer/waza/internal/transcript"
 	"github.com/spboyer/waza/internal/utils"
@@ -1169,8 +1170,13 @@ func (r *TestRunner) runGraders(ctx context.Context, tc *models.TestCase, grader
 
 	// Run global validators
 	spec := r.cfg.Spec()
+	judgeModel := spec.Config.JudgeModel
 	for _, vCfg := range spec.Graders {
-		grader, err := graders.Create(vCfg.Kind, vCfg.Identifier, vCfg.Parameters)
+		params := vCfg.Parameters
+		if judgeModel != "" && vCfg.Kind == models.GraderKindPrompt {
+			params = injectJudgeModel(params, judgeModel)
+		}
+		grader, err := graders.Create(vCfg.Kind, vCfg.Identifier, params)
 
 		if err != nil {
 			return nil, err
@@ -1200,6 +1206,9 @@ func (r *TestRunner) runGraders(ctx context.Context, tc *models.TestCase, grader
 		if len(vCfg.Checks) > 0 {
 			params["assertions"] = vCfg.Checks
 		}
+		if judgeModel != "" && kind == models.GraderKindPrompt {
+			params = injectJudgeModel(params, judgeModel)
+		}
 
 		grader, err := graders.Create(kind, vCfg.Identifier, params)
 
@@ -1222,6 +1231,16 @@ func (r *TestRunner) runGraders(ctx context.Context, tc *models.TestCase, grader
 	}
 
 	return graderResults, nil
+}
+
+// injectJudgeModel returns a copy of params with the "model" key set to judgeModel.
+func injectJudgeModel(params map[string]any, judgeModel string) map[string]any {
+	merged := make(map[string]any, len(params)+1)
+	for k, v := range params {
+		merged[k] = v
+	}
+	merged["model"] = judgeModel
+	return merged
 }
 
 func (r *TestRunner) buildSessionDigest(resp *execution.ExecutionResponse) models.SessionDigest {
@@ -1280,15 +1299,39 @@ func (r *TestRunner) computeTestStats(runs []models.RunResult) *models.TestStats
 		totalDuration += run.DurationMs
 	}
 
-	return &models.TestStats{
+	stdDev := models.ComputeStdDev(scores)
+
+	stats := &models.TestStats{
 		PassRate:         float64(passed) / float64(len(runs)),
 		AvgScore:         totalScore / float64(len(runs)),
 		AvgWeightedScore: totalWeightedScore / float64(len(runs)),
 		MinScore:         minScore,
 		MaxScore:         maxScore,
-		StdDevScore:      models.ComputeStdDev(scores),
+		StdDevScore:      stdDev,
+		ScoreVariance:    stdDev * stdDev,
 		AvgDurationMs:    totalDuration / int64(len(runs)),
 	}
+
+	// Populate flaky, CI, and bootstrap stats for multi-trial runs
+	stats.Flaky = stats.PassRate > 0 && stats.PassRate < 1
+
+	if len(runs) >= 2 {
+		// Collect weighted scores for bootstrap
+		weightedScores := make([]float64, 0, len(runs))
+		for _, run := range runs {
+			weightedScores = append(weightedScores, run.ComputeWeightedRunScore())
+		}
+
+		ci := statistics.BootstrapCI(weightedScores, 0.95)
+		stats.BootstrapCI = &ci
+		stats.CI95Lo = ci.Lower
+		stats.CI95Hi = ci.Upper
+
+		sig := statistics.IsSignificant(ci)
+		stats.IsSignificant = &sig
+	}
+
+	return stats
 }
 
 func (r *TestRunner) buildOutcome(testOutcomes []models.TestOutcome, startTime time.Time) *models.EvaluationOutcome {
@@ -1324,6 +1367,40 @@ func (r *TestRunner) buildOutcome(testOutcomes []models.TestOutcome, startTime t
 	// Compute group stats if grouping is configured
 	groupStats := computeGroupStats(testOutcomes)
 
+	digest := models.OutcomeDigest{
+		TotalTests:     totalTests,
+		Succeeded:      succeeded,
+		Failed:         failed,
+		Errors:         errors,
+		Skipped:        0,
+		SuccessRate:    successRate,
+		AggregateScore: aggregateScore,
+		WeightedScore:  weightedScore,
+		MinScore:       digestMin,
+		MaxScore:       digestMax,
+		StdDev:         digestStdDev,
+		DurationMs:     time.Since(startTime).Milliseconds(),
+		Groups:         groupStats,
+	}
+
+	// Compute digest-level bootstrap CI over per-test weighted scores when multi-trial
+	if spec.Config.RunsPerTest > 1 && len(testOutcomes) > 0 {
+		perTestScores := make([]float64, 0, len(testOutcomes))
+		for _, to := range testOutcomes {
+			if to.Stats != nil {
+				perTestScores = append(perTestScores, to.Stats.AvgWeightedScore)
+			}
+		}
+		if len(perTestScores) >= 2 {
+			ci := statistics.BootstrapCI(perTestScores, 0.95)
+			sig := statistics.IsSignificant(ci)
+			digest.Statistics = &models.StatisticalSummary{
+				BootstrapCI:   ci,
+				IsSignificant: sig,
+			}
+		}
+	}
+
 	return &models.EvaluationOutcome{
 		RunID:       fmt.Sprintf("run-%d", time.Now().Unix()),
 		SkillTested: spec.SkillName,
@@ -1335,21 +1412,7 @@ func (r *TestRunner) buildOutcome(testOutcomes []models.TestOutcome, startTime t
 			EngineType:  spec.Config.EngineType,
 			TimeoutSec:  spec.Config.TimeoutSec,
 		},
-		Digest: models.OutcomeDigest{
-			TotalTests:     totalTests,
-			Succeeded:      succeeded,
-			Failed:         failed,
-			Errors:         errors,
-			Skipped:        0,
-			SuccessRate:    successRate,
-			AggregateScore: aggregateScore,
-			WeightedScore:  weightedScore,
-			MinScore:       digestMin,
-			MaxScore:       digestMax,
-			StdDev:         digestStdDev,
-			DurationMs:     time.Since(startTime).Milliseconds(),
-			Groups:         groupStats,
-		},
+		Digest:       digest,
 		Measures:     make(map[string]models.MeasureResult),
 		TestOutcomes: testOutcomes,
 		Metadata:     make(map[string]any),
