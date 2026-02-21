@@ -45,6 +45,7 @@ var (
 	sessionLog     bool
 	sessionDir     string
 	noSummary      bool
+	judgeModel     string
 )
 
 // modelResult pairs a model identifier with its evaluation outcome.
@@ -92,6 +93,7 @@ You can also specify a skill name to run its eval:
 	cmd.Flags().BoolVar(&sessionLog, "session-log", false, "Enable session event logging (NDJSON)")
 	cmd.Flags().StringVar(&sessionDir, "session-dir", "", "Directory for session log files (default: current directory)")
 	cmd.Flags().BoolVar(&noSummary, "no-summary", false, "Skip writing combined summary.json for multi-skill runs")
+	cmd.Flags().StringVar(&judgeModel, "judge-model", "", "Model for prompt graders (overrides execution model for LLM-as-judge)")
 
 	return cmd
 }
@@ -314,6 +316,9 @@ func runCommandForSpec(cmd *cobra.Command, sp skillSpecPath) ([]modelResult, err
 	}
 	if baselineFlag {
 		spec.Baseline = true
+	}
+	if judgeModel != "" {
+		spec.Config.JudgeModel = judgeModel
 	}
 
 	// Determine the list of models to evaluate
@@ -543,6 +548,9 @@ func runSingleModel(_ *cobra.Command, spec *models.BenchmarkSpec, specPath strin
 	fmt.Printf("Skill: %s\n", spec.SkillName)
 	fmt.Printf("Engine: %s\n", spec.Config.EngineType)
 	fmt.Printf("Model: %s\n", spec.Config.ModelID)
+	if spec.Config.JudgeModel != "" {
+		fmt.Printf("Judge Model: %s\n", spec.Config.JudgeModel)
+	}
 	if spec.Config.Concurrent {
 		w := spec.Config.Workers
 		if w <= 0 {

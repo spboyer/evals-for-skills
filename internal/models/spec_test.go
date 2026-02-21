@@ -245,3 +245,59 @@ graders:
 		t.Errorf("Expected grader[1] effective weight=1.0, got %f", spec.Graders[1].EffectiveWeight())
 	}
 }
+
+func TestBenchmarkSpec_JudgeModel(t *testing.T) {
+	tempDir := t.TempDir()
+
+	t.Run("parses judge_model from YAML", func(t *testing.T) {
+		yamlContent := `name: judge-test
+skill: test
+config:
+  trials_per_task: 1
+  timeout_seconds: 60
+  executor: mock
+  model: gpt-4o
+  judge_model: claude-opus-4.6
+`
+		specPath := filepath.Join(tempDir, "judge.yaml")
+		if err := os.WriteFile(specPath, []byte(yamlContent), 0644); err != nil {
+			t.Fatalf("Failed to write spec file: %v", err)
+		}
+
+		spec, err := LoadBenchmarkSpec(specPath)
+		if err != nil {
+			t.Fatalf("Failed to load spec: %v", err)
+		}
+
+		if spec.Config.JudgeModel != "claude-opus-4.6" {
+			t.Errorf("Expected judge_model='claude-opus-4.6', got '%s'", spec.Config.JudgeModel)
+		}
+		if spec.Config.ModelID != "gpt-4o" {
+			t.Errorf("Expected model='gpt-4o', got '%s'", spec.Config.ModelID)
+		}
+	})
+
+	t.Run("defaults to empty when omitted", func(t *testing.T) {
+		yamlContent := `name: no-judge
+skill: test
+config:
+  trials_per_task: 1
+  timeout_seconds: 60
+  executor: mock
+  model: gpt-4o
+`
+		specPath := filepath.Join(tempDir, "no-judge.yaml")
+		if err := os.WriteFile(specPath, []byte(yamlContent), 0644); err != nil {
+			t.Fatalf("Failed to write spec file: %v", err)
+		}
+
+		spec, err := LoadBenchmarkSpec(specPath)
+		if err != nil {
+			t.Fatalf("Failed to load spec: %v", err)
+		}
+
+		if spec.Config.JudgeModel != "" {
+			t.Errorf("Expected empty judge_model, got '%s'", spec.Config.JudgeModel)
+		}
+	})
+}

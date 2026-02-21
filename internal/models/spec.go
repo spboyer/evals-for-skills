@@ -44,6 +44,7 @@ type Config struct {
 	ServerConfigs  map[string]any `yaml:"mcp_servers,omitempty" json:"server_configs,omitempty"`
 	MaxAttempts    int            `yaml:"max_attempts,omitempty" json:"max_attempts,omitempty"`
 	GroupBy        string         `yaml:"group_by,omitempty" json:"group_by,omitempty"`
+	JudgeModel     string         `yaml:"judge_model,omitempty" json:"judge_model,omitempty"`
 }
 
 // GraderConfig defines a validator/grader
