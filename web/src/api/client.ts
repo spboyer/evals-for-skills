@@ -42,6 +42,13 @@ export interface TranscriptEvent {
   success?: boolean;
 }
 
+export interface BootstrapCI {
+  lower: number;
+  upper: number;
+  mean: number;
+  confidenceLevel: number;
+}
+
 export interface SessionDigest {
   totalTurns: number;
   toolCallCount: number;
@@ -61,6 +68,8 @@ export interface TaskResult {
   graderResults: GraderResult[];
   transcript?: TranscriptEvent[];
   sessionDigest?: SessionDigest;
+  bootstrapCI?: BootstrapCI;
+  isSignificant?: boolean;
 }
 
 export interface RunDetail extends RunSummary {

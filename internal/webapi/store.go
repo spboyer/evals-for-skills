@@ -178,6 +178,15 @@ func outcomeToDetail(o *models.EvaluationOutcome) *RunDetail {
 		if to.Stats != nil {
 			tr.Score = to.Stats.AvgScore
 			tr.Duration = float64(to.Stats.AvgDurationMs) / 1000.0
+			if to.Stats.BootstrapCI != nil {
+				tr.BootstrapCI = &ConfidenceIntervalResponse{
+					Lower:           to.Stats.BootstrapCI.Lower,
+					Upper:           to.Stats.BootstrapCI.Upper,
+					Mean:            to.Stats.BootstrapCI.Mean,
+					ConfidenceLevel: to.Stats.BootstrapCI.ConfidenceLevel,
+				}
+			}
+			tr.IsSignificant = to.Stats.IsSignificant
 		}
 
 		// Collect grader results, transcript, and session digest from the first run.

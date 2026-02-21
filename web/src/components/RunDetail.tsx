@@ -17,6 +17,13 @@ import {
   formatPercent,
   formatRelativeTime,
 } from "../lib/format";
+
+/** Format a confidence interval as a percentage range string. */
+function formatCIRange(lower: number, upper: number): string {
+  const lo = (lower * 100).toFixed(1);
+  const hi = (upper * 100).toFixed(1);
+  return `[${lo}%, ${hi}%]`;
+}
 import { exportRunDetailToCSV } from "../lib/export";
 import TrajectoryViewer from "./TrajectoryViewer";
 
@@ -61,6 +68,42 @@ function TypeBadge({ type }: { type: string }) {
   return (
     <span className="rounded bg-zinc-700 px-1.5 py-0.5 text-xs text-zinc-300">
       {type}
+    </span>
+  );
+}
+
+function SignificanceBadge({ isSignificant }: { isSignificant?: boolean }) {
+  if (isSignificant == null) return null;
+  if (isSignificant) {
+    return (
+      <span
+        className="inline-flex items-center gap-0.5 rounded-full bg-green-500/10 px-1.5 py-0.5 text-xs font-medium text-green-400"
+        data-testid="significance-badge"
+        title="Statistically significant"
+      >
+        ✓ significant
+      </span>
+    );
+  }
+  return (
+    <span
+      className="inline-flex items-center gap-0.5 rounded-full bg-yellow-500/10 px-1.5 py-0.5 text-xs font-medium text-yellow-400"
+      data-testid="significance-badge"
+      title="Not statistically significant"
+    >
+      ⚠ not significant
+    </span>
+  );
+}
+
+function CIRange({ lower, upper }: { lower: number; upper: number }) {
+  return (
+    <span
+      className="text-xs text-zinc-400"
+      data-testid="ci-range"
+      title={`95% CI: ${formatCIRange(lower, upper)}`}
+    >
+      {formatCIRange(lower, upper)}
     </span>
   );
 }
@@ -117,7 +160,13 @@ function TaskRow({ task }: { task: TaskResult }) {
           {formatPercent(task.score)}
         </td>
         <td className="px-4 py-3 text-zinc-300">
-          {ws != null ? formatPercent(ws) : "—"}
+          <span className="flex items-center gap-1.5">
+            {ws != null ? formatPercent(ws) : "—"}
+            <SignificanceBadge isSignificant={task.isSignificant} />
+          </span>
+          {task.bootstrapCI && (
+            <CIRange lower={task.bootstrapCI.lower} upper={task.bootstrapCI.upper} />
+          )}
         </td>
         <td className="px-4 py-3 text-zinc-300">
           {formatDuration(task.duration)}
