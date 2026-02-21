@@ -152,25 +152,14 @@ Package waza as an Azure Developer CLI extension.
 
 ### System Overview
 
-```
-┌─────────────────────────────────────────────────────────────────────────┐
-│                           DEVELOPER WORKFLOW                            │
-│                                                                         │
-│   ┌─────────────────────────────────────────────────────────────────┐   │
-│   │                          WAZA CLI (Go)                          │   │
-│   │                                                                 │   │
-│   │   init → generate → dev → run → compare                        │   │
-│   └─────────────────────────────────────────────────────────────────┘   │
-│                                    │                                    │
-│              ┌─────────────────────┼─────────────────────┐              │
-│              │                     │                     │              │
-│              ▼                     ▼                     ▼              │
-│   ┌──────────────────┐  ┌──────────────────┐  ┌──────────────────┐      │
-│   │   Sensei Engine  │  │  Eval Framework  │  │   Waza Skill     │      │
-│   │   (Compliance)   │  │ (Testing/Metrics)│  │   (Guidance)     │      │
-│   └──────────────────┘  └──────────────────┘  └──────────────────┘      │
-│                                                                         │
-└─────────────────────────────────────────────────────────────────────────┘
+```mermaid
+flowchart TD
+    subgraph DW["DEVELOPER WORKFLOW"]
+        CLI["WAZA CLI (Go)\ninit → generate → dev → run → compare"]
+        CLI --> SE["Sensei Engine\n(Compliance)"]
+        CLI --> EF["Eval Framework\n(Testing/Metrics)"]
+        CLI --> WS["Waza Skill\n(Guidance)"]
+    end
 ```
 
 ### Component Breakdown
