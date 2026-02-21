@@ -40,7 +40,7 @@ func extractSection(text, label string) []TriggerPhrase {
 		pos := searchFrom + i
 		// For "USE FOR:", reject matches inside "DO NOT USE FOR:".
 		if labelUpper == "USE FOR:" && pos >= 4 {
-			preceding := upper[max(0, pos-11) : pos]
+			preceding := upper[max(0, pos-11):pos]
 			if strings.Contains(preceding, "NOT ") {
 				searchFrom = pos + len(labelUpper)
 				continue
