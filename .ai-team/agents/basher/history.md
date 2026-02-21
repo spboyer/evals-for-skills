@@ -73,3 +73,12 @@ All code roles now use `claude-opus-4.6`. Docs/Scribe/diversity use `gemini-3-pr
 - **Gotcha:** Untracked files from concurrent branches (e.g. `spec.go`) can cause build failures — always verify `git status` for stray files before testing
 - **Test count:** 8 new batch tests in `batch_test.go`, all passing alongside existing 40+ dev tests
 - **Pattern:** Batch summary table uses `batchSkillResult` struct to track before/after state per skill — emoji status indicators: ✅ unchanged, 📈 improved, ❌ error
+
+### Judge Model Flag (PR #323, Issue #309)
+- **Branch:** `squad/309-judge-model`
+- **Feature:** `--judge-model` CLI flag for `waza run` — allows prompt graders to use a separate model from execution (LLM-as-judge pattern)
+- **Implementation:** `JudgeModel` field in `models.Config`, CLI flag in `cmd_run.go`, `injectJudgeModel()` helper in `runner.go`
+- **Threading pattern:** `runGraders()` checks `spec.Config.JudgeModel` and injects it into prompt grader params map before creating the grader — copies map to avoid mutating originals
+- **Backward compatible:** Empty `JudgeModel` = no override, existing per-grader model or SDK default used
+- **Gotcha:** Prior session on same branch had partially committed changes — always check `git log` for existing commits on branch before starting work
+- **Test count:** 7 new tests (5 injectJudgeModel unit + 2 spec YAML deserialization), all passing
