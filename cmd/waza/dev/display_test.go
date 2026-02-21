@@ -60,6 +60,11 @@ Anti-triggers: 1
 Spec Compliance: 5/8 passed
   ⚠️ [spec-license] Consider adding a 'license' field (e.g., MIT, Apache-2.0)
   ⚠️ [spec-version] Consider adding 'metadata.version' for versioning
+
+MCP Integration: 1/4
+  ⚠️ [mcp-tools-table] No MCP tools table found — add a Markdown table listing tools used
+  ⚠️ [mcp-prerequisites] MCP prerequisites not documented — describe which MCP servers are needed
+  ⚠️ [mcp-cli-fallback] No CLI fallback documented — describe behavior when MCP is unavailable
 `
 	require.Equal(t, want, buf.String())
 }

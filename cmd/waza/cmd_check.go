@@ -46,6 +46,7 @@ type readinessReport struct {
 	complianceScore *dev.ScoreResult
 	complianceLevel dev.AdherenceLevel
 	specResult      *dev.SpecResult
+	mcpResult       *dev.McpResult
 	tokenCount      int
 	tokenLimit      int
 	tokenExceeded   bool
@@ -173,6 +174,10 @@ func checkReadiness(skillDir string) (*readinessReport, error) {
 	specScorer := &dev.SpecScorer{}
 	report.specResult = specScorer.Score(&sk)
 
+	// 3c. Run MCP integration checks
+	mcpScorer := &dev.McpScorer{}
+	report.mcpResult = mcpScorer.Score(&sk)
+
 	// 4. Check token budget
 	counter, err := internalTokens.NewCounter(internalTokens.TokenizerDefault)
 	if err != nil {
@@ -258,6 +263,24 @@ func displayReadinessReport(out interface{ Write([]byte) (int, error) }, report 
 				}
 				fmt.Fprintf(w, "   %s [%s] %s\n", emoji, issue.Rule, issue.Message)
 			}
+		}
+		fmt.Fprintf(w, "\n")
+	}
+
+	// 1c. MCP Integration
+	if report.mcpResult != nil {
+		fmt.Fprintf(w, "🔌 MCP Integration: %d/4\n", report.mcpResult.SubScore)
+		if report.mcpResult.SubScore == 4 {
+			fmt.Fprintf(w, "   ✅ All MCP integration checks passed.\n")
+		} else {
+			fmt.Fprintf(w, "   ⚠️  MCP documentation incomplete (%d/4 checks passed).\n", report.mcpResult.SubScore)
+		}
+		for _, issue := range report.mcpResult.Issues {
+			emoji := "⚠️"
+			if issue.Severity == "error" {
+				emoji = "❌"
+			}
+			fmt.Fprintf(w, "   %s [%s] %s\n", emoji, issue.Rule, issue.Message)
 		}
 		fmt.Fprintf(w, "\n")
 	}

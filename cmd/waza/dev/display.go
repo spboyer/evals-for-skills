@@ -46,6 +46,10 @@ func DisplayScore(w io.Writer, sk *skill.Skill, score *ScoreResult) {
 	specResult := (SpecScorer{}).Score(sk)
 	DisplaySpecResult(w, specResult)
 
+	// Run and display MCP integration checks
+	mcpResult := (McpScorer{}).Score(sk)
+	DisplayMcp(w, mcpResult)
+
 	// Run and display SkillsBench advisory checks
 	advisoryResult := (AdvisoryScorer{}).Score(sk)
 	DisplayAdvisory(w, advisoryResult)
@@ -161,6 +165,21 @@ func DisplayAdvisory(w io.Writer, r *AdvisoryResult) {
 			icon = "ℹ️"
 		}
 		fprintf(w, "  %s [%s] %s\n", icon, a.Check, a.Message)
+	}
+}
+
+// DisplayMcp shows MCP integration scoring results.
+func DisplayMcp(w io.Writer, r *McpResult) {
+	if r == nil {
+		return
+	}
+	fprintf(w, "\nMCP Integration: %d/4\n", r.SubScore)
+	for _, iss := range r.Issues {
+		icon := "⚠️"
+		if iss.Severity == "error" {
+			icon = "❌"
+		}
+		fprintf(w, "  %s [%s] %s\n", icon, iss.Rule, iss.Message)
 	}
 }
 
