@@ -76,16 +76,16 @@ func validateRequiredSkills(requiredSkills []string, discoveredSkills map[string
 		var sb strings.Builder
 		sb.WriteString("required skills not found:\n")
 		for _, skillName := range missing {
-			sb.WriteString(fmt.Sprintf("  - %s\n", skillName))
+			fmt.Fprintf(&sb, "  - %s\n", skillName)
 		}
 		sb.WriteString("\nSearched directories:\n")
 		for _, dir := range searchedDirs {
-			sb.WriteString(fmt.Sprintf("  - %s\n", dir))
+			fmt.Fprintf(&sb, "  - %s\n", dir)
 		}
 		if len(discoveredSkills) > 0 {
 			sb.WriteString("\nFound skills:\n")
 			for skillName := range discoveredSkills {
-				sb.WriteString(fmt.Sprintf("  - %s\n", skillName))
+				fmt.Fprintf(&sb, "  - %s\n", skillName)
 			}
 		} else {
 			sb.WriteString("\nNo skills were found in the searched directories.\n")

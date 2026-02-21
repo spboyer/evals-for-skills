@@ -46,8 +46,8 @@ type SkillProfile struct {
 }
 
 const (
-	tokenWarningThreshold  = 2500
-	sectionWarningMinimum  = 3
+	tokenWarningThreshold = 2500
+	sectionWarningMinimum = 3
 )
 
 var numberedStepRe = regexp.MustCompile(`(?m)^\s*\d+\.\s+`)
@@ -166,7 +166,7 @@ func runProfile(cmd *cobra.Command, args []string) error {
 		return err
 	}
 	if len(files) == 0 {
-		fmt.Fprintln(cmd.OutOrStdout(), "No SKILL.md files found.")
+		_, _ = fmt.Fprintln(cmd.OutOrStdout(), "No SKILL.md files found.")
 		return nil
 	}
 
@@ -219,10 +219,10 @@ func outputProfileText(w io.Writer, profiles []*SkillProfile) {
 		if p.DetailLevel == "detailed" {
 			detailMark = "✓"
 		}
-		fmt.Fprintf(w, "📊 %s: %s tokens (%s %s), %d sections, %d code blocks\n",
+		_, _ = fmt.Fprintf(w, "📊 %s: %s tokens (%s %s), %d sections, %d code blocks\n",
 			p.Name, formatNumber(p.Tokens), p.DetailLevel, detailMark, p.Sections, p.CodeBlocks)
 		for _, warn := range p.Warnings {
-			fmt.Fprintf(w, "   ⚠️  %s\n", warn)
+			_, _ = fmt.Fprintf(w, "   ⚠️  %s\n", warn)
 		}
 	}
 }
