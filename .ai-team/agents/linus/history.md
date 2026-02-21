@@ -57,3 +57,10 @@ All code roles now use `claude-opus-4.6`. Docs/Scribe/diversity use `gemini-3-pr
 - **Files changed:** `internal/models/spec.go`, `internal/models/outcome.go`, `internal/orchestration/runner.go`, `internal/reporting/interpreter.go`, `internal/webapi/types.go`, `internal/webapi/store.go`, `internal/models/spec_test.go`, `internal/models/outcome_test.go`
 - **What:** Added optional `weight` field to `GraderConfig` (default 1.0 via `EffectiveWeight()`). Added `ComputeWeightedRunScore()` to `RunResult`. Weighted composite score surfaces in `TestStats.AvgWeightedScore`, `OutcomeDigest.WeightedScore`, and the interpretation report. Web API `GraderResult` also carries weight. All existing eval.yaml files work unchanged — weight is optional and defaults to 1.0.
 - **Key learning:** `ValidatorInline` (task-level graders) already had a `Weight` field before this change — only `GraderConfig` (spec-level) was missing it. The runner is the correct place to stamp weights onto `GraderResults` since graders themselves don't know their config weight.
+
+### #314 — agentskills.io Spec Compliance Checks (PR #322)
+- **Date:** 2026-02-20
+- **Branch:** `squad/314-spec-compliance`
+- **Files changed:** `cmd/waza/dev/spec.go` (new), `cmd/waza/dev/spec_test.go` (new), `cmd/waza/dev/display.go`, `cmd/waza/dev/display_test.go`, `cmd/waza/dev/score_test.go`, `cmd/waza/dev/loop_test.go`, `cmd/waza/cmd_check.go`
+- **What:** Added `SpecScorer` with 8 formal agentskills.io spec checks (frontmatter, allowed-fields, name format, dir-match, description length, compatibility length, license recommendation, version recommendation). Integrated into both `waza dev` (inline in DisplayScore) and `waza check` (separate section, summary table column, readiness gate). 15 new test cases.
+- **Key learning:** `makeSkill` test helper needed `FrontmatterRaw` field populated (was nil before) to properly test spec checks. Existing display/loop tests use exact string matching — any new output from `DisplayScore` requires updating all dependent test expected strings.
