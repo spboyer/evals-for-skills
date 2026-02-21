@@ -191,6 +191,7 @@ func outcomeToDetail(o *models.EvaluationOutcome) *RunDetail {
 					Type:    string(v.Type),
 					Passed:  v.Passed,
 					Score:   v.Score,
+					Weight:  v.Weight,
 					Message: v.Feedback,
 				})
 			}

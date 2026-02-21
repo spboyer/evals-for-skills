@@ -58,6 +58,53 @@ func TestComputeRunScore(t *testing.T) {
 	}
 }
 
+func TestComputeWeightedRunScore(t *testing.T) {
+	tests := []struct {
+		name string
+		run  RunResult
+		want float64
+	}{
+		{name: "no validations", run: RunResult{}, want: 0.0},
+		{
+			name: "single validation default weight",
+			run:  RunResult{Validations: map[string]GraderResults{"check": {Score: 0.75, Weight: 1.0}}},
+			want: 0.75,
+		},
+		{
+			name: "equal weights same as unweighted",
+			run: RunResult{Validations: map[string]GraderResults{
+				"a": {Score: 1.0, Weight: 1.0},
+				"b": {Score: 0.5, Weight: 1.0},
+			}},
+			want: 0.75,
+		},
+		{
+			name: "weighted favoring higher scorer",
+			run: RunResult{Validations: map[string]GraderResults{
+				"a": {Score: 1.0, Weight: 3.0},
+				"b": {Score: 0.0, Weight: 1.0},
+			}},
+			want: 0.75, // (1.0*3 + 0.0*1) / (3+1) = 0.75
+		},
+		{
+			name: "zero weight defaults to 1.0",
+			run: RunResult{Validations: map[string]GraderResults{
+				"a": {Score: 1.0, Weight: 0.0},
+				"b": {Score: 0.5, Weight: 0.0},
+			}},
+			want: 0.75, // treated as equal weight 1.0
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := tt.run.ComputeWeightedRunScore()
+			if math.Abs(got-tt.want) > 1e-9 {
+				t.Errorf("ComputeWeightedRunScore() = %f, want %f", got, tt.want)
+			}
+		})
+	}
+}
+
 func TestAllValidationsPassed(t *testing.T) {
 	tests := []struct {
 		name string

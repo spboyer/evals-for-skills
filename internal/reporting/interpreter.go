@@ -57,6 +57,9 @@ func FormatSummaryReport(outcome *models.EvaluationOutcome) string {
 	b.WriteString("=== Interpretation ===\n\n")
 
 	b.WriteString(fmt.Sprintf("Overall Score: %.2f — %s\n", d.AggregateScore, InterpretScore(d.AggregateScore)))
+	if d.WeightedScore != d.AggregateScore {
+		b.WriteString(fmt.Sprintf("Weighted Score: %.2f — %s\n", d.WeightedScore, InterpretScore(d.WeightedScore)))
+	}
 	b.WriteString(fmt.Sprintf("Pass Rate:     %s\n", InterpretPassRate(d.SuccessRate)))
 	b.WriteString(fmt.Sprintf("Duration:      %v\n", duration))
 

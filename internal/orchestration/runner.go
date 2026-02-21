@@ -1182,6 +1182,7 @@ func (r *TestRunner) runGraders(ctx context.Context, tc *models.TestCase, grader
 			return nil, err
 		}
 
+		result.Weight = vCfg.EffectiveWeight()
 		graderResults[result.Name] = *result
 	}
 
@@ -1212,6 +1213,11 @@ func (r *TestRunner) runGraders(ctx context.Context, tc *models.TestCase, grader
 			return nil, fmt.Errorf("failed to run grader %s: %w", vCfg.Identifier, err)
 		}
 
+		w := vCfg.Weight
+		if w <= 0 {
+			w = 1.0
+		}
+		result.Weight = w
 		graderResults[result.Name] = *result
 	}
 
@@ -1247,6 +1253,7 @@ func (r *TestRunner) computeTestStats(runs []models.RunResult) *models.TestStats
 
 	passed := 0
 	totalScore := 0.0
+	totalWeightedScore := 0.0
 	minScore := math.Inf(1)
 	maxScore := math.Inf(-1)
 	totalDuration := int64(0)
@@ -1254,7 +1261,9 @@ func (r *TestRunner) computeTestStats(runs []models.RunResult) *models.TestStats
 
 	for _, run := range runs {
 		score := run.ComputeRunScore()
+		weightedScore := run.ComputeWeightedRunScore()
 		totalScore += score
+		totalWeightedScore += weightedScore
 		scores = append(scores, score)
 
 		if score < minScore {
@@ -1272,12 +1281,13 @@ func (r *TestRunner) computeTestStats(runs []models.RunResult) *models.TestStats
 	}
 
 	return &models.TestStats{
-		PassRate:      float64(passed) / float64(len(runs)),
-		AvgScore:      totalScore / float64(len(runs)),
-		MinScore:      minScore,
-		MaxScore:      maxScore,
-		StdDevScore:   models.ComputeStdDev(scores),
-		AvgDurationMs: totalDuration / int64(len(runs)),
+		PassRate:         float64(passed) / float64(len(runs)),
+		AvgScore:         totalScore / float64(len(runs)),
+		AvgWeightedScore: totalWeightedScore / float64(len(runs)),
+		MinScore:         minScore,
+		MaxScore:         maxScore,
+		StdDevScore:      models.ComputeStdDev(scores),
+		AvgDurationMs:    totalDuration / int64(len(runs)),
 	}
 }
 
@@ -1308,6 +1318,7 @@ func (r *TestRunner) buildOutcome(testOutcomes []models.TestOutcome, startTime t
 
 	// Compute aggregate score, min, max, and stddev across tests
 	aggregateScore := r.computeAggregateScore(testOutcomes)
+	weightedScore := r.computeWeightedAggregateScore(testOutcomes)
 	digestMin, digestMax, digestStdDev := r.computeDigestScoreStats(testOutcomes)
 
 	// Compute group stats if grouping is configured
@@ -1332,6 +1343,7 @@ func (r *TestRunner) buildOutcome(testOutcomes []models.TestOutcome, startTime t
 			Skipped:        0,
 			SuccessRate:    successRate,
 			AggregateScore: aggregateScore,
+			WeightedScore:  weightedScore,
 			MinScore:       digestMin,
 			MaxScore:       digestMax,
 			StdDev:         digestStdDev,
@@ -1355,6 +1367,22 @@ func (r *TestRunner) computeAggregateScore(testOutcomes []models.TestOutcome) fl
 	for _, to := range testOutcomes {
 		if to.Stats != nil {
 			totalScore += to.Stats.AvgScore
+		}
+	}
+
+	return totalScore / float64(len(testOutcomes))
+}
+
+// computeWeightedAggregateScore returns the mean of per-test weighted scores.
+func (r *TestRunner) computeWeightedAggregateScore(testOutcomes []models.TestOutcome) float64 {
+	if len(testOutcomes) == 0 {
+		return 0.0
+	}
+
+	totalScore := 0.0
+	for _, to := range testOutcomes {
+		if to.Stats != nil {
+			totalScore += to.Stats.AvgWeightedScore
 		}
 	}
 

@@ -173,3 +173,75 @@ config:
 		t.Errorf("Expected engine='mock', got '%s'", spec.Config.EngineType)
 	}
 }
+
+func TestGraderConfig_EffectiveWeight(t *testing.T) {
+	tests := []struct {
+		name   string
+		weight float64
+		want   float64
+	}{
+		{name: "zero defaults to 1.0", weight: 0, want: 1.0},
+		{name: "negative defaults to 1.0", weight: -1, want: 1.0},
+		{name: "explicit 1.0", weight: 1.0, want: 1.0},
+		{name: "explicit 2.5", weight: 2.5, want: 2.5},
+		{name: "explicit 0.5", weight: 0.5, want: 0.5},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			gc := GraderConfig{Weight: tt.weight}
+			got := gc.EffectiveWeight()
+			if got != tt.want {
+				t.Errorf("EffectiveWeight() = %f, want %f", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestBenchmarkSpec_GraderWeight(t *testing.T) {
+	tempDir := t.TempDir()
+	yamlContent := `name: weighted-graders
+skill: test
+config:
+  trials_per_task: 1
+  timeout_seconds: 60
+  executor: mock
+graders:
+  - name: important
+    type: regex
+    weight: 3.0
+    config:
+      must_match: ["foo"]
+  - name: minor
+    type: regex
+    config:
+      must_match: ["bar"]
+`
+	specPath := filepath.Join(tempDir, "weighted.yaml")
+	if err := os.WriteFile(specPath, []byte(yamlContent), 0644); err != nil {
+		t.Fatalf("Failed to write spec file: %v", err)
+	}
+
+	spec, err := LoadBenchmarkSpec(specPath)
+	if err != nil {
+		t.Fatalf("Failed to load spec: %v", err)
+	}
+
+	if len(spec.Graders) != 2 {
+		t.Fatalf("Expected 2 graders, got %d", len(spec.Graders))
+	}
+
+	if spec.Graders[0].Weight != 3.0 {
+		t.Errorf("Expected grader[0] weight=3.0, got %f", spec.Graders[0].Weight)
+	}
+	if spec.Graders[0].EffectiveWeight() != 3.0 {
+		t.Errorf("Expected grader[0] effective weight=3.0, got %f", spec.Graders[0].EffectiveWeight())
+	}
+
+	// Omitted weight should be zero-value, but EffectiveWeight returns 1.0
+	if spec.Graders[1].Weight != 0 {
+		t.Errorf("Expected grader[1] weight=0 (omitted), got %f", spec.Graders[1].Weight)
+	}
+	if spec.Graders[1].EffectiveWeight() != 1.0 {
+		t.Errorf("Expected grader[1] effective weight=1.0, got %f", spec.Graders[1].EffectiveWeight())
+	}
+}

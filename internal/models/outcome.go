@@ -64,6 +64,7 @@ type OutcomeDigest struct {
 	Skipped        int          `json:"skipped"`
 	SuccessRate    float64      `json:"success_rate"`
 	AggregateScore float64      `json:"aggregate_score"`
+	WeightedScore  float64      `json:"weighted_score"`
 	MinScore       float64      `json:"min_score"`
 	MaxScore       float64      `json:"max_score"`
 	StdDev         float64      `json:"std_dev"`
@@ -119,6 +120,7 @@ type GraderResults struct {
 	Name       string         `json:"identifier"`
 	Type       GraderKind     `json:"type"`
 	Score      float64        `json:"score"`
+	Weight     float64        `json:"weight"`
 	Passed     bool           `json:"passed"`
 	Feedback   string         `json:"feedback"`
 	Details    map[string]any `json:"details,omitempty"`
@@ -136,16 +138,17 @@ type SessionDigest struct {
 }
 
 type TestStats struct {
-	PassRate      float64 `json:"pass_rate"`
-	AvgScore      float64 `json:"avg_score"`
-	MinScore      float64 `json:"min_score"`
-	MaxScore      float64 `json:"max_score"`
-	StdDevScore   float64 `json:"std_dev_score"`
-	ScoreVariance float64 `json:"score_variance"`
-	CI95Lo        float64 `json:"ci95_lo"`
-	CI95Hi        float64 `json:"ci95_hi"`
-	Flaky         bool    `json:"flaky"`
-	AvgDurationMs int64   `json:"avg_duration_ms"`
+	PassRate         float64 `json:"pass_rate"`
+	AvgScore         float64 `json:"avg_score"`
+	AvgWeightedScore float64 `json:"avg_weighted_score"`
+	MinScore         float64 `json:"min_score"`
+	MaxScore         float64 `json:"max_score"`
+	StdDevScore      float64 `json:"std_dev_score"`
+	ScoreVariance    float64 `json:"score_variance"`
+	CI95Lo           float64 `json:"ci95_lo"`
+	CI95Hi           float64 `json:"ci95_hi"`
+	Flaky            bool    `json:"flaky"`
+	AvgDurationMs    int64   `json:"avg_duration_ms"`
 }
 
 // SkillImpactMetric represents A/B comparison for a single task
@@ -156,7 +159,7 @@ type SkillImpactMetric struct {
 	PercentChange      float64 `json:"percent_change"`
 }
 
-// ComputeRunScore calculates the average score across all validations
+// ComputeRunScore calculates the average score across all validations (unweighted, for backward compat)
 func (r *RunResult) ComputeRunScore() float64 {
 	if len(r.Validations) == 0 {
 		return 0.0
@@ -166,6 +169,28 @@ func (r *RunResult) ComputeRunScore() float64 {
 		total += v.Score
 	}
 	return total / float64(len(r.Validations))
+}
+
+// ComputeWeightedRunScore calculates the weighted composite score (0.0–1.0)
+// using each grader's Weight field. If all weights are zero, falls back to simple average.
+func (r *RunResult) ComputeWeightedRunScore() float64 {
+	if len(r.Validations) == 0 {
+		return 0.0
+	}
+	totalWeight := 0.0
+	weightedSum := 0.0
+	for _, v := range r.Validations {
+		w := v.Weight
+		if w <= 0 {
+			w = 1.0
+		}
+		weightedSum += v.Score * w
+		totalWeight += w
+	}
+	if totalWeight == 0 {
+		return 0.0
+	}
+	return weightedSum / totalWeight
 }
 
 // AllValidationsPassed checks if all validations passed

@@ -62,6 +62,7 @@ type GraderResult struct {
 	Type    string  `json:"type"`
 	Passed  bool    `json:"passed"`
 	Score   float64 `json:"score"`
+	Weight  float64 `json:"weight"`
 	Message string  `json:"message"`
 }
 

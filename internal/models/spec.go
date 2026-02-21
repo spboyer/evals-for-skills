@@ -53,7 +53,16 @@ type GraderConfig struct {
 	ScriptPath string         `yaml:"script,omitempty" json:"script_path,omitempty"`
 	Rubric     string         `yaml:"rubric,omitempty" json:"rubric,omitempty"`
 	ModelID    string         `yaml:"model,omitempty" json:"model_id,omitempty"`
+	Weight     float64        `yaml:"weight,omitempty" json:"weight,omitempty"`
 	Parameters map[string]any `yaml:"config,omitempty" json:"parameters,omitempty"`
+}
+
+// EffectiveWeight returns the grader weight, defaulting to 1.0 if unset.
+func (g *GraderConfig) EffectiveWeight() float64 {
+	if g.Weight <= 0 {
+		return 1.0
+	}
+	return g.Weight
 }
 
 // MeasurementDef defines a metric

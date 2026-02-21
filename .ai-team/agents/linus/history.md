@@ -50,3 +50,10 @@
 ## 📌 Team update (2026-02-20): Model policy overhaul
 
 All code roles now use `claude-opus-4.6`. Docs/Scribe/diversity use `gemini-3-pro-preview`. Heavy code gen uses `gpt-5.2-codex`. Decided by Scott Boyer. See decisions.md for full details.
+
+### #299 — Grader Weighting (PR pending)
+- **Date:** 2026-02-20
+- **Branch:** `squad/299-grader-weighting`
+- **Files changed:** `internal/models/spec.go`, `internal/models/outcome.go`, `internal/orchestration/runner.go`, `internal/reporting/interpreter.go`, `internal/webapi/types.go`, `internal/webapi/store.go`, `internal/models/spec_test.go`, `internal/models/outcome_test.go`
+- **What:** Added optional `weight` field to `GraderConfig` (default 1.0 via `EffectiveWeight()`). Added `ComputeWeightedRunScore()` to `RunResult`. Weighted composite score surfaces in `TestStats.AvgWeightedScore`, `OutcomeDigest.WeightedScore`, and the interpretation report. Web API `GraderResult` also carries weight. All existing eval.yaml files work unchanged — weight is optional and defaults to 1.0.
+- **Key learning:** `ValidatorInline` (task-level graders) already had a `Weight` field before this change — only `GraderConfig` (spec-level) was missing it. The runner is the correct place to stamp weights onto `GraderResults` since graders themselves don't know their config weight.
