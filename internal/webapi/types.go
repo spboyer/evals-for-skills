@@ -25,13 +25,13 @@ type RunDetail struct {
 
 // TaskResult is a per-task result within a run.
 type TaskResult struct {
-	Name          string                    `json:"name"`
-	Outcome       string                    `json:"outcome"`
-	Score         float64                   `json:"score"`
-	Duration      float64                   `json:"duration"`
-	GraderResults []GraderResult            `json:"graderResults"`
-	Transcript    []TranscriptEventResponse `json:"transcript,omitempty"`
-	SessionDigest *SessionDigestResponse    `json:"sessionDigest,omitempty"`
+	Name          string                      `json:"name"`
+	Outcome       string                      `json:"outcome"`
+	Score         float64                     `json:"score"`
+	Duration      float64                     `json:"duration"`
+	GraderResults []GraderResult              `json:"graderResults"`
+	Transcript    []TranscriptEventResponse   `json:"transcript,omitempty"`
+	SessionDigest *SessionDigestResponse      `json:"sessionDigest,omitempty"`
 	BootstrapCI   *ConfidenceIntervalResponse `json:"bootstrapCI,omitempty"`
 	IsSignificant *bool                       `json:"isSignificant,omitempty"`
 }
