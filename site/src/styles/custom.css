@@ -81,6 +81,13 @@ header.header {
   border-bottom: 1px solid #27272a;
 }
 
+/* GitHub icon alignment in header */
+.social-links svg,
+[class*='social'] svg {
+  vertical-align: middle;
+  display: inline-block;
+}
+
 nav.sidebar {
   background-color: #09090b;
   border-right: 1px solid #27272a;
@@ -99,6 +106,18 @@ nav.sidebar a[aria-current='true'] {
   color: #10b981 !important;
   font-weight: 600;
   box-shadow: inset 2px 0 0 0 #10b981;
+}
+
+/* Sidebar group collapsibility and smooth transitions */
+[class*='sidebar-group'],
+.sidebar-group-details summary {
+  transition: all 0.2s ease-in-out;
+}
+[class*='sidebar-group'] {
+  margin-bottom: 0.5rem;
+}
+.sidebar-group-details[open] {
+  background-color: rgba(16, 185, 129, 0.05);
 }
 
 /* ─── Content typography ────────────────────────────────────────────── */
@@ -172,6 +191,13 @@ tbody tr:hover {
   --pagefind-ui-primary: #10b981;
   --pagefind-ui-background: #18181b;
   --pagefind-ui-border: #27272a;
+}
+
+/* Widen search bar */
+[data-pagefind-ui] input,
+.search-button,
+[class*='search'] {
+  min-width: 200px !important;
 }
 
 /* ─── Banner / callouts ─────────────────────────────────────────────── */
