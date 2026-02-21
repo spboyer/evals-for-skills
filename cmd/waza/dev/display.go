@@ -41,6 +41,22 @@ func DisplayScore(w io.Writer, sk *skill.Skill, score *ScoreResult) {
 		fprintf(w, "\n")
 		DisplayIssues(w, score.Issues)
 	}
+
+	// Run and display spec compliance
+	specResult := (SpecScorer{}).Score(sk)
+	DisplaySpecResult(w, specResult)
+}
+
+// DisplaySpecResult shows agentskills.io spec compliance results.
+func DisplaySpecResult(w io.Writer, r *SpecResult) {
+	fprintf(w, "\nSpec Compliance: %d/%d passed\n", r.Pass, r.Total)
+	for _, iss := range r.Issues {
+		icon := "⚠️"
+		if iss.Severity == "error" {
+			icon = "❌"
+		}
+		fprintf(w, "  %s [%s] %s\n", icon, iss.Rule, iss.Message)
+	}
 }
 
 // DisplayIssues lists all issues found.

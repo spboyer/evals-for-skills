@@ -30,6 +30,10 @@ Anti-triggers: 0
 
 Issues:
   ❌ Description is 17 chars (need 150+)
+
+Spec Compliance: 5/8 passed
+  ⚠️ [spec-license] Consider adding a 'license' field (e.g., MIT, Apache-2.0)
+  ⚠️ [spec-version] Consider adding 'metadata.version' for versioning
 `
 	require.Equal(t, want, buf.String())
 }
@@ -52,6 +56,10 @@ Tokens: 73
 Description: 248 chars
 Triggers: 2
 Anti-triggers: 1
+
+Spec Compliance: 5/8 passed
+  ⚠️ [spec-license] Consider adding a 'license' field (e.g., MIT, Apache-2.0)
+  ⚠️ [spec-version] Consider adding 'metadata.version' for versioning
 `
 	require.Equal(t, want, buf.String())
 }
@@ -72,6 +80,10 @@ Tokens: 57
 Description: 184 chars
 Triggers: 3
 Anti-triggers: 1
+
+Spec Compliance: 5/8 passed
+  ⚠️ [spec-license] Consider adding a 'license' field (e.g., MIT, Apache-2.0)
+  ⚠️ [spec-version] Consider adding 'metadata.version' for versioning
 `
 	require.Equal(t, want, buf.String())
 }

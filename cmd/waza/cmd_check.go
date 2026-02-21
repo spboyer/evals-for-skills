@@ -45,6 +45,7 @@ You can also specify a skill name or path:
 type readinessReport struct {
 	complianceScore *dev.ScoreResult
 	complianceLevel dev.AdherenceLevel
+	specResult      *dev.SpecResult
 	tokenCount      int
 	tokenLimit      int
 	tokenExceeded   bool
@@ -113,8 +114,8 @@ func printCheckSummaryTable(w interface{ Write([]byte) (int, error) }, reports [
 	fmt.Fprintf(w, "═══════════════════════════════════════════════\n")               //nolint:errcheck
 	fmt.Fprintf(w, " CHECK SUMMARY\n")                                                //nolint:errcheck
 	fmt.Fprintf(w, "═══════════════════════════════════════════════\n\n")             //nolint:errcheck
-	fmt.Fprintf(w, "%-25s %-15s %-12s %s\n", "Skill", "Compliance", "Tokens", "Eval") //nolint:errcheck
-	fmt.Fprintf(w, "%s\n", strings.Repeat("─", 60))                                   //nolint:errcheck
+	fmt.Fprintf(w, "%-25s %-15s %-12s %-8s %s\n", "Skill", "Compliance", "Tokens", "Spec", "Eval") //nolint:errcheck
+	fmt.Fprintf(w, "%s\n", strings.Repeat("─", 68))                                                //nolint:errcheck
 
 	for _, r := range reports {
 		name := r.skillName
@@ -125,12 +126,16 @@ func printCheckSummaryTable(w interface{ Write([]byte) (int, error) }, reports [
 		if r.tokenExceeded {
 			tokenStatus = "❌"
 		}
+		specStatus := "✅"
+		if r.specResult != nil && !r.specResult.Passed() {
+			specStatus = "❌"
+		}
 		evalStatus := "✅"
 		if !r.hasEval {
 			evalStatus = "⚠️"
 		}
-		fmt.Fprintf(w, "%-25s %-15s %s %d/%-6d %s\n", //nolint:errcheck
-			name, r.complianceLevel, tokenStatus, r.tokenCount, r.tokenLimit, evalStatus)
+		fmt.Fprintf(w, "%-25s %-15s %s %d/%-6d %s       %s\n", //nolint:errcheck
+			name, r.complianceLevel, tokenStatus, r.tokenCount, r.tokenLimit, specStatus, evalStatus)
 	}
 	fmt.Fprintf(w, "\n") //nolint:errcheck
 }
@@ -163,6 +168,10 @@ func checkReadiness(skillDir string) (*readinessReport, error) {
 	scorer := &dev.HeuristicScorer{}
 	report.complianceScore = scorer.Score(&sk)
 	report.complianceLevel = report.complianceScore.Level
+
+	// 3b. Run spec compliance checks
+	specScorer := &dev.SpecScorer{}
+	report.specResult = specScorer.Score(&sk)
 
 	// 4. Check token budget
 	counter, err := internalTokens.NewCounter(internalTokens.TokenizerDefault)
@@ -233,6 +242,26 @@ func displayReadinessReport(out interface{ Write([]byte) (int, error) }, report 
 	}
 	fmt.Fprintf(w, "\n")
 
+	// 1b. Spec Compliance
+	if report.specResult != nil {
+		fmt.Fprintf(w, "📐 Spec Compliance: %d/%d checks passed\n", report.specResult.Pass, report.specResult.Total)
+		if report.specResult.Passed() {
+			fmt.Fprintf(w, "   ✅ Meets agentskills.io specification.\n")
+		} else {
+			fmt.Fprintf(w, "   ❌ Does not fully meet agentskills.io specification.\n")
+		}
+		if len(report.specResult.Issues) > 0 {
+			for _, issue := range report.specResult.Issues {
+				emoji := "⚠️"
+				if issue.Severity == "error" {
+					emoji = "❌"
+				}
+				fmt.Fprintf(w, "   %s [%s] %s\n", emoji, issue.Rule, issue.Message)
+			}
+		}
+		fmt.Fprintf(w, "\n")
+	}
+
 	// 2. Token Budget Check
 	fmt.Fprintf(w, "📊 Token Budget: %d / %d tokens\n", report.tokenCount, report.tokenLimit)
 	if report.tokenExceeded {
@@ -261,7 +290,8 @@ func displayReadinessReport(out interface{ Write([]byte) (int, error) }, report 
 	fmt.Fprintf(w, "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n")
 
 	isReady := report.complianceLevel.AtLeast(dev.AdherenceMediumHigh) &&
-		!report.tokenExceeded
+		!report.tokenExceeded &&
+		(report.specResult == nil || report.specResult.Passed())
 
 	if isReady {
 		fmt.Fprintf(w, "✅ Your skill is ready for submission!\n\n")
@@ -308,6 +338,15 @@ func generateNextSteps(report *readinessReport) []string {
 		}
 		if len(steps) > 0 {
 			steps = append(steps, "Run 'waza dev' for interactive compliance improvement")
+		}
+	}
+
+	// Spec compliance issues (between compliance and token checks)
+	if report.specResult != nil && !report.specResult.Passed() {
+		for _, iss := range report.specResult.Issues {
+			if iss.Severity == "error" {
+				steps = append(steps, fmt.Sprintf("Fix spec violation [%s]: %s", iss.Rule, iss.Message))
+			}
 		}
 	}
 

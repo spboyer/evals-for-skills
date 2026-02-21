@@ -82,11 +82,12 @@ func TestParseAdherenceLevel(t *testing.T) {
 func makeSkill(name, description string) *skill.Skill {
 	raw := "---\nname: " + name + "\ndescription: " + description + "\n---\n"
 	return &skill.Skill{
-		Frontmatter: skill.Frontmatter{Name: name, Description: description},
-		RawContent:  raw,
-		Tokens:      tokens.Estimate(raw),
-		Characters:  len(raw),
-		Lines:       strings.Count(raw, "\n") + 1,
+		Frontmatter:    skill.Frontmatter{Name: name, Description: description},
+		FrontmatterRaw: map[string]any{"name": name, "description": description},
+		RawContent:     raw,
+		Tokens:         tokens.Estimate(raw),
+		Characters:     len(raw),
+		Lines:          strings.Count(raw, "\n") + 1,
 	}
 }
 

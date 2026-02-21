@@ -101,6 +101,10 @@ Tokens: 74
 Description: 198 chars
 Triggers: 3
 Anti-triggers: 0
+
+Spec Compliance: 6/8 passed
+  ⚠️ [spec-license] Consider adding a 'license' field (e.g., MIT, Apache-2.0)
+  ⚠️ [spec-version] Consider adding 'metadata.version' for versioning
 `
 	require.Equal(t, expected, buf.String())
 }
@@ -182,6 +186,10 @@ Description: 266 chars
 Triggers: 3
 Anti-triggers: 1
 
+Spec Compliance: 6/8 passed
+  ⚠️ [spec-license] Consider adding a 'license' field (e.g., MIT, Apache-2.0)
+  ⚠️ [spec-version] Consider adding 'metadata.version' for versioning
+
 ✅ Target adherence level High reached!
 `
 	require.Equal(t, expected, buf.String())
@@ -227,6 +235,10 @@ Anti-triggers: 0
 
 Issues:
   ❌ Description is 5 chars (need 150+)
+
+Spec Compliance: 6/8 passed
+  ⚠️ [spec-license] Consider adding a 'license' field (e.g., MIT, Apache-2.0)
+  ⚠️ [spec-version] Consider adding 'metadata.version' for versioning
 
 📝 Suggested improvement (description-length):
 ────────────────────────────────────────
@@ -316,6 +328,10 @@ Anti-triggers: 0
 Issues:
   ❌ Description is 5 chars (need 150+)
 
+Spec Compliance: 6/8 passed
+  ⚠️ [spec-license] Consider adding a 'license' field (e.g., MIT, Apache-2.0)
+  ⚠️ [spec-version] Consider adding 'metadata.version' for versioning
+
 📝 Suggested improvement (description-length):
 ────────────────────────────────────────
 Short. This skill handles data processing, file management, report generation. Provides comprehensive support for common use cases and edge cases. Provides comprehensive support for common use cases and edge cases.
@@ -331,6 +347,10 @@ Tokens: 83
 Description: 214 chars
 Triggers: 0
 Anti-triggers: 0
+
+Spec Compliance: 6/8 passed
+  ⚠️ [spec-license] Consider adding a 'license' field (e.g., MIT, Apache-2.0)
+  ⚠️ [spec-version] Consider adding 'metadata.version' for versioning
 
 📝 Suggested improvement (triggers):
 ────────────────────────────────────────
@@ -348,6 +368,10 @@ Description: 305 chars
 Triggers: 5
 Anti-triggers: 0
 
+Spec Compliance: 6/8 passed
+  ⚠️ [spec-license] Consider adding a 'license' field (e.g., MIT, Apache-2.0)
+  ⚠️ [spec-version] Consider adding 'metadata.version' for versioning
+
 📝 Suggested improvement (anti-triggers):
 ────────────────────────────────────────
 DO NOT USE FOR: general coding questions unrelated to auto-skill, creating new projects from scratch.
@@ -363,6 +387,10 @@ Tokens: 132
 Description: 407 chars
 Triggers: 5
 Anti-triggers: 2
+
+Spec Compliance: 6/8 passed
+  ⚠️ [spec-license] Consider adding a 'license' field (e.g., MIT, Apache-2.0)
+  ⚠️ [spec-version] Consider adding 'metadata.version' for versioning
 
 📝 Suggested improvement (routing-clarity):
 ────────────────────────────────────────
@@ -438,6 +466,10 @@ Anti-triggers: 0
 
 Issues:
   ❌ Description is 5 chars (need 150+)
+
+Spec Compliance: 6/8 passed
+  ⚠️ [spec-license] Consider adding a 'license' field (e.g., MIT, Apache-2.0)
+  ⚠️ [spec-version] Consider adding 'metadata.version' for versioning
 
 📝 Suggested improvement (description-length):
 ────────────────────────────────────────
