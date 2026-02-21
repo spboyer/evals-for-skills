@@ -25,18 +25,16 @@ const isLandingPage = currentPath === '/waza/' || currentPath === '/waza';
 	<div class="title-wrapper sl-flex">
 		<SiteTitle />
 	</div>
-	{isLandingPage && (
-		<nav class="site-nav sl-hidden md:sl-flex print:hidden">
-			{navLinks.map((link) => (
-				<a
-					href={link.href}
-					class:list={['nav-link', { active: currentPath.startsWith(link.href) }]}
-				>
-					{link.label}
-				</a>
-			))}
-		</nav>
-	)}
+	<nav class="site-nav sl-hidden md:sl-flex print:hidden">
+		{isLandingPage && navLinks.map((link) => (
+			<a
+				href={link.href}
+				class:list={['nav-link', { active: currentPath.startsWith(link.href) }]}
+			>
+				{link.label}
+			</a>
+		))}
+	</nav>
 	<div class="sl-flex print:hidden">
 		{shouldRenderSearch && <Search />}
 	</div>

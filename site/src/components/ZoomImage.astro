@@ -1,0 +1,51 @@
+---
+interface Props {
+	src: string;
+	alt: string;
+}
+
+const { src, alt } = Astro.props;
+---
+
+<a href={src} target="_blank" rel="noopener noreferrer" class="zoom-image-link" title="Click to view full size">
+	<img src={src} alt={alt} class="zoom-image" />
+	<span class="zoom-hint">🔍 Click to enlarge</span>
+</a>
+
+<style>
+	.zoom-image-link {
+		display: block;
+		position: relative;
+		text-decoration: none;
+	}
+
+	.zoom-image {
+		display: block;
+		max-width: 100%;
+		border-radius: 6px;
+		border: 1px solid var(--waza-border);
+		cursor: zoom-in;
+		transition: opacity 0.15s, box-shadow 0.15s;
+	}
+
+	.zoom-image-link:hover .zoom-image {
+		opacity: 0.9;
+		box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
+	}
+
+	.zoom-hint {
+		display: none;
+		position: absolute;
+		bottom: 0.5rem;
+		right: 0.5rem;
+		background: rgba(0, 0, 0, 0.65);
+		color: #fff;
+		font-size: 0.75rem;
+		padding: 0.2rem 0.5rem;
+		border-radius: 4px;
+	}
+
+	.zoom-image-link:hover .zoom-hint {
+		display: block;
+	}
+</style>
