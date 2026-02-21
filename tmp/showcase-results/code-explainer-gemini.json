@@ -1,0 +1,215 @@
+{
+  "eval_id": "sc-explainer-gemini-003",
+  "skill": "code-explainer",
+  "eval_name": "code-explainer",
+  "timestamp": "2026-02-19T16:45:00Z",
+  "config": {
+    "runs_per_test": 3,
+    "model_id": "gemini-2.5-pro",
+    "engine_type": "copilot",
+    "timeout_sec": 300
+  },
+  "summary": {
+    "total_tests": 5,
+    "succeeded": 4,
+    "failed": 1,
+    "errors": 0,
+    "skipped": 0,
+    "success_rate": 0.80,
+    "aggregate_score": 0.82,
+    "weighted_score": 0.80,
+    "min_score": 0.22,
+    "max_score": 1.0,
+    "std_dev": 0.21,
+    "duration_ms": 58600,
+    "statistics": {
+      "bootstrap_ci": {
+        "lower": 0.74,
+        "upper": 0.88,
+        "mean": 0.82,
+        "confidence_level": 0.95,
+        "num_bootstraps": 10000
+      },
+      "is_significant": true,
+      "normalized_gain": 0.28
+    }
+  },
+  "metrics": {},
+  "tasks": [
+    {
+      "test_id": "explain-fibonacci",
+      "display_name": "Explain Fibonacci Recursion",
+      "status": "passed",
+      "runs": [
+        {
+          "run_number": 1, "attempts": 1, "status": "passed", "duration_ms": 7200,
+          "validations": {
+            "mentions-recursion": {"identifier": "mentions-recursion", "type": "regex", "score": 1.0, "weight": 0.5, "passed": true, "feedback": "Clearly explains recursive calls and base cases", "duration_ms": 15},
+            "code-quality": {"identifier": "code-quality", "type": "prompt", "score": 0.94, "weight": 0.8, "passed": true, "feedback": "Excellent step-by-step breakdown with call tree visualization", "duration_ms": 1620},
+            "complexity-analysis": {"identifier": "complexity-analysis", "type": "keyword", "score": 1.0, "weight": 0.3, "passed": true, "feedback": "Mentions O(2^n) time and O(n) space complexity", "duration_ms": 10}
+          },
+          "session_digest": {"total_turns": 3, "tool_call_count": 2, "tokens_in": 1200, "tokens_out": 2800, "tokens_total": 4000, "tools_used": ["read_file", "create_file"], "errors": []},
+          "transcript": [
+            {"type": "Turn", "content": "Let me analyze the Fibonacci implementation and explain the recursion pattern."},
+            {"type": "ToolExecutionStart", "tool_call_id": "tc_i01", "tool_name": "read_file", "arguments": {"path": "fibonacci.py"}},
+            {"type": "ToolExecutionComplete", "tool_call_id": "tc_i01", "tool_name": "read_file", "tool_result": {"content": "def fibonacci(n):\n    if n <= 1:\n        return n\n    return fibonacci(n-1) + fibonacci(n-2)"}, "success": true},
+            {"type": "ToolExecutionStart", "tool_call_id": "tc_i02", "tool_name": "create_file", "arguments": {"path": "explanation.md"}},
+            {"type": "ToolExecutionComplete", "tool_call_id": "tc_i02", "tool_name": "create_file", "tool_result": {"content": "File created"}, "success": true},
+            {"type": "Turn", "content": "The recursive Fibonacci function uses two base cases (n=0, n=1) and builds the sequence by summing the two preceding values. The call tree grows exponentially — O(2^n) time complexity."}
+          ],
+          "final_output": "Fibonacci recursion explained with call tree and complexity analysis."
+        },
+        {
+          "run_number": 2, "attempts": 1, "status": "passed", "duration_ms": 6800,
+          "validations": {
+            "mentions-recursion": {"identifier": "mentions-recursion", "type": "regex", "score": 1.0, "weight": 0.5, "passed": true, "feedback": "Recursion clearly explained", "duration_ms": 12},
+            "code-quality": {"identifier": "code-quality", "type": "prompt", "score": 0.91, "weight": 0.8, "passed": true, "feedback": "Good explanation with memoization suggestion", "duration_ms": 1580},
+            "complexity-analysis": {"identifier": "complexity-analysis", "type": "keyword", "score": 1.0, "weight": 0.3, "passed": true, "feedback": "Complexity mentioned", "duration_ms": 8}
+          },
+          "session_digest": {"total_turns": 3, "tool_call_count": 2, "tokens_in": 1150, "tokens_out": 2600, "tokens_total": 3750, "tools_used": ["read_file", "create_file"], "errors": []},
+          "transcript": [],
+          "final_output": "Recursive Fibonacci with memoization optimization explained."
+        },
+        {
+          "run_number": 3, "attempts": 1, "status": "passed", "duration_ms": 7500,
+          "validations": {
+            "mentions-recursion": {"identifier": "mentions-recursion", "type": "regex", "score": 1.0, "weight": 0.5, "passed": true, "feedback": "Found recursion keyword", "duration_ms": 14},
+            "code-quality": {"identifier": "code-quality", "type": "prompt", "score": 0.96, "weight": 0.8, "passed": true, "feedback": "Outstanding — included visual ASCII call tree", "duration_ms": 1710},
+            "complexity-analysis": {"identifier": "complexity-analysis", "type": "keyword", "score": 1.0, "weight": 0.3, "passed": true, "feedback": "Thorough complexity breakdown", "duration_ms": 9}
+          },
+          "session_digest": {"total_turns": 4, "tool_call_count": 3, "tokens_in": 1300, "tokens_out": 3100, "tokens_total": 4400, "tools_used": ["read_file", "create_file", "bash"], "errors": []},
+          "transcript": [],
+          "final_output": "Fibonacci explained with ASCII call tree visualization."
+        }
+      ],
+      "stats": {
+        "pass_rate": 1.0, "avg_score": 0.968, "avg_weighted_score": 0.957, "min_score": 0.91, "max_score": 1.0,
+        "std_dev_score": 0.021, "score_variance": 0.0004, "ci95_lo": 0.94, "ci95_hi": 0.99, "flaky": false, "avg_duration_ms": 7167,
+        "bootstrap_ci": {"lower": 0.94, "upper": 0.99, "mean": 0.957, "confidence_level": 0.95, "num_bootstraps": 10000},
+        "is_significant": true
+      }
+    },
+    {
+      "test_id": "explain-binary-search",
+      "display_name": "Explain Binary Search Algorithm",
+      "status": "passed",
+      "runs": [
+        {
+          "run_number": 1, "attempts": 1, "status": "passed", "duration_ms": 11400,
+          "validations": {
+            "mentions-olog": {"identifier": "mentions-olog", "type": "regex", "score": 1.0, "weight": 0.5, "passed": true, "feedback": "O(log n) complexity clearly stated", "duration_ms": 13},
+            "code-quality": {"identifier": "code-quality", "type": "prompt", "score": 0.88, "weight": 0.8, "passed": true, "feedback": "Good explanation of halving search space, could include edge cases", "duration_ms": 1740},
+            "example-trace": {"identifier": "example-trace", "type": "code", "score": 0.85, "weight": 1.0, "passed": true, "feedback": "Includes step-by-step trace with array indices", "duration_ms": 280}
+          },
+          "session_digest": {"total_turns": 4, "tool_call_count": 3, "tokens_in": 1500, "tokens_out": 3200, "tokens_total": 4700, "tools_used": ["read_file", "create_file", "bash"], "errors": []},
+          "transcript": [
+            {"type": "Turn", "content": "I'll trace through the binary search implementation step by step."},
+            {"type": "ToolExecutionStart", "tool_call_id": "tc_j01", "tool_name": "read_file", "arguments": {"path": "binary_search.py"}},
+            {"type": "ToolExecutionComplete", "tool_call_id": "tc_j01", "tool_name": "read_file", "tool_result": {"content": "def binary_search(arr, target):\n    lo, hi = 0, len(arr) - 1\n    while lo <= hi:\n        mid = (lo + hi) // 2\n        if arr[mid] == target: return mid\n        elif arr[mid] < target: lo = mid + 1\n        else: hi = mid - 1\n    return -1"}, "success": true},
+            {"type": "ToolExecutionStart", "tool_call_id": "tc_j02", "tool_name": "bash", "arguments": {"command": "python3 -c \"print('Search trace:', [16,32,48,64,80,96], 'target=64')\""}},
+            {"type": "ToolExecutionComplete", "tool_call_id": "tc_j02", "tool_name": "bash", "tool_result": {"content": "Search trace: [16, 32, 48, 64, 80, 96] target=64"}, "success": true},
+            {"type": "Turn", "content": "Binary search halves the search space each iteration, achieving O(log n) time complexity."}
+          ],
+          "final_output": "Binary search explained with step-by-step trace and O(log n) analysis."
+        }
+      ],
+      "stats": {"pass_rate": 1.0, "avg_score": 0.91, "avg_weighted_score": 0.89, "min_score": 0.85, "max_score": 1.0, "std_dev_score": 0.0, "score_variance": 0.0, "ci95_lo": 0.85, "ci95_hi": 1.0, "flaky": false, "avg_duration_ms": 11400}
+    },
+    {
+      "test_id": "explain-quicksort",
+      "display_name": "Explain Quicksort Partitioning",
+      "status": "passed",
+      "runs": [
+        {
+          "run_number": 1, "attempts": 1, "status": "passed", "duration_ms": 9800,
+          "validations": {
+            "mentions-pivot": {"identifier": "mentions-pivot", "type": "regex", "score": 1.0, "weight": 0.5, "passed": true, "feedback": "Pivot selection strategy explained", "duration_ms": 11},
+            "code-quality": {"identifier": "code-quality", "type": "prompt", "score": 0.82, "weight": 0.8, "passed": true, "feedback": "Good overview but in-place partitioning could be clearer", "duration_ms": 1650},
+            "worst-case": {"identifier": "worst-case", "type": "keyword", "score": 0.80, "weight": 0.3, "passed": true, "feedback": "Mentions O(n²) worst case but doesn't explain when it occurs", "duration_ms": 12}
+          },
+          "session_digest": {"total_turns": 3, "tool_call_count": 2, "tokens_in": 1100, "tokens_out": 2100, "tokens_total": 3200, "tools_used": ["read_file", "create_file"], "errors": []},
+          "transcript": [],
+          "final_output": "Quicksort explained with pivot selection and partition logic."
+        }
+      ],
+      "stats": {"pass_rate": 1.0, "avg_score": 0.87, "avg_weighted_score": 0.85, "min_score": 0.80, "max_score": 1.0, "std_dev_score": 0.0, "score_variance": 0.0, "ci95_lo": 0.80, "ci95_hi": 1.0, "flaky": false, "avg_duration_ms": 9800}
+    },
+    {
+      "test_id": "explain-async-await",
+      "display_name": "Explain Async/Await Pattern",
+      "status": "passed",
+      "runs": [
+        {
+          "run_number": 1, "attempts": 1, "status": "passed", "duration_ms": 12300,
+          "validations": {
+            "mentions-event-loop": {"identifier": "mentions-event-loop", "type": "regex", "score": 1.0, "weight": 0.5, "passed": true, "feedback": "Event loop and task queue explained", "duration_ms": 14},
+            "code-quality": {"identifier": "code-quality", "type": "prompt", "score": 0.86, "weight": 0.8, "passed": true, "feedback": "Clear comparison of callbacks vs promises vs async/await", "duration_ms": 1820},
+            "error-handling": {"identifier": "error-handling", "type": "keyword", "score": 1.0, "weight": 0.3, "passed": true, "feedback": "try/catch with async functions demonstrated", "duration_ms": 10}
+          },
+          "session_digest": {"total_turns": 4, "tool_call_count": 3, "tokens_in": 1800, "tokens_out": 3400, "tokens_total": 5200, "tools_used": ["read_file", "create_file", "bash"], "errors": []},
+          "transcript": [
+            {"type": "Turn", "content": "Let me break down the async/await pattern with practical examples."},
+            {"type": "ToolExecutionStart", "tool_call_id": "tc_k01", "tool_name": "read_file", "arguments": {"path": "async_example.js"}},
+            {"type": "ToolExecutionComplete", "tool_call_id": "tc_k01", "tool_name": "read_file", "tool_result": {"content": "async function fetchUser(id) {\n  const res = await fetch(`/api/users/${id}`);\n  if (!res.ok) throw new Error('Failed');\n  return res.json();\n}"}, "success": true},
+            {"type": "ToolExecutionStart", "tool_call_id": "tc_k02", "tool_name": "create_file", "arguments": {"path": "explanation.md"}},
+            {"type": "ToolExecutionComplete", "tool_call_id": "tc_k02", "tool_name": "create_file", "tool_result": {"content": "File created"}, "success": true},
+            {"type": "Turn", "content": "Async/await syntactic sugar over Promises, making asynchronous code read like synchronous code."}
+          ],
+          "final_output": "Async/await pattern explained with event loop, Promises, and error handling."
+        }
+      ],
+      "stats": {"pass_rate": 1.0, "avg_score": 0.93, "avg_weighted_score": 0.91, "min_score": 0.86, "max_score": 1.0, "std_dev_score": 0.0, "score_variance": 0.0, "ci95_lo": 0.86, "ci95_hi": 1.0, "flaky": false, "avg_duration_ms": 12300}
+    },
+    {
+      "test_id": "explain-linked-list",
+      "display_name": "Explain Linked List Operations",
+      "status": "failed",
+      "runs": [
+        {
+          "run_number": 1, "attempts": 1, "status": "failed", "duration_ms": 4100,
+          "validations": {
+            "mentions-pointer": {"identifier": "mentions-pointer", "type": "regex", "score": 0.0, "weight": 0.5, "passed": false, "feedback": "Did not use 'pointer' or 'reference' — used 'link' throughout which is imprecise", "duration_ms": 12},
+            "code-quality": {"identifier": "code-quality", "type": "prompt", "score": 0.35, "weight": 0.8, "passed": false, "feedback": "Incomplete — only covers insertion, missing deletion and traversal", "duration_ms": 1520},
+            "memory-model": {"identifier": "memory-model", "type": "keyword", "score": 0.22, "weight": 0.3, "passed": false, "feedback": "No mention of heap allocation or memory layout", "duration_ms": 9}
+          },
+          "session_digest": {"total_turns": 2, "tool_call_count": 1, "tokens_in": 800, "tokens_out": 950, "tokens_total": 1750, "tools_used": ["create_file"], "errors": []},
+          "transcript": [
+            {"type": "Turn", "content": "Let me explain linked list operations."},
+            {"type": "ToolExecutionStart", "tool_call_id": "tc_l01", "tool_name": "create_file", "arguments": {"path": "explanation.md"}},
+            {"type": "ToolExecutionComplete", "tool_call_id": "tc_l01", "tool_name": "create_file", "tool_result": {"content": "File created"}, "success": true},
+            {"type": "Turn", "content": "A linked list stores elements in nodes connected by links."}
+          ],
+          "final_output": "Incomplete linked list explanation — missing pointers, deletion, and memory model."
+        },
+        {
+          "run_number": 2, "attempts": 1, "status": "failed", "duration_ms": 3900,
+          "validations": {
+            "mentions-pointer": {"identifier": "mentions-pointer", "type": "regex", "score": 0.0, "weight": 0.5, "passed": false, "feedback": "Still using 'link' instead of 'pointer'", "duration_ms": 11},
+            "code-quality": {"identifier": "code-quality", "type": "prompt", "score": 0.40, "weight": 0.8, "passed": false, "feedback": "Slightly better but still missing key operations", "duration_ms": 1490},
+            "memory-model": {"identifier": "memory-model", "type": "keyword", "score": 0.30, "weight": 0.3, "passed": false, "feedback": "Brief mention of non-contiguous memory", "duration_ms": 8}
+          },
+          "session_digest": {"total_turns": 2, "tool_call_count": 1, "tokens_in": 850, "tokens_out": 1000, "tokens_total": 1850, "tools_used": ["create_file"], "errors": []},
+          "transcript": [],
+          "final_output": "Linked list explanation still incomplete across trials."
+        },
+        {
+          "run_number": 3, "attempts": 1, "status": "failed", "duration_ms": 4400,
+          "validations": {
+            "mentions-pointer": {"identifier": "mentions-pointer", "type": "regex", "score": 0.0, "weight": 0.5, "passed": false, "feedback": "Consistent miss on pointer terminology", "duration_ms": 10},
+            "code-quality": {"identifier": "code-quality", "type": "prompt", "score": 0.38, "weight": 0.8, "passed": false, "feedback": "Repetitive issues across all three trials", "duration_ms": 1550},
+            "memory-model": {"identifier": "memory-model", "type": "keyword", "score": 0.25, "weight": 0.3, "passed": false, "feedback": "No heap allocation detail", "duration_ms": 9}
+          },
+          "session_digest": {"total_turns": 2, "tool_call_count": 1, "tokens_in": 820, "tokens_out": 970, "tokens_total": 1790, "tools_used": ["create_file"], "errors": []},
+          "transcript": [],
+          "final_output": "Linked list explanation consistently weak."
+        }
+      ],
+      "stats": {
+        "pass_rate": 0.0, "avg_score": 0.22, "avg_weighted_score": 0.26, "min_score": 0.0, "max_score": 0.40,
+        "std_dev_score": 0.03, "score_variance": 0.001, "ci95_lo": 0.18, "ci95_hi": 0.34, "flaky": false, "avg_duration_ms": 4133,
+        "bootstrap_ci": {"lower": 0.18, "upper": 0.34, "mean": 0.26, "confidence_level": 0.95, "num_bootstraps": 10000},
+        "is_significant": false
+      }
+    }
+  ]
+}

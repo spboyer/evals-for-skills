@@ -1,0 +1,148 @@
+{
+  "eval_id": "sc-trigger-gemini-007",
+  "skill": "skill-trigger-accuracy",
+  "eval_name": "skill-trigger-accuracy",
+  "timestamp": "2026-02-21T15:20:00Z",
+  "config": {
+    "runs_per_test": 2,
+    "model_id": "gemini-2.5-pro",
+    "engine_type": "copilot",
+    "timeout_sec": 120
+  },
+  "summary": {
+    "total_tests": 8,
+    "succeeded": 7,
+    "failed": 1,
+    "errors": 0,
+    "skipped": 0,
+    "success_rate": 0.875,
+    "aggregate_score": 0.91,
+    "weighted_score": 0.90,
+    "min_score": 0.45,
+    "max_score": 1.0,
+    "std_dev": 0.14,
+    "duration_ms": 72400,
+    "statistics": {
+      "bootstrap_ci": {
+        "lower": 0.84,
+        "upper": 0.96,
+        "mean": 0.91,
+        "confidence_level": 0.95,
+        "num_bootstraps": 10000
+      },
+      "is_significant": true,
+      "normalized_gain": 0.51
+    }
+  },
+  "metrics": {},
+  "trigger_metrics": {
+    "true_positives": 6,
+    "false_positives": 1,
+    "true_negatives": 6,
+    "false_negatives": 0,
+    "precision": 0.857,
+    "recall": 1.0,
+    "f1_score": 0.923,
+    "accuracy": 0.923
+  },
+  "tasks": [
+    {
+      "test_id": "trigger-pos-deploy",
+      "display_name": "Triggers on 'deploy my app to Azure'",
+      "group": "positive",
+      "status": "passed",
+      "runs": [
+        {"run_number": 1, "attempts": 1, "status": "passed", "duration_ms": 2800, "validations": {"trigger-fired": {"identifier": "trigger-fired", "type": "behavior", "score": 1.0, "weight": 1.0, "passed": true, "feedback": "Fast activation in 650ms", "duration_ms": 650}}, "session_digest": {"total_turns": 2, "tool_call_count": 0, "tokens_in": 380, "tokens_out": 560, "tokens_total": 940, "tools_used": [], "errors": []}, "transcript": [], "final_output": "Triggered."},
+        {"run_number": 2, "attempts": 1, "status": "passed", "duration_ms": 2700, "validations": {"trigger-fired": {"identifier": "trigger-fired", "type": "behavior", "score": 1.0, "weight": 1.0, "passed": true, "feedback": "Consistent", "duration_ms": 620}}, "session_digest": {"total_turns": 2, "tool_call_count": 0, "tokens_in": 370, "tokens_out": 550, "tokens_total": 920, "tools_used": [], "errors": []}, "transcript": [], "final_output": "Triggered."}
+      ],
+      "stats": {"pass_rate": 1.0, "avg_score": 1.0, "avg_weighted_score": 1.0, "min_score": 1.0, "max_score": 1.0, "std_dev_score": 0.0, "score_variance": 0.0, "ci95_lo": 1.0, "ci95_hi": 1.0, "flaky": false, "avg_duration_ms": 2750}
+    },
+    {
+      "test_id": "trigger-pos-provision",
+      "display_name": "Triggers on 'provision cloud infrastructure'",
+      "group": "positive",
+      "status": "passed",
+      "runs": [
+        {"run_number": 1, "attempts": 1, "status": "passed", "duration_ms": 3100, "validations": {"trigger-fired": {"identifier": "trigger-fired", "type": "behavior", "score": 1.0, "weight": 1.0, "passed": true, "feedback": "Activated correctly", "duration_ms": 780}}, "session_digest": {"total_turns": 2, "tool_call_count": 0, "tokens_in": 420, "tokens_out": 600, "tokens_total": 1020, "tools_used": [], "errors": []}, "transcript": [], "final_output": "Triggered."},
+        {"run_number": 2, "attempts": 1, "status": "passed", "duration_ms": 3000, "validations": {"trigger-fired": {"identifier": "trigger-fired", "type": "behavior", "score": 1.0, "weight": 1.0, "passed": true, "feedback": "Consistent", "duration_ms": 760}}, "session_digest": {"total_turns": 2, "tool_call_count": 0, "tokens_in": 415, "tokens_out": 595, "tokens_total": 1010, "tools_used": [], "errors": []}, "transcript": [], "final_output": "Triggered."}
+      ],
+      "stats": {"pass_rate": 1.0, "avg_score": 1.0, "avg_weighted_score": 1.0, "min_score": 1.0, "max_score": 1.0, "std_dev_score": 0.0, "score_variance": 0.0, "ci95_lo": 1.0, "ci95_hi": 1.0, "flaky": false, "avg_duration_ms": 3050}
+    },
+    {
+      "test_id": "trigger-pos-setup-ci",
+      "display_name": "Triggers on 'set up CI/CD pipeline for Azure'",
+      "group": "positive",
+      "status": "passed",
+      "runs": [
+        {"run_number": 1, "attempts": 1, "status": "passed", "duration_ms": 3500, "validations": {"trigger-fired": {"identifier": "trigger-fired", "type": "behavior", "score": 1.0, "weight": 1.0, "passed": true, "feedback": "CI/CD trigger activated", "duration_ms": 880}}, "session_digest": {"total_turns": 3, "tool_call_count": 1, "tokens_in": 490, "tokens_out": 720, "tokens_total": 1210, "tools_used": ["read_file"], "errors": []}, "transcript": [], "final_output": "Triggered."},
+        {"run_number": 2, "attempts": 1, "status": "passed", "duration_ms": 3400, "validations": {"trigger-fired": {"identifier": "trigger-fired", "type": "behavior", "score": 1.0, "weight": 1.0, "passed": true, "feedback": "Consistent", "duration_ms": 860}}, "session_digest": {"total_turns": 3, "tool_call_count": 1, "tokens_in": 485, "tokens_out": 715, "tokens_total": 1200, "tools_used": ["read_file"], "errors": []}, "transcript": [], "final_output": "Triggered."}
+      ],
+      "stats": {"pass_rate": 1.0, "avg_score": 1.0, "avg_weighted_score": 1.0, "min_score": 1.0, "max_score": 1.0, "std_dev_score": 0.0, "score_variance": 0.0, "ci95_lo": 1.0, "ci95_hi": 1.0, "flaky": false, "avg_duration_ms": 3450}
+    },
+    {
+      "test_id": "trigger-neg-general-q",
+      "display_name": "Does NOT trigger on 'what is Azure?'",
+      "group": "negative",
+      "status": "passed",
+      "runs": [
+        {"run_number": 1, "attempts": 1, "status": "passed", "duration_ms": 2200, "validations": {"trigger-not-fired": {"identifier": "trigger-not-fired", "type": "behavior", "score": 1.0, "weight": 1.0, "passed": true, "feedback": "Correctly ignored", "duration_ms": 510}}, "session_digest": {"total_turns": 2, "tool_call_count": 0, "tokens_in": 320, "tokens_out": 460, "tokens_total": 780, "tools_used": [], "errors": []}, "transcript": [], "final_output": "Not triggered."},
+        {"run_number": 2, "attempts": 1, "status": "passed", "duration_ms": 2100, "validations": {"trigger-not-fired": {"identifier": "trigger-not-fired", "type": "behavior", "score": 1.0, "weight": 1.0, "passed": true, "feedback": "Consistent", "duration_ms": 500}}, "session_digest": {"total_turns": 2, "tool_call_count": 0, "tokens_in": 310, "tokens_out": 450, "tokens_total": 760, "tools_used": [], "errors": []}, "transcript": [], "final_output": "Not triggered."}
+      ],
+      "stats": {"pass_rate": 1.0, "avg_score": 1.0, "avg_weighted_score": 1.0, "min_score": 1.0, "max_score": 1.0, "std_dev_score": 0.0, "score_variance": 0.0, "ci95_lo": 1.0, "ci95_hi": 1.0, "flaky": false, "avg_duration_ms": 2150}
+    },
+    {
+      "test_id": "trigger-neg-aws",
+      "display_name": "Does NOT trigger on 'deploy to AWS Lambda'",
+      "group": "negative",
+      "status": "passed",
+      "runs": [
+        {"run_number": 1, "attempts": 1, "status": "passed", "duration_ms": 2300, "validations": {"trigger-not-fired": {"identifier": "trigger-not-fired", "type": "behavior", "score": 1.0, "weight": 1.0, "passed": true, "feedback": "AWS correctly ignored", "duration_ms": 530}}, "session_digest": {"total_turns": 2, "tool_call_count": 0, "tokens_in": 350, "tokens_out": 490, "tokens_total": 840, "tools_used": [], "errors": []}, "transcript": [], "final_output": "Not triggered."},
+        {"run_number": 2, "attempts": 1, "status": "passed", "duration_ms": 2200, "validations": {"trigger-not-fired": {"identifier": "trigger-not-fired", "type": "behavior", "score": 1.0, "weight": 1.0, "passed": true, "feedback": "Consistent", "duration_ms": 520}}, "session_digest": {"total_turns": 2, "tool_call_count": 0, "tokens_in": 345, "tokens_out": 485, "tokens_total": 830, "tools_used": [], "errors": []}, "transcript": [], "final_output": "Not triggered."}
+      ],
+      "stats": {"pass_rate": 1.0, "avg_score": 1.0, "avg_weighted_score": 1.0, "min_score": 1.0, "max_score": 1.0, "std_dev_score": 0.0, "score_variance": 0.0, "ci95_lo": 1.0, "ci95_hi": 1.0, "flaky": false, "avg_duration_ms": 2250}
+    },
+    {
+      "test_id": "trigger-neg-gcp",
+      "display_name": "Does NOT trigger on 'deploy to GCP Cloud Run'",
+      "group": "negative",
+      "status": "passed",
+      "runs": [
+        {"run_number": 1, "attempts": 1, "status": "passed", "duration_ms": 2150, "validations": {"trigger-not-fired": {"identifier": "trigger-not-fired", "type": "behavior", "score": 1.0, "weight": 1.0, "passed": true, "feedback": "GCP correctly ignored", "duration_ms": 490}}, "session_digest": {"total_turns": 2, "tool_call_count": 0, "tokens_in": 330, "tokens_out": 470, "tokens_total": 800, "tools_used": [], "errors": []}, "transcript": [], "final_output": "Not triggered."},
+        {"run_number": 2, "attempts": 1, "status": "passed", "duration_ms": 2100, "validations": {"trigger-not-fired": {"identifier": "trigger-not-fired", "type": "behavior", "score": 1.0, "weight": 1.0, "passed": true, "feedback": "Reliable", "duration_ms": 480}}, "session_digest": {"total_turns": 2, "tool_call_count": 0, "tokens_in": 325, "tokens_out": 465, "tokens_total": 790, "tools_used": [], "errors": []}, "transcript": [], "final_output": "Not triggered."}
+      ],
+      "stats": {"pass_rate": 1.0, "avg_score": 1.0, "avg_weighted_score": 1.0, "min_score": 1.0, "max_score": 1.0, "std_dev_score": 0.0, "score_variance": 0.0, "ci95_lo": 1.0, "ci95_hi": 1.0, "flaky": false, "avg_duration_ms": 2125}
+    },
+    {
+      "test_id": "trigger-edge-cloud-host",
+      "display_name": "Handles ambiguous 'set up cloud hosting'",
+      "group": "edge",
+      "status": "passed",
+      "runs": [
+        {"run_number": 1, "attempts": 1, "status": "passed", "duration_ms": 4800, "validations": {"trigger-fired": {"identifier": "trigger-fired", "type": "behavior", "score": 0.85, "weight": 1.0, "passed": true, "feedback": "Activated with high confidence — inferred Azure from project context", "duration_ms": 1200}}, "session_digest": {"total_turns": 3, "tool_call_count": 1, "tokens_in": 520, "tokens_out": 780, "tokens_total": 1300, "tools_used": ["read_file"], "errors": []}, "transcript": [], "final_output": "Triggered (high confidence)."},
+        {"run_number": 2, "attempts": 1, "status": "passed", "duration_ms": 4600, "validations": {"trigger-fired": {"identifier": "trigger-fired", "type": "behavior", "score": 0.82, "weight": 1.0, "passed": true, "feedback": "Consistent high-confidence activation", "duration_ms": 1150}}, "session_digest": {"total_turns": 3, "tool_call_count": 1, "tokens_in": 510, "tokens_out": 770, "tokens_total": 1280, "tools_used": ["read_file"], "errors": []}, "transcript": [], "final_output": "Triggered (consistent)."}
+      ],
+      "stats": {
+        "pass_rate": 1.0, "avg_score": 0.835, "avg_weighted_score": 0.835, "min_score": 0.82, "max_score": 0.85,
+        "std_dev_score": 0.015, "score_variance": 0.0002, "ci95_lo": 0.81, "ci95_hi": 0.86, "flaky": false, "avg_duration_ms": 4700,
+        "bootstrap_ci": {"lower": 0.82, "upper": 0.85, "mean": 0.835, "confidence_level": 0.95, "num_bootstraps": 10000},
+        "is_significant": true
+      }
+    },
+    {
+      "test_id": "trigger-edge-migrate",
+      "display_name": "Handles ambiguous 'migrate my database'",
+      "group": "edge",
+      "status": "failed",
+      "runs": [
+        {"run_number": 1, "attempts": 1, "status": "failed", "duration_ms": 5400, "validations": {"trigger-fired": {"identifier": "trigger-fired", "type": "behavior", "score": 0.45, "weight": 1.0, "passed": false, "feedback": "Triggered when it should not have — no Azure context in prompt", "duration_ms": 1350}}, "session_digest": {"total_turns": 3, "tool_call_count": 1, "tokens_in": 500, "tokens_out": 750, "tokens_total": 1250, "tools_used": ["read_file"], "errors": []}, "transcript": [], "final_output": "False positive."},
+        {"run_number": 2, "attempts": 1, "status": "passed", "duration_ms": 5100, "validations": {"trigger-fired": {"identifier": "trigger-fired", "type": "behavior", "score": 0.90, "weight": 1.0, "passed": true, "feedback": "Correctly did not trigger on second trial", "duration_ms": 1280}}, "session_digest": {"total_turns": 2, "tool_call_count": 0, "tokens_in": 490, "tokens_out": 740, "tokens_total": 1230, "tools_used": [], "errors": []}, "transcript": [], "final_output": "Not triggered (correct)."}
+      ],
+      "stats": {
+        "pass_rate": 0.5, "avg_score": 0.675, "avg_weighted_score": 0.675, "min_score": 0.45, "max_score": 0.90,
+        "std_dev_score": 0.225, "score_variance": 0.051, "ci95_lo": 0.45, "ci95_hi": 0.90, "flaky": true, "avg_duration_ms": 5250,
+        "bootstrap_ci": {"lower": 0.45, "upper": 0.90, "mean": 0.675, "confidence_level": 0.95, "num_bootstraps": 10000},
+        "is_significant": false
+      }
+    }
+  ]
+}
