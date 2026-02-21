@@ -414,10 +414,6 @@ func runCommandForSpec(cmd *cobra.Command, sp skillSpecPath) ([]modelResult, err
 		}
 	}
 
-	if lastErr != nil {
-		return allResults, lastErr
-	}
-
 	return allResults, nil
 }
 

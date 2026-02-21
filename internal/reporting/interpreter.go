@@ -56,16 +56,16 @@ func FormatSummaryReport(outcome *models.EvaluationOutcome) string {
 
 	b.WriteString("=== Interpretation ===\n\n")
 
-	b.WriteString(fmt.Sprintf("Overall Score: %.2f — %s\n", d.AggregateScore, InterpretScore(d.AggregateScore)))
+	fmt.Fprintf(&b, "Overall Score: %.2f — %s\n", d.AggregateScore, InterpretScore(d.AggregateScore))
 	if d.WeightedScore != d.AggregateScore {
-		b.WriteString(fmt.Sprintf("Weighted Score: %.2f — %s\n", d.WeightedScore, InterpretScore(d.WeightedScore)))
+		fmt.Fprintf(&b, "Weighted Score: %.2f — %s\n", d.WeightedScore, InterpretScore(d.WeightedScore))
 	}
-	b.WriteString(fmt.Sprintf("Pass Rate:     %s\n", InterpretPassRate(d.SuccessRate)))
-	b.WriteString(fmt.Sprintf("Duration:      %v\n", duration))
+	fmt.Fprintf(&b, "Pass Rate:     %s\n", InterpretPassRate(d.SuccessRate))
+	fmt.Fprintf(&b, "Duration:      %v\n", duration)
 
 	if d.TotalTests > 0 {
-		b.WriteString(fmt.Sprintf("Tests:         %d passed, %d failed, %d errors out of %d total\n",
-			d.Succeeded, d.Failed, d.Errors, d.TotalTests))
+		fmt.Fprintf(&b, "Tests:         %d passed, %d failed, %d errors out of %d total\n",
+			d.Succeeded, d.Failed, d.Errors, d.TotalTests)
 	}
 
 	// Per-task interpretation
@@ -76,10 +76,10 @@ func FormatSummaryReport(outcome *models.EvaluationOutcome) string {
 			if to.Status != models.StatusPassed {
 				icon = "✗"
 			}
-			b.WriteString(fmt.Sprintf("  %s %s: %s\n", icon, to.DisplayName, to.Status))
+			fmt.Fprintf(&b, "  %s %s: %s\n", icon, to.DisplayName, to.Status)
 			if to.Stats != nil {
-				b.WriteString(fmt.Sprintf("    Score: %.2f — %s\n", to.Stats.AvgScore, InterpretScore(to.Stats.AvgScore)))
-				b.WriteString(fmt.Sprintf("    %s\n", InterpretFlaky(to.Stats.Flaky, to.Stats.PassRate)))
+				fmt.Fprintf(&b, "    Score: %.2f — %s\n", to.Stats.AvgScore, InterpretScore(to.Stats.AvgScore))
+				fmt.Fprintf(&b, "    %s\n", InterpretFlaky(to.Stats.Flaky, to.Stats.PassRate))
 			}
 		}
 	}

@@ -203,7 +203,7 @@ func WriteJUnitXML(outcome *models.EvaluationOutcome, path string) error {
 
 	data, err := xml.MarshalIndent(suites, "", "  ")
 	if err != nil {
-		return fmt.Errorf("marshalling JUnit XML: %w", err)
+		return fmt.Errorf("marshaling JUnit XML: %w", err)
 	}
 
 	output := append([]byte(xml.Header), data...)
