@@ -329,7 +329,7 @@ Skill: code-explainer
 
 Consider:
   • Running 'waza run eval.yaml' to verify functionality
-  • Submitting a PR to microsoft/skills
+  • Sharing your skill with the community
 ```
 
 **Usage:**
@@ -712,11 +712,11 @@ When using CSV-generated tasks, each row's column values are also available as `
 
 ## CI/CD Integration
 
-Waza is designed to work seamlessly with CI/CD pipelines, including **microsoft/skills** repositories.
+Waza is designed to work seamlessly with CI/CD pipelines.
 
-### For microsoft/skills Contributors
+### Integrating Waza in CI
 
-If you're contributing a skill to [microsoft/skills](https://github.com/microsoft/skills), waza can validate your skill in CI:
+Waza can validate your skill in CI before publishing:
 
 #### Installation in CI
 
@@ -822,7 +822,7 @@ See the complete [Grader Reference](docs/GRADERS.md) for detailed configuration 
 - **[Demo Guide](docs/DEMO-GUIDE.md)** - 7 live demo scenarios for presentations
 - **[Grader Reference](docs/GRADERS.md)** - Complete grader types and configuration
 - **[Tutorial](docs/TUTORIAL.md)** - Getting started with writing skill evals
-- **[CI Integration](docs/SKILLS_CI_INTEGRATION.md)** - GitHub Actions workflows for microsoft/skills
+- **[CI Integration](docs/SKILLS_CI_INTEGRATION.md)** - GitHub Actions workflows for skill evaluation
 - **[Token Management](docs/TOKEN-LIMITS.md)** - Tracking and optimizing skill context size
 
 ## Contributing

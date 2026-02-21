@@ -7,13 +7,13 @@ description: About waza, architecture, and how to contribute.
 
 **Waza** (技 - Japanese for "skill/technique") is a unified CLI platform for creating, testing, and evaluating AI agent skills.
 
-It consolidates existing skill development tools into a single binary that provides the complete developer experience for contributing to the [microsoft/skills](https://github.com/microsoft/skills) repository.
+It consolidates existing skill development tools into a single binary that provides the complete developer experience for creating, testing, and improving AI agent skills across any domain or platform.
 
 ## The Problem
 
-The microsoft/skills repository hosts 132+ skills for AI coding agents, but the contribution process lacks:
+Creating, testing, and evaluating AI agent skills lacks consistent tooling:
 
-- **Automated compliance validation** — No standardized scoring before PR submission
+- **Automated compliance validation** — No standardized scoring to ensure skill quality
 - **Trigger testing** — Manual verification of skill activation patterns
 - **Cross-model evaluation** — No framework for testing skills across GPT-4o, Claude, etc.
 - **Token budget enforcement** — Guidelines exist but aren't automatically checked
@@ -24,7 +24,7 @@ Waza automates the skill development workflow:
 
 | Phase | Capability |
 |-------|-----------|
-| **Scaffold** | Generate compliant skill structure matching microsoft/skills conventions |
+| **Scaffold** | Generate a compliant skill structure ready for evaluation |
 | **Develop** | Iterate with real-time compliance scoring |
 | **Test** | Run agentic test loops with real LLM execution |
 | **Evaluate** | Cross-model comparison with comprehensive metrics |
@@ -211,7 +211,6 @@ Have questions or ideas? Join the conversation:
 
 - **Documentation:** [docs/](https://github.com/spboyer/waza/tree/main/docs)
 - **Examples:** [examples/](https://github.com/spboyer/waza/tree/main/examples)
-- **Skill Repository:** [microsoft/skills](https://github.com/microsoft/skills)
 
 ## Roadmap
 

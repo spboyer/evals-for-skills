@@ -331,7 +331,7 @@ func displayReadinessReport(out interface{ Write([]byte) (int, error) }, report 
 		fmt.Fprintf(w, "✨ No action needed! Your skill looks great.\n")
 		fmt.Fprintf(w, "\nConsider:\n")
 		fmt.Fprintf(w, "  • Running 'waza run eval.yaml' to verify functionality\n")
-		fmt.Fprintf(w, "  • Submitting a PR to microsoft/skills\n")
+		fmt.Fprintf(w, "  • Sharing your skill with the community\n")
 	} else {
 		fmt.Fprintf(w, "To improve your skill:\n\n")
 		for i, step := range steps {
