@@ -34,24 +34,61 @@ Clicking a run opens its detail page. The Tasks tab shows every task in the eval
 
 ## Run Detail — Trajectory
 
-Switch to the Trajectory tab to see the agent's execution path for each task. The task selector lists every task with its outcome badge so you can quickly jump between them.
+Switch to the **Trajectory** tab to see the agent's execution path. The task selector lists every task with its pass/fail badge.
 
-![Trajectory tab showing the task selector with pass/fail badges](/waza/images/explore/run-detail-trajectory.png)
+![Trajectory tab showing the task selector with pass/fail badges](/waza/images/explore/trajectory-task-selector.png)
 
-- **Task selector** — every task is listed as a clickable card with its outcome badge
-- **Color-coded cards** — passing tasks have a green accent, failing tasks have a red accent
-- **Quick navigation** — click any task card to load its trajectory detail
+- **Task selector** — every task listed as a clickable button with its outcome badge
+- **Color-coded badges** — green for pass, red for fail
+- **Quick navigation** — click any task to load its full trajectory
 
 ## Waterfall Timeline
 
-After selecting a task, the trajectory view shows a session digest and a waterfall of execution spans. Each span represents a reasoning step or tool call made by the agent.
+After selecting a task, the Aspire-inspired waterfall timeline shows a **session digest** and **execution spans**. Each span represents a tool call the agent made.
 
-![Waterfall timeline showing session digest and execution spans](/waza/images/explore/waterfall-timeline.png)
+![Waterfall timeline showing session digest and tool call spans](/waza/images/explore/waterfall-timeline.png)
 
-- **Session digest** — Turns, Tool Calls, Tokens In, Tokens Out, and Tokens Total summarize the agent's session
-- **Span types** — `reasoning` spans (pink) show the agent's thinking; `tool call` spans (blue) show function invocations
-- **Grader results** — each span shows which grader evaluated it and the behavior it tested
-- **Show details** — expand any span to see the full grader output and raw agent response
+- **Session digest** — Turns, Tool Calls, Tokens In/Out/Total, and Tools Used at a glance
+- **Trace header** — total span count and tool call breakdown (e.g., `read_file × 2 create_file × 4 bash × 1`)
+- **Span bars** — teal/emerald bars sized proportionally to duration, labeled with tool names
+- **Timeline axis** — seconds scale showing relative timing of each call
+
+### Span Detail Panel
+
+Click any span bar to open the detail panel with full tool call information.
+
+![Span detail panel showing tool name, attributes, arguments, and result](/waza/images/explore/waterfall-span-detail.png)
+
+- **Tool name** — which tool was called (bash, create_file, read_file, etc.)
+- **Status badge** — Passed/Failed indicator
+- **Attributes** — Duration, event count, event range, call ID
+- **Arguments** — the exact arguments passed to the tool (JSON formatted)
+- **Result** — expandable section with the tool's return value
+
+### Events View
+
+Toggle from **Timeline** to **Events** to see a chronological list of every event in the agent session.
+
+![Events list showing assistant turns and tool start/complete events](/waza/images/explore/trajectory-events-list.png)
+
+- **Assistant turns** — the agent's reasoning text before and after tool calls
+- **Tool start/complete pairs** — each tool call shown as start → complete with tool name and call ID
+- **Show details** — expand any event to see its full content
+
+![Event expanded showing the assistant's reasoning text](/waza/images/explore/trajectory-event-expanded.png)
+
+- **Expanded detail** — full text of assistant reasoning or tool arguments/results
+- **Collapsible** — click "Hide details" to collapse back
+
+### Task Grader Expansion
+
+Back on the **Tasks** tab, click any task row to expand and see individual grader results.
+
+![Task expanded showing per-grader results with weights and scores](/waza/images/explore/task-grader-expansion.png)
+
+- **Per-grader rows** — each grader shows name, type, pass/fail, score, and weight
+- **Weight display** — grader weights shown as `×N` multiplier badges
+- **Weighted score** — composite W. Score computed from individual grader weights
 
 ## Compare Runs
 
