@@ -30,6 +30,27 @@ export interface GraderResult {
   message: string;
 }
 
+export interface ConfidenceInterval {
+  lower: number;
+  upper: number;
+  mean: number;
+  confidenceLevel: number;
+}
+
+export interface TaskStats {
+  passRate: number;
+  avgScore: number;
+  stdDev: number;
+  bootstrapCI?: ConfidenceInterval;
+  isSignificant?: boolean;
+}
+
+export interface StatisticalSummary {
+  bootstrapCI: ConfidenceInterval;
+  isSignificant: boolean;
+  normalizedGain?: number;
+}
+
 export interface TranscriptEvent {
   type: string;
   content?: string;
@@ -60,10 +81,12 @@ export interface TaskResult {
   graderResults: GraderResult[];
   transcript?: TranscriptEvent[];
   sessionDigest?: SessionDigest;
+  stats?: TaskStats;
 }
 
 export interface RunDetail extends RunSummary {
   tasks: TaskResult[];
+  statistics?: StatisticalSummary;
 }
 
 async function fetchJSON<T>(url: string): Promise<T> {

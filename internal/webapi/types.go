@@ -4,22 +4,24 @@ import "time"
 
 // RunSummary is the API response for a single run in the list.
 type RunSummary struct {
-	ID        string    `json:"id"`
-	Spec      string    `json:"spec"`
-	Model     string    `json:"model"`
-	Outcome   string    `json:"outcome"`
-	PassCount int       `json:"passCount"`
-	TaskCount int       `json:"taskCount"`
-	Tokens    int       `json:"tokens"`
-	Cost      float64   `json:"cost"`
-	Duration  float64   `json:"duration"`
-	Timestamp time.Time `json:"timestamp"`
+	ID            string    `json:"id"`
+	Spec          string    `json:"spec"`
+	Model         string    `json:"model"`
+	Outcome       string    `json:"outcome"`
+	PassCount     int       `json:"passCount"`
+	TaskCount     int       `json:"taskCount"`
+	Tokens        int       `json:"tokens"`
+	Cost          float64   `json:"cost"`
+	Duration      float64   `json:"duration"`
+	WeightedScore *float64  `json:"weightedScore,omitempty"`
+	Timestamp     time.Time `json:"timestamp"`
 }
 
 // RunDetail is the API response for a single run with per-task results.
 type RunDetail struct {
 	RunSummary
-	Tasks []TaskResult `json:"tasks"`
+	Tasks      []TaskResult                `json:"tasks"`
+	Statistics *StatisticalSummaryResponse `json:"statistics,omitempty"`
 }
 
 // TaskResult is a per-task result within a run.
@@ -27,10 +29,36 @@ type TaskResult struct {
 	Name          string                    `json:"name"`
 	Outcome       string                    `json:"outcome"`
 	Score         float64                   `json:"score"`
+	WeightedScore *float64                  `json:"weightedScore,omitempty"`
 	Duration      float64                   `json:"duration"`
 	GraderResults []GraderResult            `json:"graderResults"`
 	Transcript    []TranscriptEventResponse `json:"transcript,omitempty"`
 	SessionDigest *SessionDigestResponse    `json:"sessionDigest,omitempty"`
+	Stats         *TaskStatsResponse        `json:"stats,omitempty"`
+}
+
+// TaskStatsResponse holds per-task statistical data.
+type TaskStatsResponse struct {
+	PassRate    float64              `json:"passRate"`
+	AvgScore    float64              `json:"avgScore"`
+	StdDev      float64              `json:"stdDev"`
+	BootstrapCI *ConfidenceIntervalResponse `json:"bootstrapCI,omitempty"`
+	IsSignificant *bool              `json:"isSignificant,omitempty"`
+}
+
+// ConfidenceIntervalResponse holds bootstrap CI bounds.
+type ConfidenceIntervalResponse struct {
+	Lower           float64 `json:"lower"`
+	Upper           float64 `json:"upper"`
+	Mean            float64 `json:"mean"`
+	ConfidenceLevel float64 `json:"confidenceLevel"`
+}
+
+// StatisticalSummaryResponse holds digest-level statistics.
+type StatisticalSummaryResponse struct {
+	BootstrapCI    ConfidenceIntervalResponse `json:"bootstrapCI"`
+	IsSignificant  bool                       `json:"isSignificant"`
+	NormalizedGain *float64                   `json:"normalizedGain,omitempty"`
 }
 
 // TranscriptEventResponse is the API representation of a transcript event.

@@ -145,7 +145,7 @@ func outcomeToSummary(o *models.EvaluationOutcome) RunSummary {
 		}
 	}
 
-	return RunSummary{
+	s := RunSummary{
 		ID:        o.RunID,
 		Spec:      o.BenchName,
 		Model:     o.Setup.ModelID,
@@ -157,6 +157,11 @@ func outcomeToSummary(o *models.EvaluationOutcome) RunSummary {
 		Duration:  float64(o.Digest.DurationMs) / 1000.0,
 		Timestamp: o.Timestamp,
 	}
+	if o.Digest.WeightedScore > 0 {
+		ws := o.Digest.WeightedScore
+		s.WeightedScore = &ws
+	}
+	return s
 }
 
 // estimateCost provides a rough cost estimate based on token count.
@@ -169,6 +174,20 @@ func outcomeToDetail(o *models.EvaluationOutcome) *RunDetail {
 	s := outcomeToSummary(o)
 	detail := &RunDetail{RunSummary: s}
 
+	// Map digest-level statistics
+	if o.Digest.Statistics != nil {
+		detail.Statistics = &StatisticalSummaryResponse{
+			BootstrapCI: ConfidenceIntervalResponse{
+				Lower:           o.Digest.Statistics.BootstrapCI.Lower,
+				Upper:           o.Digest.Statistics.BootstrapCI.Upper,
+				Mean:            o.Digest.Statistics.BootstrapCI.Mean,
+				ConfidenceLevel: o.Digest.Statistics.BootstrapCI.ConfidenceLevel,
+			},
+			IsSignificant:  o.Digest.Statistics.IsSignificant,
+			NormalizedGain: o.Digest.Statistics.NormalizedGain,
+		}
+	}
+
 	for _, to := range o.TestOutcomes {
 		tr := TaskResult{
 			Name:    to.DisplayName,
@@ -177,6 +196,27 @@ func outcomeToDetail(o *models.EvaluationOutcome) *RunDetail {
 		if to.Stats != nil {
 			tr.Score = to.Stats.AvgScore
 			tr.Duration = float64(to.Stats.AvgDurationMs) / 1000.0
+			ws := to.Stats.AvgWeightedScore
+			tr.WeightedScore = &ws
+
+			// Map per-task stats including bootstrap CI
+			taskStats := &TaskStatsResponse{
+				PassRate: to.Stats.PassRate,
+				AvgScore: to.Stats.AvgScore,
+				StdDev:   to.Stats.StdDevScore,
+			}
+			if to.Stats.BootstrapCI != nil {
+				taskStats.BootstrapCI = &ConfidenceIntervalResponse{
+					Lower:           to.Stats.BootstrapCI.Lower,
+					Upper:           to.Stats.BootstrapCI.Upper,
+					Mean:            to.Stats.BootstrapCI.Mean,
+					ConfidenceLevel: to.Stats.BootstrapCI.ConfidenceLevel,
+				}
+			}
+			if to.Stats.IsSignificant != nil {
+				taskStats.IsSignificant = to.Stats.IsSignificant
+			}
+			tr.Stats = taskStats
 		}
 
 		// Collect grader results, transcript, and session digest from the first run.

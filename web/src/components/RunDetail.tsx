@@ -7,6 +7,7 @@ import {
   ChevronRight,
   ChevronDown,
   Download,
+  Info,
 } from "lucide-react";
 import { useRunDetail } from "../hooks/useApi";
 import type { TaskResult, GraderResult } from "../api/client";
@@ -65,6 +66,40 @@ function TypeBadge({ type }: { type: string }) {
   );
 }
 
+function SignificanceBadge({ isSignificant }: { isSignificant: boolean }) {
+  return isSignificant ? (
+    <span
+      data-testid="significance-badge"
+      className="inline-flex items-center gap-0.5 rounded-full bg-green-500/10 px-1.5 py-0.5 text-[10px] font-medium text-green-400"
+      title="Result is statistically significant"
+    >
+      ✓ significant
+    </span>
+  ) : (
+    <span
+      data-testid="significance-badge"
+      className="inline-flex items-center gap-0.5 rounded-full bg-yellow-500/10 px-1.5 py-0.5 text-[10px] font-medium text-yellow-400"
+      title="Result is not statistically significant"
+    >
+      ⚠ not significant
+    </span>
+  );
+}
+
+function CIRange({ lower, upper }: { lower: number; upper: number }) {
+  const fmt = (v: number) => (v >= 0 ? "+" : "") + (v * 100).toFixed(1) + "%";
+  return (
+    <span
+      data-testid="ci-range"
+      className="inline-flex items-center gap-1 text-[10px] text-zinc-400"
+      title={`95% confidence interval: [${fmt(lower)}, ${fmt(upper)}]`}
+    >
+      <Info className="h-3 w-3" />
+      [{fmt(lower)}, {fmt(upper)}]
+    </span>
+  );
+}
+
 function GraderRow({ grader }: { grader: GraderResult }) {
   return (
     <tr className="border-b border-zinc-700/30">
@@ -117,7 +152,15 @@ function TaskRow({ task }: { task: TaskResult }) {
           {formatPercent(task.score)}
         </td>
         <td className="px-4 py-3 text-zinc-300">
-          {ws != null ? formatPercent(ws) : "—"}
+          <span className="flex flex-wrap items-center gap-1.5">
+            {ws != null ? formatPercent(ws) : "—"}
+            {task.stats?.isSignificant != null && (
+              <SignificanceBadge isSignificant={task.stats.isSignificant} />
+            )}
+            {task.stats?.bootstrapCI && (
+              <CIRange lower={task.stats.bootstrapCI.lower} upper={task.stats.bootstrapCI.upper} />
+            )}
+          </span>
         </td>
         <td className="px-4 py-3 text-zinc-300">
           {formatDuration(task.duration)}
@@ -209,6 +252,19 @@ export default function RunDetail({ id }: { id: string }) {
         <StatCard label="Cost" value={formatCost(data.cost)} />
         <StatCard label="Duration" value={formatDuration(data.duration)} />
       </div>
+
+      {data.statistics && (
+        <div data-testid="run-statistics" className="flex flex-wrap items-center gap-3 rounded-lg border border-zinc-700 bg-zinc-800/50 px-4 py-2.5 text-sm">
+          <span className="text-xs font-medium uppercase text-zinc-400">Statistics</span>
+          <SignificanceBadge isSignificant={data.statistics.isSignificant} />
+          <CIRange lower={data.statistics.bootstrapCI.lower} upper={data.statistics.bootstrapCI.upper} />
+          {data.statistics.normalizedGain != null && (
+            <span className="text-xs text-zinc-400">
+              Gain: {(data.statistics.normalizedGain * 100).toFixed(1)}%
+            </span>
+          )}
+        </div>
+      )}
 
       <div className="flex gap-1 border-b border-zinc-700">
         <button

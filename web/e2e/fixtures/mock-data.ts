@@ -57,6 +57,11 @@ export const RUNS = [
 
 export const RUN_DETAIL = {
   ...RUNS[0],
+  statistics: {
+    bootstrapCI: { lower: 0.082, upper: 0.288, mean: 0.185, confidenceLevel: 0.95 },
+    isSignificant: true,
+    normalizedGain: 0.15,
+  },
   tasks: [
     {
       name: "explain-fibonacci",
@@ -82,6 +87,13 @@ export const RUN_DETAIL = {
           message: 'Matched pattern "recursion|recursive"',
         },
       ],
+      stats: {
+        passRate: 1.0,
+        avgScore: 1.0,
+        stdDev: 0.0,
+        bootstrapCI: { lower: 0.12, upper: 0.35, mean: 0.23, confidenceLevel: 0.95 },
+        isSignificant: true,
+      },
       transcript: [
         { type: "Turn", content: "I'll analyze the code now." },
         { type: "ToolExecutionStart", toolCallId: "tc-1", toolName: "read_file", arguments: { path: "fibonacci.py" } },
@@ -141,6 +153,13 @@ export const RUN_DETAIL = {
           message: "Pattern not matched",
         },
       ],
+      stats: {
+        passRate: 0.4,
+        avgScore: 0.33,
+        stdDev: 0.47,
+        bootstrapCI: { lower: -0.1, upper: 0.18, mean: 0.04, confidenceLevel: 0.95 },
+        isSignificant: false,
+      },
     },
     {
       name: "explain-merge-sort",

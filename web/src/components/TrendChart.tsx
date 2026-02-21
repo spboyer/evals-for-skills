@@ -3,6 +3,8 @@ import { useState, useRef, useEffect } from "react";
 export interface DataPoint {
   label: string;
   value: number;
+  ciLower?: number;
+  ciUpper?: number;
 }
 
 interface TrendChartProps {
@@ -52,9 +54,9 @@ export default function TrendChart({
     );
   }
 
-  const values = data.map((d) => d.value);
-  const minVal = Math.min(...values);
-  const maxVal = Math.max(...values);
+  const allValues = data.flatMap((d) => [d.value, d.ciLower ?? d.value, d.ciUpper ?? d.value]);
+  const minVal = Math.min(...allValues);
+  const maxVal = Math.max(...allValues);
   const range = maxVal - minVal || 1;
   const yMin = minVal - range * 0.1;
   const yMax = maxVal + range * 0.1;
@@ -172,6 +174,26 @@ export default function TrendChart({
 
         {/* Area fill */}
         <path d={areaPath} fill="rgb(59 130 246 / 0.1)" />
+
+        {/* CI error band */}
+        {data.some((d) => d.ciLower != null && d.ciUpper != null) && (() => {
+          const ciPoints = data.map((d, i) => ({
+            x: toX(i),
+            yLo: toY(d.ciLower ?? d.value),
+            yHi: toY(d.ciUpper ?? d.value),
+          }));
+          const upper = ciPoints.map((p, i) => `${i === 0 ? "M" : "L"} ${p.x} ${p.yHi}`).join(" ");
+          const lower = [...ciPoints].reverse().map((p, i) => `${i === 0 ? "L" : "L"} ${p.x} ${p.yLo}`).join(" ");
+          return (
+            <path
+              data-testid="ci-band"
+              d={`${upper} ${lower} Z`}
+              fill="rgb(59 130 246 / 0.15)"
+              stroke="rgb(59 130 246 / 0.3)"
+              strokeWidth={1}
+            />
+          );
+        })()}
 
         {/* Line */}
         <path
