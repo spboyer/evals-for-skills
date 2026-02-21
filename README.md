@@ -85,6 +85,10 @@ waza new skill-name
 # Check if a skill is ready for submission
 waza check skills/my-skill
 
+# Suggest an eval suite from SKILL.md
+waza suggest skills/my-skill --dry-run
+waza suggest skills/my-skill --apply
+
 # Note: 'generate' is available as an alias for 'new' (see below for new command)
 
 # Run evaluations
@@ -344,6 +348,30 @@ waza check skills/my-skill
 waza check skills/my-skill     # Check readiness
 waza dev skills/my-skill       # Improve compliance if needed
 waza check skills/my-skill     # Verify improvements
+```
+
+### `waza suggest <skill-path>`
+
+Use an LLM to analyze `SKILL.md` and generate suggested evaluation artifacts.
+
+| Flag | Description |
+|------|-------------|
+| `--model <model>` | Model to use for suggestions (default: project default model) |
+| `--dry-run` | Print suggested output to stdout (default) |
+| `--apply` | Write files to disk |
+| `--output-dir <dir>` | Output directory (default: `<skill-path>/evals`) |
+| `--format yaml\|json` | Output format (default: `yaml`) |
+
+**Examples:**
+```bash
+# Preview generated eval/task/fixture files as YAML
+waza suggest skills/code-explainer --dry-run
+
+# Write generated files to disk
+waza suggest skills/code-explainer --apply
+
+# Print JSON-formatted suggestion payload
+waza suggest skills/code-explainer --format json
 ```
 
 ### `waza tokens count [paths...]`

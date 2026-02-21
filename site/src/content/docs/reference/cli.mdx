@@ -242,6 +242,37 @@ waza compare gpt4.json sonnet.json opus.json
 waza compare results-*.json --format json
 ```
 
+## waza suggest
+
+Generate suggested eval artifacts from a skill's `SKILL.md` using an LLM.
+
+```bash
+waza suggest <skill-path>
+```
+
+### Flags
+
+| Flag | Description |
+|------|-------------|
+| `--model` | Model to use for suggestions (default: project default model) |
+| `--dry-run` | Print suggestions to stdout (default) |
+| `--apply` | Write suggested files to disk |
+| `--output-dir` | Output directory (default: `<skill-path>/evals`) |
+| `--format` | Output format: `yaml` (default), `json` |
+
+### Examples
+
+```bash
+# Preview suggestions
+waza suggest skills/code-explainer --dry-run
+
+# Write eval/task/fixture files
+waza suggest skills/code-explainer --apply
+
+# JSON output
+waza suggest skills/code-explainer --format json
+```
+
 ## waza tokens
 
 Token budget management.
