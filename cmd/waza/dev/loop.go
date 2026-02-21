@@ -632,10 +632,10 @@ func runScaffoldTriggers(cmd *cobra.Command, skillArg string) error {
 	}
 
 	out := cmd.OutOrStdout()
-	fmt.Fprintf(out, "✅ Scaffolded trigger tests from %s frontmatter\n", sk.Frontmatter.Name)
-	fmt.Fprintf(out, "   %d should-trigger prompts\n", len(useFor))
-	fmt.Fprintf(out, "   %d should-not-trigger prompts\n", len(doNotUseFor))
-	fmt.Fprintf(out, "   → %s\n", outPath)
+	_, _ = fmt.Fprintf(out, "✅ Scaffolded trigger tests from %s frontmatter\n", sk.Frontmatter.Name)
+	_, _ = fmt.Fprintf(out, "   %d should-trigger prompts\n", len(useFor))
+	_, _ = fmt.Fprintf(out, "   %d should-not-trigger prompts\n", len(doNotUseFor))
+	_, _ = fmt.Fprintf(out, "   → %s\n", outPath)
 
 	return nil
 }

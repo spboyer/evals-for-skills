@@ -24,7 +24,7 @@ func ParseTriggerPhrases(description string) (useFor []TriggerPhrase, doNotUseFo
 	return useFor, doNotUseFor
 }
 
-// extractSection finds a labelled section (e.g. "USE FOR:") and parses
+// extractSection finds a labeled section (e.g. "USE FOR:") and parses
 // comma-separated phrases until the next label or end of string.
 func extractSection(text, label string) []TriggerPhrase {
 	upper := strings.ToUpper(text)
