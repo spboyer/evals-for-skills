@@ -151,14 +151,18 @@ func TestHandleToolsCallSkillCheck(t *testing.T) {
 
 	data, _ := json.Marshal(resp.Result)
 	var result toolsCallResult
-	json.Unmarshal(data, &result)
+	if err := json.Unmarshal(data, &result); err != nil {
+		t.Fatalf("failed to unmarshal result: %v", err)
+	}
 	if result.IsError {
 		t.Fatalf("tool returned error: %s", result.Content[0].Text)
 	}
 
 	// Parse the inner JSON to verify structure.
 	var check skillCheckResult
-	json.Unmarshal([]byte(result.Content[0].Text), &check)
+	if err := json.Unmarshal([]byte(result.Content[0].Text), &check); err != nil {
+		t.Fatalf("failed to unmarshal skill check: %v", err)
+	}
 	if check.HasSkill {
 		t.Error("expected HasSkill=false for empty dir")
 	}
@@ -185,7 +189,9 @@ func TestHandleToolsCallUnknownTool(t *testing.T) {
 
 	data, _ := json.Marshal(resp.Result)
 	var result toolsCallResult
-	json.Unmarshal(data, &result)
+	if err := json.Unmarshal(data, &result); err != nil {
+		t.Fatalf("failed to unmarshal result: %v", err)
+	}
 	if !result.IsError {
 		t.Error("expected IsError=true for unknown tool")
 	}
