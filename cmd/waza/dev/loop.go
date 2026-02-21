@@ -10,6 +10,7 @@ import (
 	"strings"
 	"unicode/utf8"
 
+	"github.com/spboyer/waza/internal/scaffold"
 	"github.com/spboyer/waza/internal/skill"
 	"github.com/spboyer/waza/internal/workspace"
 	"github.com/spf13/cobra"
@@ -30,6 +31,18 @@ type devConfig struct {
 }
 
 func runDev(cmd *cobra.Command, args []string) error {
+	// Check for --scaffold-triggers first — it's a standalone mode.
+	scaffoldTriggers, err := cmd.Flags().GetBool("scaffold-triggers")
+	if err != nil {
+		return err
+	}
+	if scaffoldTriggers {
+		if len(args) == 0 {
+			return errors.New("skill name or path required with --scaffold-triggers")
+		}
+		return runScaffoldTriggers(cmd, args[0])
+	}
+
 	copilotMode, err := cmd.Flags().GetBool("copilot")
 	if err != nil {
 		return err
@@ -551,4 +564,78 @@ func writeSkillFile(skill *skill.Skill) error {
 		return err
 	}
 	return os.WriteFile(skill.Path, data, 0644)
+}
+
+// runScaffoldTriggers reads a skill's SKILL.md, parses trigger phrases from
+// the description frontmatter, and writes tests/trigger_tests.yaml.
+func runScaffoldTriggers(cmd *cobra.Command, skillArg string) error {
+	skillDir := skillArg
+
+	// Resolve skill name to directory if it doesn't look like a path.
+	if !workspace.LooksLikePath(skillDir) {
+		wd, wdErr := os.Getwd()
+		if wdErr != nil {
+			return fmt.Errorf("getting working directory: %w", wdErr)
+		}
+		ctx, ctxErr := workspace.DetectContext(wd)
+		if ctxErr != nil {
+			return fmt.Errorf("detecting workspace: %w", ctxErr)
+		}
+		si, findErr := workspace.FindSkill(ctx, skillDir)
+		if findErr != nil {
+			return findErr
+		}
+		skillDir = si.Dir
+	}
+
+	if !filepath.IsAbs(skillDir) {
+		wd, err := os.Getwd()
+		if err != nil {
+			return fmt.Errorf("getting working directory: %w", err)
+		}
+		skillDir = filepath.Join(wd, skillDir)
+	}
+
+	// Read SKILL.md
+	skillPath := filepath.Join(skillDir, "SKILL.md")
+	data, err := os.ReadFile(skillPath)
+	if err != nil {
+		return fmt.Errorf("reading SKILL.md: %w", err)
+	}
+
+	var sk skill.Skill
+	if err := sk.UnmarshalText(data); err != nil {
+		return fmt.Errorf("parsing SKILL.md: %w", err)
+	}
+
+	desc := sk.Frontmatter.Description
+	if desc == "" {
+		return errors.New("SKILL.md has no description field — cannot extract trigger phrases")
+	}
+
+	useFor, doNotUseFor := scaffold.ParseTriggerPhrases(desc)
+	if len(useFor) == 0 && len(doNotUseFor) == 0 {
+		return errors.New("no USE FOR or DO NOT USE FOR phrases found in description")
+	}
+
+	yaml := scaffold.TriggerTestsYAML(sk.Frontmatter.Name, useFor, doNotUseFor)
+
+	// Write to tests/trigger_tests.yaml
+	testsDir := filepath.Join(skillDir, "tests")
+	if err := os.MkdirAll(testsDir, 0o755); err != nil {
+		return fmt.Errorf("creating tests directory: %w", err)
+	}
+
+	outPath := filepath.Join(testsDir, "trigger_tests.yaml")
+	if err := os.WriteFile(outPath, []byte(yaml), 0o644); err != nil {
+		return fmt.Errorf("writing trigger_tests.yaml: %w", err)
+	}
+
+	out := cmd.OutOrStdout()
+	fmt.Fprintf(out, "✅ Scaffolded trigger tests from %s frontmatter\n", sk.Frontmatter.Name)
+	fmt.Fprintf(out, "   %d should-trigger prompts\n", len(useFor))
+	fmt.Fprintf(out, "   %d should-not-trigger prompts\n", len(doNotUseFor))
+	fmt.Fprintf(out, "   → %s\n", outPath)
+
+	return nil
 }

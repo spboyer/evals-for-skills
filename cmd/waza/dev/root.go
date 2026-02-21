@@ -38,5 +38,6 @@ Use --copilot to get a non-interactive report that includes recommendations from
 	cmd.Flags().String("model", defaultCopilotModel, "Model to use with --copilot")
 	cmd.Flags().Bool("all", false, "Process all skills in workspace")
 	cmd.Flags().String("filter", "", "Filter skills by adherence level (used with --all): low | medium | medium-high | high")
+	cmd.Flags().Bool("scaffold-triggers", false, "Generate tests/trigger_tests.yaml from SKILL.md frontmatter USE FOR / DO NOT USE FOR phrases")
 	return cmd
 }
