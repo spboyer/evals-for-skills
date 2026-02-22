@@ -39,6 +39,7 @@ export default defineConfig({
 					items: [
 						{ label: 'CLI Commands', slug: 'reference/cli' },
 						{ label: 'YAML Schema', slug: 'reference/schema' },
+						{ label: 'Releases', slug: 'reference/releases' },
 					],
 				},
 				{

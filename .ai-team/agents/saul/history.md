@@ -40,3 +40,13 @@
 ## 📌 Team update (2026-02-20): Model policy overhaul
 
 All code roles now use `claude-opus-4.6`. Docs/Scribe/diversity use `gemini-3-pro-preview`. Heavy code gen uses `gpt-5.2-codex`. Decided by Scott Boyer. See decisions.md for full details.
+
+### Releases Page (#383, PR #384)
+
+- Created `site/src/content/docs/reference/releases.mdx` — Starlight MDX format with Tabs component for install commands
+- Used existing reference pages (cli.mdx, schema.mdx) as style baseline: frontmatter with title+description, horizontal rules between sections, consistent table formatting
+- Changelog highlights extracted from CHANGELOG.md v0.8.0 — grouped by Added/Changed/Fixed, condensed to one-line summaries
+- Download table covers all 6 platform binaries with absolute GitHub release URLs
+- azd extension section includes full install command with versioned tar.gz URL
+- Sidebar updated in astro.config.mjs under Reference group
+- Pattern: release pages should link to GitHub Releases for history rather than duplicating old changelogs

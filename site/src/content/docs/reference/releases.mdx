@@ -1,0 +1,117 @@
+---
+title: Releases
+description: Download waza binaries and the azd extension. Changelog highlights and install instructions.
+---
+
+import { Tabs, TabItem } from '@astrojs/starlight/components';
+
+## Current Release: v0.8.0
+
+**Released:** 2026-02-21
+
+### What's New
+
+#### Added
+
+- **MCP Server** — `waza serve` with 10 tools via stdio transport
+- **`waza suggest`** — LLM-powered eval suggestions from SKILL.md
+- **Interactive workflow skill** — 5 conversational eval scenarios
+- **Grader weighting** — `weight` field and `ComputeWeightedRunScore`
+- **Statistical confidence intervals** — Bootstrap CI, significance badges
+- **Judge model support** — `--judge-model` flag for separate LLM-as-judge
+- **Spec compliance checks** — 8 agentskills.io checks in `waza check` / `waza dev`
+- **SkillsBench advisory** — 5 advisory checks (module-count, complexity, etc.)
+- **MCP integration scoring** — 4 MCP checks in `waza dev`
+- **Batch skill processing** — `waza dev` handles multiple skills per run
+- **Token compare `--strict`** — Budget enforcement mode
+- **Scaffold trigger tests** — Auto-generate trigger test YAML from frontmatter
+- **Skill profile** — `waza tokens profile` for static token analysis
+- **JUnit XML reporter** — `--format junit` for CI integration
+- **Template variables** — Go `text/template` syntax in hooks and commands
+- **GroupBy results** — `group_by` config for organizing results by dimension
+- **Custom input variables** — `inputs` section in eval.yaml
+- **CSV dataset support** — `tasks_from` field generates tasks from CSV rows
+- **Retry/Attempts** — `max_attempts` for retrying failed executions
+- **Lifecycle hooks** — `before_run` / `after_run` / `before_task` / `after_task`
+- **`prompt` grader (LLM-as-judge)** — Rubric-based evaluation with session modes
+- **`trigger_tests.yaml` auto-discovery** — Measure prompt trigger accuracy
+- **`diff` grader** — Workspace file comparison with snapshot matching
+- **Azure ML rubrics** — 8 pre-built rubric YAMLs in `examples/rubrics/`
+
+#### Changed
+
+- Dashboard — Aspire-style trajectory waterfall, weighted scores, CI bands
+- Docs site — Dashboard explore page with 14+ screenshots, light/dark mode
+
+#### Fixed
+
+- `install.sh` macOS checksum — `shasum -a 256` fallback for macOS
+- Dashboard compare-runs screenshot now shows 2 runs with full comparison
+- GitHub icon alignment and search bar width on docs site
+
+---
+
+## Download Binaries
+
+Pre-built binaries for all major platforms:
+
+| Platform | Architecture | Download |
+|----------|-------------|----------|
+| macOS | Apple Silicon (ARM64) | [waza-darwin-arm64](https://github.com/spboyer/waza/releases/download/v0.8.0/waza-darwin-arm64) |
+| macOS | Intel (AMD64) | [waza-darwin-amd64](https://github.com/spboyer/waza/releases/download/v0.8.0/waza-darwin-amd64) |
+| Linux | x64 (AMD64) | [waza-linux-amd64](https://github.com/spboyer/waza/releases/download/v0.8.0/waza-linux-amd64) |
+| Linux | ARM64 | [waza-linux-arm64](https://github.com/spboyer/waza/releases/download/v0.8.0/waza-linux-arm64) |
+| Windows | x64 (AMD64) | [waza-windows-amd64.exe](https://github.com/spboyer/waza/releases/download/v0.8.0/waza-windows-amd64.exe) |
+| Windows | ARM64 | [waza-windows-arm64.exe](https://github.com/spboyer/waza/releases/download/v0.8.0/waza-windows-arm64.exe) |
+
+---
+
+## Quick Install
+
+<Tabs>
+<TabItem label="macOS / Linux">
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/spboyer/waza/main/install.sh | bash
+```
+
+</TabItem>
+<TabItem label="Windows (PowerShell)">
+
+```powershell
+iwr -useb https://raw.githubusercontent.com/spboyer/waza/main/install.ps1 | iex
+```
+
+</TabItem>
+</Tabs>
+
+Verify the installation:
+
+```bash
+waza --version
+```
+
+---
+
+## azd Extension
+
+Install waza as an [Azure Developer CLI](https://learn.microsoft.com/azure/developer/azure-developer-cli/) extension.
+
+**Current version:** v0.8.0
+
+```bash
+azd extension install azd-waza \
+  --source https://github.com/spboyer/waza/releases/download/azd-ext-microsoft-azd-waza_0.8.0/azd-ext-microsoft-azd-waza_0.8.0.tar.gz
+```
+
+Once installed, run evaluations through `azd`:
+
+```bash
+azd waza run eval.yaml
+```
+
+---
+
+## Previous Releases
+
+For older versions, changelogs, and pre-release builds, see the full [GitHub Releases](https://github.com/spboyer/waza/releases) page.

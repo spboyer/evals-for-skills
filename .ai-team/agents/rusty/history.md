@@ -86,3 +86,14 @@
 ## 📌 Team update (2026-02-20): Model policy overhaul
 
 All code roles now use `claude-opus-4.6`. Docs/Scribe/diversity use `gemini-3-pro-preview`. Heavy code gen uses `gpt-5.2-codex`. Decided by Scott Boyer. See decisions.md for full details.
+
+### Competitive Analysis: Waza vs OpenAI Evals (Feb 21)
+
+**Key Findings:**
+- Waza wins 10 of 15 comparison dimensions on shipped capability. The fundamental gap is architectural: OpenAI Evals evaluates *completions*, waza evaluates *agents*. Different paradigm entirely.
+- OpenAI Evals' strengths are ecosystem (800+ community evals, brand recognition, LangChain integration) and custom eval extensibility (Python class inheritance). Waza's strengths are agent-native architecture, trajectory visualization, statistical rigor, and development toolchain.
+- OpenAI's Platform dashboard (platform.openai.com) is vendor-locked to OpenAI models — not a competitive threat to waza's model-agnostic approach.
+- Highest-impact moves: (1) positioning doc framing "agent eval vs LLM eval" narrative, (2) migration guide from OpenAI Evals format, (3) grader plugin interface to close extensibility gap.
+- OpenAI Evals cannot evaluate agents without a ground-up redesign. As the industry moves from completions to agents, this becomes a legacy framework for a shrinking use case.
+
+**Document:** `tmp/waza-vs-openai-evals.md`

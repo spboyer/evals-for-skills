@@ -114,3 +114,83 @@ Added Documentation Impact Matrix mapping code paths to required doc updates, sh
 **Why:** User directive: "Cost is not an issue — optimize for best/fastest per role." Benchmarks consulted: SWE-bench Verified (Feb 2026). Claude Opus 4.6 leads at 81%, GPT-5.2 Codex wins speed, Gemini 3 Pro wins context window + provider diversity.
 
 **Supersedes:** "Model selection directive (updated)" from 2026-02-18 and "Web UI model assignments" from 2026-02-18.
+
+## 2026-02-21: User directive — MCP always on
+
+**By:** Shayne Boyer (via Copilot)
+
+**What:** MCP server always launches with `waza serve` — no --mcp flag needed. It's always on, supporting all features.
+
+**Why:** User request — simplify the CLI surface, MCP is a core feature not an opt-in
+
+## 2026-02-21: User directive — Waza skill should orchestrate workflows
+
+**By:** Shayne Boyer (via Copilot)
+
+**What:** The waza interactive skill (#288) should support scenarios and orchestrate user workflows — not just be a reference doc. It should guide users through creating evals, running them, interpreting results, comparing models, etc.
+
+**Why:** User request — the skill needs to be a real workflow partner, not a tool catalog
+
+## 2026-02-21: User directive — Use Mermaid for diagrams
+
+**By:** Shayne Boyer (via Copilot)
+
+**What:** Use Mermaid for all markdown diagrams in documentation and design docs — no ASCII art diagrams
+
+**Why:** User request — captured for team memory
+
+## 2026-02-20: Grader Weighting Design
+
+**By:** Linus (Backend Dev)
+**Date:** 2026-02-20
+**Issue:** #299
+
+### What
+
+Added optional `weight` field to grader configs for weighted composite scoring. Key design choices:
+
+1. **Weight lives on config, not on the grader interface.** Graders don't know their own weight — the runner stamps it onto `GraderResults` after grading. This keeps grader implementations simple and weight-unaware.
+
+2. **Default weight is 1.0** (via `EffectiveWeight()`). Zero and negative values are treated as 1.0. This means all existing eval.yaml files produce identical results — no migration needed.
+
+3. **Weighted score is additive, not a replacement.** `AggregateScore` (unweighted) is preserved. `WeightedScore` is a new parallel field. The interpretation report only shows weighted score when it differs from unweighted.
+
+4. **Weight flows through the full pipeline:** `GraderConfig.Weight` → `GraderResults.Weight` → `RunResult.ComputeWeightedRunScore()` → `TestStats.AvgWeightedScore` → `OutcomeDigest.WeightedScore`. Web API also carries weight per grader result.
+
+### Why
+
+Weighted scoring lets users express that some graders matter more than others (e.g., correctness 3× more important than style). Without breaking existing pass/fail semantics.
+
+### Impact
+
+- `internal/models/` — new fields on `GraderConfig`, `GraderResults`, `TestStats`, `OutcomeDigest`
+- `internal/orchestration/runner.go` — weight stamping in `runGraders`, weighted stats in `computeTestStats`/`buildOutcome`
+- `internal/reporting/` — conditional weighted score display
+- `internal/webapi/` — weight exposed in API responses
+- JSON schema unchanged (eval.yaml schema is separate from waza-config.schema.json)
+
+## 2026-02-20: SpecScorer as separate scorer from HeuristicScorer
+
+**By:** Linus (Backend Developer)
+**Date:** 2026-02-20
+**PR:** #322
+**Issue:** #314
+
+**What:** The agentskills.io spec compliance checks are implemented as a separate `SpecScorer` type rather than extending `HeuristicScorer`. Both run independently — `HeuristicScorer` handles heuristic quality scoring (triggers, anti-triggers, routing clarity) while `SpecScorer` handles formal spec validation (field presence, naming rules, length limits).
+
+**Why:** The two scorers have different concerns: `HeuristicScorer` is about quality/adherence level (Low→High), while `SpecScorer` is about pass/fail conformance to the agentskills.io specification. Keeping them separate means each can evolve independently. The spec may change without affecting heuristic scoring, and vice versa.
+
+**Impact:** Both `waza dev` and `waza check` now run both scorers. Any new spec checks should be added to `SpecScorer` in `cmd/waza/dev/spec.go`. The `SpecResult.Passed()` method only considers errors (not warnings) — warnings like missing license/version don't block readiness.
+
+## 2026-02-21: Releases page pattern
+
+**By:** Saul (Documentation Lead)
+**Date:** 2026-02-21
+**Issue:** #383
+**PR:** #384
+
+**What:** Created a releases reference page at `site/src/content/docs/reference/releases.mdx` that shows the current release (v0.8.0) with changelog highlights, download table, install commands, and azd extension info. Older releases link out to GitHub Releases rather than duplicating content.
+
+**Why:** The docs site should be a self-contained starting point for users downloading waza. Having binaries, install commands, and changelog highlights in one place reduces friction. Linking to GitHub Releases for history avoids maintaining two changelog surfaces.
+
+**Pattern for future releases:** When cutting a new version, update the releases.mdx page — change the version number, update the changelog highlights, and update download URLs. The CHANGELOG.md remains the source of truth; the releases page is a curated summary of the latest.
