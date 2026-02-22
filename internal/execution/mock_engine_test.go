@@ -54,10 +54,20 @@ func TestMockEngine_Execute_ReplacesWorkspace(t *testing.T) {
 	secondWorkspace := resp2.WorkspaceDir
 
 	assert.NotEqual(t, firstWorkspace, secondWorkspace)
-	_, statErr := os.Stat(firstWorkspace)
-	assert.True(t, os.IsNotExist(statErr), "first workspace should be removed")
+
+	// Both workspaces exist until Shutdown (safe for concurrent use)
+	_, err1 := os.Stat(firstWorkspace)
+	_, err2 := os.Stat(secondWorkspace)
+	assert.NoError(t, err1, "first workspace should still exist before Shutdown")
+	assert.NoError(t, err2, "second workspace should still exist before Shutdown")
 
 	require.NoError(t, engine.Shutdown(context.Background()))
+
+	// Both workspaces removed after Shutdown
+	_, statErr := os.Stat(firstWorkspace)
+	assert.True(t, os.IsNotExist(statErr), "first workspace should be removed after Shutdown")
+	_, statErr2 := os.Stat(secondWorkspace)
+	assert.True(t, os.IsNotExist(statErr2), "second workspace should be removed after Shutdown")
 }
 
 func TestMockEngine_Execute_SetupResourcesError(t *testing.T) {
