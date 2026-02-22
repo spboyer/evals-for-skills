@@ -14,5 +14,6 @@ func TestPtr(t *testing.T) {
 	assert.Equal(t, 42, *p)
 
 	v = 100
+	_ = v
 	assert.Equal(t, 42, *p)
 }
