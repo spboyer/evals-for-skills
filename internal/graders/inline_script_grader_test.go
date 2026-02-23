@@ -8,6 +8,7 @@ import (
 	"io"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"testing"
 
 	copilot "github.com/github/copilot-sdk/go"
@@ -299,7 +300,7 @@ func TestUnsupportedLanguage(t *testing.T) {
 }
 
 func loadSampleEvents(t *testing.T) []copilot.SessionEvent {
-	reader, err := os.Open("../testdata/copilot_events_using_skill.json")
+	reader, err := os.Open(filepath.Join("..", "testdata", "copilot_events_using_skill.json"))
 	require.NoError(t, err)
 
 	defer reader.Close() //nolint:errcheck

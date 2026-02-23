@@ -67,14 +67,12 @@ var newCopilotClient = func(opts *copilot.ClientOptions) copilotClient {
 
 // CopilotEngine integrates with GitHub Copilot SDK
 type CopilotEngine struct {
-	modelID string
+	defaultModelID string
 
-	// Mutex to protect concurrent access to workspace and client
-	mu     sync.Mutex
 	client copilotClient
 
-	workspace     string
-	oldWorkspaces []string // previous workspaces to clean up at Shutdown
+	workspacesMu sync.Mutex
+	workspaces   []string // workspaces to clean up at Shutdown
 }
 
 // CopilotEngineBuilder builds a CopilotEngine with options
@@ -82,13 +80,35 @@ type CopilotEngineBuilder struct {
 	engine *CopilotEngine
 }
 
+type CopilotEngineBuilderOptions struct {
+	NewCopilotClient func(clientOptions *copilot.ClientOptions) copilotClient
+}
+
 // NewCopilotEngineBuilder creates a builder for CopilotEngine
-func NewCopilotEngineBuilder(modelID string) *CopilotEngineBuilder {
-	return &CopilotEngineBuilder{
+//   - defaultModelID - used if no model ID is specified in session creation. Can be blank, which means the copilot
+//     CLI will choose its own fallback model.
+func NewCopilotEngineBuilder(defaultModelID string, options *CopilotEngineBuilderOptions) *CopilotEngineBuilder {
+	var client copilotClient
+
+	copilotOptions := &copilot.ClientOptions{
+		// workspace is set at the session level, instead of at the client.
+		LogLevel: "error",
+	}
+
+	if options == nil || options.NewCopilotClient == nil {
+		client = newCopilotClient(copilotOptions)
+	} else {
+		client = options.NewCopilotClient(copilotOptions)
+	}
+
+	builder := &CopilotEngineBuilder{
 		engine: &CopilotEngine{
-			modelID: modelID,
+			defaultModelID: defaultModelID,
 		},
 	}
+
+	builder.engine.client = client
+	return builder
 }
 
 func (b *CopilotEngineBuilder) Build() *CopilotEngine {
@@ -96,94 +116,62 @@ func (b *CopilotEngineBuilder) Build() *CopilotEngine {
 }
 
 // Initialize sets up the Copilot client
-// Note: workspace is created per-Execute call for test isolation
 func (e *CopilotEngine) Initialize(ctx context.Context) error {
-	// Client initialization is deferred to Execute() for better isolation
-	// Each test execution gets a fresh workspace
+	// NOTE: the copilot client auto-starts on first call, so no need to explicitly init
+	// or start it here.
 	return nil
 }
 
 // Execute runs a test with Copilot SDK
-// This method is now concurrency-safe through mutex protection
 func (e *CopilotEngine) Execute(ctx context.Context, req *ExecutionRequest) (*ExecutionResponse, error) {
-	// Lock for the entire execution to ensure workspace/client isolation
-	e.mu.Lock()
-	defer e.mu.Unlock()
+	if req == nil {
+		return nil, fmt.Errorf("nil req was passed to CopilotEngine.Execute")
+	}
+
+	modelID, sourceDir, err := e.extractReqParams(req)
+
+	if err != nil {
+		return nil, err
+	}
 
 	start := time.Now()
 
-	// Track previous workspace for cleanup at Shutdown — don't delete now
-	// because the SDK client may still hold file locks (especially on Windows).
-	if e.workspace != "" {
-		e.oldWorkspaces = append(e.oldWorkspaces, e.workspace)
-		e.workspace = ""
-	}
-
-	tmpDir, err := os.MkdirTemp("", "waza-*")
-	if err != nil {
-		return nil, fmt.Errorf("failed to create temp workspace: %w", err)
-	}
-	e.workspace = tmpDir
-
-	// Write resource files to workspace
-	if err := e.setupResources(req.Resources); err != nil {
-		return nil, fmt.Errorf("failed to setup resources: %w", err)
-	}
-
-	// Reinitialize client with new workspace
-	if e.client != nil {
-		if err := e.client.Stop(); err != nil {
-			// Log but don't fail on cleanup error
-			fmt.Printf("warning: failed to stop client: %v\n", err)
-		}
-	}
-
-	client := newCopilotClient(&copilot.ClientOptions{
-		Cwd:      e.workspace,
-		LogLevel: "error",
-	})
-
-	if err := client.Start(ctx); err != nil {
-		return nil, fmt.Errorf("failed to start copilot client: %w", err)
-	}
-	e.client = client
-
-	// note, we're assuming you're _in_ the directory with the skill until we get our
-	// workspacing story in order.
-	cwd, err := os.Getwd()
+	workspaceDir, err := e.setupWorkspace(req.Resources)
 
 	if err != nil {
-		return nil, fmt.Errorf("failed to get current directory: %w", err)
+		return nil, err
 	}
 
 	// Build skill directories list: start with CWD, then add any from request
-	// Use map for O(n) duplicate detection
-	seen := make(map[string]bool)
-	seen[cwd] = true
-	skillDirs := []string{cwd}
+	skillDirs := e.getSkillDirs(sourceDir, req)
 
-	// Add skill directories from request, avoiding duplicates
-	for _, path := range req.SkillPaths {
-		if !seen[path] {
-			seen[path] = true
-			skillDirs = append(skillDirs, path)
+	ctx, cancel := context.WithTimeout(ctx, req.Timeout)
+	defer cancel()
+
+	var session copilotSession
+
+	if req.SessionID == "" {
+		// Create session with updated API
+		session, err = e.client.CreateSession(ctx, &copilot.SessionConfig{
+			Model:            modelID,
+			SkillDirectories: skillDirs,
+			WorkingDirectory: workspaceDir,
+		})
+
+		if err != nil {
+			return nil, fmt.Errorf("failed to create session: %w", err)
 		}
-	}
+	} else {
+		session, err = e.client.ResumeSessionWithOptions(ctx, req.SessionID, &copilot.ResumeSessionConfig{
+			Model: modelID,
+			// these are the directory for the skill itself.
+			SkillDirectories: skillDirs,
+			WorkingDirectory: workspaceDir,
+		})
 
-	// Log skill directories in verbose mode
-	for _, dir := range skillDirs {
-		slog.Debug("Adding skill directory", "path", dir)
-	}
-
-	// Create session with updated API
-	session, err := e.client.CreateSession(ctx, &copilot.SessionConfig{
-		Model: e.modelID,
-		// these are the directory for the skill itself.
-		SkillDirectories: skillDirs,
-	})
-
-	if err != nil {
-		return nil, fmt.Errorf("failed to create session: %w", err)
+		if err != nil {
+			return nil, fmt.Errorf("failed to resume session (%s): %w", req.SessionID, err)
+		}
 	}
 
 	eventsCollector := NewSessionEventsCollector()
@@ -196,79 +184,136 @@ func (e *CopilotEngine) Execute(ctx context.Context, req *ExecutionRequest) (*Ex
 	defer unsubscribe()
 
 	// Send prompt with updated API
-	_, err = session.Send(ctx, copilot.MessageOptions{
+	_, err = session.SendAndWait(ctx, copilot.MessageOptions{
 		Prompt: req.Message,
 	})
+
+	var errMsg string
+
 	if err != nil {
-		return nil, fmt.Errorf("failed to send prompt: %w", err)
-	}
-
-	// Wait for completion with timeout
-	timeoutCtx, cancel := context.WithTimeout(ctx, time.Duration(req.TimeoutSec)*time.Second)
-	defer cancel()
-
-	errorMsg := ""
-
-	select {
-	case <-eventsCollector.Done():
-		// Completed normally
-	case <-timeoutCtx.Done():
-		errorMsg = fmt.Sprintf("execution timed out after %ds", req.TimeoutSec)
+		// errors that are returned inline, as part of the conversation, also come back
+		// in the returned error. Rather than having one of those fun functions that returns
+		// both an error and a result, I'll just put the error message in the ExecutionResponse.
+		errMsg = err.Error()
 	}
 
 	duration := time.Since(start)
-
-	if errorMsg == "" {
-		errorMsg = eventsCollector.ErrorMessage()
-	}
 
 	// Build response
 	resp := &ExecutionResponse{
 		FinalOutput:      joinStrings(eventsCollector.OutputParts()),
 		Events:           eventsCollector.SessionEvents(),
-		ModelID:          e.modelID,
+		ModelID:          modelID,
 		SkillInvocations: eventsCollector.SkillInvocations,
 		DurationMs:       duration.Milliseconds(),
 		ToolCalls:        eventsCollector.ToolCalls(),
-		ErrorMsg:         errorMsg,
-		Success:          errorMsg == "",
-		WorkspaceDir:     e.workspace,
+		ErrorMsg:         errMsg,
+		Success:          err == nil,
+		WorkspaceDir:     workspaceDir,
 		SessionID:        session.SessionID(),
 	}
 
 	return resp, nil
 }
 
-// Shutdown cleans up resources
-func (e *CopilotEngine) Shutdown(ctx context.Context) error {
-	e.mu.Lock()
-	defer e.mu.Unlock()
+func (e *CopilotEngine) extractReqParams(req *ExecutionRequest) (modelID string, sourceDir string, err error) {
+	modelID = e.defaultModelID
 
-	if e.client != nil {
-		if err := e.client.Stop(); err != nil {
-			// Log but continue cleanup
-			fmt.Printf("warning: failed to stop client: %v\n", err)
-		}
-		e.client = nil
+	if req.ModelID != "" {
+		modelID = req.ModelID // override the default model for the engine
 	}
 
-	// Clean up all workspaces (current + old ones from between tasks)
-	allWorkspaces := append(e.oldWorkspaces, e.workspace)
-	for _, ws := range allWorkspaces {
-		if ws != "" {
-			os.RemoveAll(ws) //nolint:errcheck // best-effort cleanup
-		}
-	}
-	e.workspace = ""
-	e.oldWorkspaces = nil
+	sourceDir = req.SourceDir
 
-	return nil
+	if req.SourceDir == "" {
+		cwd, err := os.Getwd()
+
+		if err != nil {
+			return "", "", fmt.Errorf("failed to get current directory: %w", err)
+		}
+
+		sourceDir = cwd
+	}
+
+	if req.Timeout <= 0 {
+		return "", "", fmt.Errorf("positive Timeout is required")
+	}
+
+	return modelID, sourceDir, nil
 }
 
-// setupResources writes resource files to the workspace.
-// Delegates to the shared setupWorkspaceResources helper for consistency with MockEngine.
-func (e *CopilotEngine) setupResources(resources []ResourceFile) error {
-	return setupWorkspaceResources(e.workspace, resources)
+func (*CopilotEngine) getSkillDirs(cwd string, req *ExecutionRequest) []string {
+	skillDirs := []string{cwd}
+
+	seen := map[string]bool{
+		cwd: true,
+	}
+
+	// Add skill directories from request, avoiding duplicates
+	for _, path := range req.SkillPaths {
+		if !seen[path] {
+			seen[path] = true
+			skillDirs = append(skillDirs, path)
+		} else {
+			slog.Warn("Skill directory included more than once in request", "path", path)
+		}
+	}
+
+	// Log skill directories in verbose mode
+	for _, dir := range skillDirs {
+		slog.Debug("Adding skill directory", "path", dir)
+	}
+
+	return skillDirs
+}
+
+func (e *CopilotEngine) setupWorkspace(resources []ResourceFile) (string, error) {
+	workspaceDir, err := os.MkdirTemp("", "waza-*")
+
+	if err != nil {
+		return "", fmt.Errorf("failed to create temp workspace: %w", err)
+	}
+
+	e.workspacesMu.Lock()
+	e.workspaces = append(e.workspaces, workspaceDir)
+	e.workspacesMu.Unlock()
+
+	// Write resource files to workspace
+	if err := setupWorkspaceResources(workspaceDir, resources); err != nil {
+		return "", fmt.Errorf("failed to setup resources at workspace %s: %w", workspaceDir, err)
+	}
+
+	return workspaceDir, nil
+}
+
+// Shutdown cleans up resources
+func (e *CopilotEngine) Shutdown(ctx context.Context) error {
+	if err := e.client.Stop(); err != nil {
+		// Log but continue cleanup
+		slog.Info("failed to stop client", "error", err)
+	}
+
+	// remove the workspace folders - should be safe now that all the copilot sessions are shut down
+	// and the tests are complete.
+	workspaces := func() []string {
+		e.workspacesMu.Lock()
+		defer e.workspacesMu.Unlock()
+		workspaces := e.workspaces
+		e.workspaces = nil
+		return workspaces
+	}()
+
+	for _, ws := range workspaces {
+		if ws != "" {
+			if err := os.RemoveAll(ws); err != nil {
+				// errors here probably indicate some issue with our code continuing to lock files
+				// even after tests have completed...
+				slog.Warn("failed to cleanup stale workspace", "path", ws, "error", err)
+			}
+		}
+	}
+
+	return nil
 }
 
 func joinStrings(parts []string) string {

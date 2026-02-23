@@ -148,13 +148,13 @@ func TestSpyEngine_DelegatesExecute(t *testing.T) {
 
 func TestCopilotEngine_Shutdown_NoInit(t *testing.T) {
 	// Shutdown on an engine that was never initialized should be safe.
-	engine := NewCopilotEngineBuilder("test-model").Build()
+	engine := NewCopilotEngineBuilder("test-model", nil).Build()
 	err := engine.Shutdown(context.Background())
 	assert.NoError(t, err, "Shutdown on uninitialized CopilotEngine should not error")
 }
 
 func TestCopilotEngine_Shutdown_Idempotent(t *testing.T) {
-	engine := NewCopilotEngineBuilder("test-model").Build()
+	engine := NewCopilotEngineBuilder("test-model", nil).Build()
 
 	for i := 0; i < 3; i++ {
 		err := engine.Shutdown(context.Background())
@@ -163,26 +163,25 @@ func TestCopilotEngine_Shutdown_Idempotent(t *testing.T) {
 }
 
 func TestCopilotEngine_Shutdown_CleansWorkspace(t *testing.T) {
-	engine := NewCopilotEngineBuilder("test-model").Build()
+	engine := NewCopilotEngineBuilder("test-model", nil).Build()
 
 	// Simulate a workspace existing (without running the full SDK)
 	tmpDir := t.TempDir()
-	engine.mu.Lock()
-	engine.workspace = tmpDir
-	engine.mu.Unlock()
+	engine.workspacesMu.Lock()
+	engine.workspaces = append(engine.workspaces, tmpDir)
+	engine.workspacesMu.Unlock()
 
 	err := engine.Shutdown(context.Background())
 	require.NoError(t, err)
 
 	// After shutdown, workspace should be cleared
-	engine.mu.Lock()
-	ws := engine.workspace
-	engine.mu.Unlock()
-	assert.Empty(t, ws, "workspace should be cleared after Shutdown")
+	engine.workspacesMu.Lock()
+	defer engine.workspacesMu.Unlock()
+	require.Empty(t, engine.workspaces)
 }
 
 func TestCopilotEngine_Shutdown_WithCancelledContext(t *testing.T) {
-	engine := NewCopilotEngineBuilder("test-model").Build()
+	engine := NewCopilotEngineBuilder("test-model", nil).Build()
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel()
 

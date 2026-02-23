@@ -34,7 +34,7 @@ const (
 )
 
 var newChatEngine = func(modelID string) execution.AgentEngine {
-	return execution.NewCopilotEngineBuilder(modelID).Build()
+	return execution.NewCopilotEngineBuilder(modelID, nil).Build()
 }
 
 func newSuggestCmd() *cobra.Command {
@@ -562,8 +562,8 @@ func wrapText(text string, width int) string {
 
 func copilotReport(ctx context.Context, engine execution.AgentEngine, content string) (string, error) {
 	res, err := engine.Execute(ctx, &execution.ExecutionRequest{
-		Message:    suggestionPrompt + content,
-		TimeoutSec: 60,
+		Message: suggestionPrompt + content,
+		Timeout: 60 * time.Second,
 	})
 	if err != nil {
 		return "", err

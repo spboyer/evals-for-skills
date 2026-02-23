@@ -143,7 +143,7 @@ func TestBuildExecutionRequest_BasicFields(t *testing.T) {
 	assert.Equal(t, "test-001", req.TestID)
 	assert.Equal(t, "Hello world", req.Message)
 	assert.Equal(t, "my-skill", req.SkillName)
-	assert.Equal(t, 120, req.TimeoutSec)
+	assert.Equal(t, float64(120), req.Timeout.Seconds())
 	assert.Equal(t, "value", req.Context["key"])
 }
 
@@ -178,7 +178,7 @@ func TestBuildExecutionRequest_TimeoutOverride(t *testing.T) {
 	req := runner.buildExecutionRequest(tc)
 
 	// Verify timeout is overridden
-	assert.Equal(t, 300, req.TimeoutSec, "test case timeout should override spec timeout")
+	assert.Equal(t, float64(300), req.Timeout.Seconds(), "test case timeout should override spec timeout")
 }
 
 func TestValidateRequiredSkills_Integration(t *testing.T) {

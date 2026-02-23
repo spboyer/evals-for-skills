@@ -147,8 +147,8 @@ func TestCount_SpecificPath(t *testing.T) {
 	require.Equal(t, 1, result.TotalFiles)
 	require.Equal(t, 424, result.TotalTokens)
 
-	require.Contains(t, result.Files, "testdata/count/SKILL.md")
-	entry := result.Files["testdata/count/SKILL.md"]
+	require.Contains(t, result.Files, filepath.Join("testdata", "count", "SKILL.md"))
+	entry := result.Files[filepath.Join("testdata", "count", "SKILL.md")]
 	require.Equal(t, 424, entry.Tokens)
 	require.Equal(t, 1608, entry.Characters)
 	require.Equal(t, 83, entry.Lines)
@@ -225,7 +225,7 @@ func TestCount_AbsoluteFilePath(t *testing.T) {
 	require.NoError(t, json.Unmarshal(out.Bytes(), &result))
 
 	require.Equal(t, 1, result.TotalFiles)
-	require.Contains(t, result.Files, "testdata/count/SKILL.md")
+	require.Contains(t, result.Files, filepath.Join("testdata", "count", "SKILL.md"))
 
 	t.Run("multiple files", func(t *testing.T) {
 		a, err := filepath.Abs(filepath.Join("testdata", "count", "SKILL.md"))
@@ -242,8 +242,8 @@ func TestCount_AbsoluteFilePath(t *testing.T) {
 		require.NoError(t, json.Unmarshal(out.Bytes(), &result))
 
 		require.Equal(t, 2, result.TotalFiles)
-		require.Contains(t, result.Files, "testdata/count/SKILL.md")
-		require.Contains(t, result.Files, "testdata/count/references/one.md")
+		require.Contains(t, result.Files, filepath.Join("testdata", "count", "SKILL.md"))
+		require.Contains(t, result.Files, filepath.Join("testdata", "count", "references", "one.md"))
 	})
 }
 

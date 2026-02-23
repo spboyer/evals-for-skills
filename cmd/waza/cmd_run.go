@@ -488,7 +488,7 @@ func runSingleModel(_ *cobra.Command, spec *models.BenchmarkSpec, specPath strin
 	case "mock":
 		engine = execution.NewMockEngine(spec.Config.ModelID)
 	case "copilot-sdk":
-		engine = execution.NewCopilotEngineBuilder(spec.Config.ModelID).Build()
+		engine = execution.NewCopilotEngineBuilder(spec.Config.ModelID, nil).Build()
 	default:
 		return nil, fmt.Errorf("unknown engine type: %s", spec.Config.EngineType)
 	}

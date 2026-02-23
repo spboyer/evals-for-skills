@@ -3,6 +3,7 @@ package execution
 import (
 	"context"
 	"strings"
+	"time"
 
 	copilot "github.com/github/copilot-sdk/go"
 	"github.com/spboyer/waza/internal/models"
@@ -22,13 +23,19 @@ type AgentEngine interface {
 
 // ExecutionRequest represents a test execution request
 type ExecutionRequest struct {
-	TestID     string
-	Message    string
-	Context    map[string]any
-	Resources  []ResourceFile
-	SkillName  string
+	TestID    string
+	ModelID   string
+	Message   string
+	Context   map[string]any
+	Resources []ResourceFile
+
+	SessionID string
+	SkillName string
+
+	SourceDir  string   // used when looking for workspace items via relative path, like skills.
 	SkillPaths []string // Directories to search for skills
-	TimeoutSec int
+
+	Timeout time.Duration
 }
 
 // ResourceFile represents a file resource

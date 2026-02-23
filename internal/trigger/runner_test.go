@@ -157,9 +157,7 @@ func TestRunnerRunConfig(t *testing.T) {
 		t.Fatal(err)
 	}
 	require.NotNil(t, engine.lastReq, "expected a captured request")
-	if engine.lastReq.TimeoutSec != 120 {
-		t.Errorf("TimeoutSec = %d, want 120", engine.lastReq.TimeoutSec)
-	}
+	require.Equal(t, float64(120), engine.lastReq.Timeout.Seconds())
 	if len(engine.lastReq.SkillPaths) != 2 {
 		t.Errorf("SkillPaths = %v, want 2 entries", engine.lastReq.SkillPaths)
 	}

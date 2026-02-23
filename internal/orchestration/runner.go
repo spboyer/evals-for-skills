@@ -1075,7 +1075,7 @@ func (r *TestRunner) buildExecutionRequest(tc *models.TestCase) *execution.Execu
 		Resources:  resources,
 		SkillName:  spec.SkillName,
 		SkillPaths: resolvedSkillPaths,
-		TimeoutSec: timeout,
+		Timeout:    time.Duration(timeout) * time.Second,
 	}
 }
 

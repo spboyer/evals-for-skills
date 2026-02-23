@@ -7,6 +7,7 @@ import (
 	"os"
 	"slices"
 	"sync"
+	"time"
 
 	"github.com/spboyer/waza/internal/config"
 	"github.com/spboyer/waza/internal/execution"
@@ -144,6 +145,6 @@ func (r *Runner) testTrigger(ctx context.Context, prompt string) (*execution.Exe
 		Message:    prompt,
 		SkillName:  r.spec.Skill,
 		SkillPaths: utils.ResolvePaths(spec.Config.SkillPaths, r.cfg.SpecDir()),
-		TimeoutSec: timeout,
+		Timeout:    time.Duration(timeout) * time.Second,
 	})
 }

@@ -21,7 +21,7 @@ import (
 var (
 	// newDevEngine is a test hook for replacing the agent engine in tests
 	newDevEngine = func(modelID string) execution.AgentEngine {
-		return execution.NewCopilotEngineBuilder(modelID).Build()
+		return execution.NewCopilotEngineBuilder(modelID, nil).Build()
 	}
 	// startDevSpinner is a test hook for replacing the spinner in tests
 	startDevSpinner = spinner.Start
@@ -145,8 +145,8 @@ func getCopilotSuggestions(ctx context.Context, engine execution.AgentEngine, sk
 	}
 
 	res, err := engine.Execute(ctx, &execution.ExecutionRequest{
-		Message:    prompt.String(),
-		TimeoutSec: 120,
+		Message: prompt.String(),
+		Timeout: 120 * time.Second,
 	})
 	if err != nil {
 		return "", fmt.Errorf("getting Copilot suggestions: %w", err)
