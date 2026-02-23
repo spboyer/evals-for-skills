@@ -12,6 +12,7 @@ import (
 
 	"github.com/spboyer/waza/internal/cache"
 	"github.com/spboyer/waza/internal/config"
+	"github.com/spboyer/waza/internal/discovery"
 	"github.com/spboyer/waza/internal/execution"
 	"github.com/spboyer/waza/internal/models"
 	"github.com/spboyer/waza/internal/orchestration"
@@ -47,6 +48,8 @@ var (
 	noSummary      bool
 	judgeModel     string
 	reporters      []string
+	discoverFlag   bool
+	strictFlag     bool
 )
 
 // modelResult pairs a model identifier with its evaluation outcome.
@@ -96,6 +99,8 @@ You can also specify a skill name to run its eval:
 	cmd.Flags().BoolVar(&noSummary, "no-summary", false, "Skip writing combined summary.json for multi-skill runs")
 	cmd.Flags().StringVar(&judgeModel, "judge-model", "", "Model for prompt graders (overrides execution model for LLM-as-judge)")
 	cmd.Flags().StringArrayVar(&reporters, "reporter", nil, "Output reporters: json (default), junit:path.xml (can be repeated)")
+	cmd.Flags().BoolVar(&discoverFlag, "discover", false, "Walk directory tree to discover and run all skill evals")
+	cmd.Flags().BoolVar(&strictFlag, "strict", false, "With --discover, fail if any SKILL.md lacks an eval.yaml")
 
 	return cmd
 }
@@ -104,6 +109,11 @@ func runCommandE(cmd *cobra.Command, args []string) error {
 	// Validate mutual exclusion
 	if outputPath != "" && outputDir != "" {
 		return fmt.Errorf("--output and --output-dir are mutually exclusive")
+	}
+
+	// Handle --discover mode
+	if discoverFlag {
+		return runDiscoverMode(cmd, args)
 	}
 
 	// Resolve spec path: explicit arg or workspace detection
@@ -1154,4 +1164,93 @@ func writeOutputDir(dir string, results []skillRunResult) error {
 	}
 
 	return nil
+}
+
+// runDiscoverMode walks a directory tree, discovers skills with eval configs, and runs them.
+func runDiscoverMode(cmd *cobra.Command, args []string) error {
+	root := "."
+	if len(args) > 0 {
+		root = args[0]
+	}
+
+	skills, err := discovery.Discover(root)
+	if err != nil {
+		return fmt.Errorf("discovery failed: %w", err)
+	}
+
+	if len(skills) == 0 {
+		return fmt.Errorf("no skills found in %s", root)
+	}
+
+	// Print discovery summary
+	fmt.Printf("\n📂 Discovered %d skills in %s\n", len(skills), root)
+	withEval := discovery.FilterWithEval(skills)
+	withoutEval := discovery.FilterWithoutEval(skills)
+
+	for _, s := range withEval {
+		relEval, _ := filepath.Rel(s.Dir, s.EvalPath)
+		fmt.Printf("  ✓ %s (%s)\n", s.Name, relEval)
+	}
+	for _, s := range withoutEval {
+		fmt.Printf("  ✗ %s (no eval.yaml found)\n", s.Name)
+	}
+	fmt.Println()
+
+	// Strict mode: fail if any skill lacks an eval
+	if strictFlag && len(withoutEval) > 0 {
+		names := make([]string, len(withoutEval))
+		for i, s := range withoutEval {
+			names[i] = s.Name
+		}
+		return fmt.Errorf("--strict: %d skills lack eval.yaml: %s", len(withoutEval), strings.Join(names, ", "))
+	}
+
+	if len(withEval) == 0 {
+		return fmt.Errorf("no skills with eval.yaml found in %s", root)
+	}
+
+	// Run evaluations
+	fmt.Println("Running evaluations...")
+
+	var allSkillResults []skillRunResult
+	var lastErr error
+
+	for i, s := range withEval {
+		fmt.Printf("\n[%d/%d] %s\n", i+1, len(withEval), s.Name)
+
+		sp := skillSpecPath{specPath: s.EvalPath, skillName: s.Name}
+		result := skillRunResult{skillName: s.Name}
+
+		outcomes, runErr := runCommandForSpec(cmd, sp)
+		result.outcomes = outcomes
+		if runErr != nil {
+			var testErr *TestFailureError
+			if errors.As(runErr, &testErr) {
+				result.err = runErr
+				lastErr = runErr
+			} else {
+				return runErr
+			}
+		}
+		allSkillResults = append(allSkillResults, result)
+	}
+
+	// Print summary
+	passed := 0
+	failed := 0
+	for _, r := range allSkillResults {
+		if r.err != nil {
+			failed++
+		} else {
+			passed++
+		}
+	}
+
+	fmt.Println()
+	if len(allSkillResults) > 1 {
+		printSkillRunSummary(allSkillResults)
+	}
+	fmt.Printf("Results: %d skills evaluated, %d passed, %d failed\n", len(allSkillResults), passed, failed)
+
+	return lastErr
 }
