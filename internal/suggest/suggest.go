@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"strings"
@@ -22,6 +23,7 @@ const defaultTimeoutSec = 120
 type Options struct {
 	SkillPath  string
 	TimeoutSec int
+	GraderDocs fs.FS // embedded grader documentation (optional)
 }
 
 // GeneratedFile is a single generated artifact.
@@ -38,6 +40,12 @@ type Suggestion struct {
 }
 
 // Generate runs the suggestion flow end-to-end.
+// When opts.GraderDocs is set, uses a two-pass approach:
+//
+//	Pass 1: ask the LLM which grader types to use (lightweight)
+//	Pass 2: provide detailed docs for those graders and generate eval YAML
+//
+// When opts.GraderDocs is nil, falls back to a single-pass prompt.
 func Generate(ctx context.Context, engine execution.AgentEngine, opts Options) (*Suggestion, error) {
 	skillFile, err := resolveSkillFile(opts.SkillPath)
 	if err != nil {
@@ -49,15 +57,41 @@ func Generate(ctx context.Context, engine execution.AgentEngine, opts Options) (
 		return nil, err
 	}
 
-	prompt := BuildPrompt(sk, skillContent)
 	timeoutSec := opts.TimeoutSec
 	if timeoutSec <= 0 {
 		timeoutSec = defaultTimeoutSec
 	}
 
+	data := buildPromptData(sk, skillContent)
+
+	// Determine grader docs for the implementation prompt.
+	var graderDocs string
+	if opts.GraderDocs != nil {
+		// Pass 1: select grader types
+		selectionPrompt := renderSelectionPrompt(data)
+		resp, err := engine.Execute(ctx, &execution.ExecutionRequest{
+			Message: selectionPrompt,
+			TestID:  "waza-suggest-select",
+			Timeout: time.Duration(timeoutSec) * time.Second,
+		})
+		if err != nil {
+			return nil, fmt.Errorf("grader selection: %w", err)
+		}
+		if resp == nil {
+			return nil, errors.New("empty engine response during grader selection")
+		}
+
+		selected := parseGraderSelection(resp.FinalOutput)
+		if len(selected) > 0 {
+			graderDocs = LoadGraderDocs(opts.GraderDocs, selected)
+		}
+	}
+
+	// Pass 2 (or single pass): generate eval YAML
+	implPrompt := renderImplementationPrompt(data, graderDocs)
 	resp, err := engine.Execute(ctx, &execution.ExecutionRequest{
+		Message: implPrompt,
 		TestID:  "waza-suggest",
-		Message: prompt,
 		Timeout: time.Duration(timeoutSec) * time.Second,
 	})
 	if err != nil {
@@ -74,11 +108,10 @@ func Generate(ctx context.Context, engine execution.AgentEngine, opts Options) (
 	return suggestion, nil
 }
 
-// BuildPrompt builds the LLM prompt for eval suggestions.
-func BuildPrompt(sk *skill.Skill, skillContent string) string {
+// buildPromptData assembles the prompt data from a parsed skill.
+func buildPromptData(sk *skill.Skill, skillContent string) promptData {
 	useFor, doNotUseFor := scaffold.ParseTriggerPhrases(sk.Frontmatter.Description)
-
-	promptData := promptData{
+	return promptData{
 		SkillName:      orDefault(sk.Frontmatter.Name, filepath.Base(filepath.Dir(sk.Path))),
 		Description:    strings.TrimSpace(sk.Frontmatter.Description),
 		Triggers:       phrasesToText(useFor),
@@ -87,7 +120,62 @@ func BuildPrompt(sk *skill.Skill, skillContent string) string {
 		GraderTypes:    "- " + strings.Join(AvailableGraderTypes(), "\n- "),
 		SkillContent:   skillContent,
 	}
-	return renderPrompt(promptData)
+}
+
+// BuildPrompt builds a single-pass LLM prompt (no grader docs).
+// Retained for backward compatibility and tests.
+func BuildPrompt(sk *skill.Skill, skillContent string) string {
+	data := buildPromptData(sk, skillContent)
+	return renderPrompt(data)
+}
+
+// parseGraderSelection extracts grader type names from the pass-1 response.
+// Accepts either a YAML structure with a "graders" key or bare lines like "- code".
+func parseGraderSelection(raw string) []string {
+	normalized := strings.TrimSpace(extractYAML(raw))
+	if normalized == "" {
+		return nil
+	}
+
+	// Try structured YAML: { graders: [code, keyword, ...] }
+	var structured struct {
+		Graders []string `yaml:"graders"`
+	}
+	if err := yaml.Unmarshal([]byte(normalized), &structured); err == nil && len(structured.Graders) > 0 {
+		return filterValidGraderTypes(structured.Graders)
+	}
+
+	// Try bare YAML list: [code, keyword, ...]
+	var bare []string
+	if err := yaml.Unmarshal([]byte(normalized), &bare); err == nil && len(bare) > 0 {
+		return filterValidGraderTypes(bare)
+	}
+
+	// Try line-by-line: "- code\n- keyword\n..."
+	var result []string
+	for _, line := range strings.Split(normalized, "\n") {
+		t := strings.TrimSpace(strings.TrimPrefix(strings.TrimSpace(line), "-"))
+		if t != "" {
+			result = append(result, t)
+		}
+	}
+	return filterValidGraderTypes(result)
+}
+
+// filterValidGraderTypes keeps only recognized grader type names.
+func filterValidGraderTypes(types []string) []string {
+	valid := make(map[string]bool)
+	for _, t := range AvailableGraderTypes() {
+		valid[t] = true
+	}
+	var result []string
+	for _, t := range types {
+		t = strings.TrimSpace(t)
+		if valid[t] {
+			result = append(result, t)
+		}
+	}
+	return result
 }
 
 // AvailableGraderTypes returns supported grader kinds.
@@ -249,6 +337,14 @@ func validateEvalYAML(raw string) error {
 	}
 	if err := spec.Validate(); err != nil {
 		return fmt.Errorf("invalid eval_yaml: %w", err)
+	}
+	for i, g := range spec.Graders {
+		if g.Identifier == "" {
+			return fmt.Errorf("invalid eval_yaml: grader[%d] is missing required 'name' field", i)
+		}
+		if g.Kind == "" {
+			return fmt.Errorf("invalid eval_yaml: grader[%d] (%s) is missing required 'type' field", i, g.Identifier)
+		}
 	}
 	return nil
 }

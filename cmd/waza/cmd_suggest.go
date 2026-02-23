@@ -9,6 +9,7 @@ import (
 	"strings"
 	"time"
 
+	waza "github.com/spboyer/waza"
 	"github.com/spboyer/waza/internal/execution"
 	"github.com/spboyer/waza/internal/scaffold"
 	suggestpkg "github.com/spboyer/waza/internal/suggest"
@@ -38,11 +39,12 @@ func newSuggestCommand() *cobra.Command {
 
 	cmd := &cobra.Command{
 		Use:   "suggest <skill-path>",
-		Short: "Suggest eval files for a skill",
+		Short: "Suggest eval files for a skill (experimental)",
 		Long: `Analyze a SKILL.md with an LLM and generate suggested eval artifacts.
 
-By default, suggestions are printed to stdout (--dry-run).
-Use --apply to write suggested eval.yaml, tasks, and fixtures to disk.`,
+This command is experimental. Because an LLM generates suggestions, they should be
+reviewed by a human before applying. By default, suggestions are printed to stdout
+(--dry-run). Use --apply to write suggested eval.yaml, tasks, and fixtures to disk.`,
 		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return runSuggestCommand(cmd, args[0], flags)
@@ -82,7 +84,10 @@ func runSuggestCommand(cmd *cobra.Command, skillPath string, flags *suggestFlags
 		_ = engine.Shutdown(shutdownCtx)
 	}()
 
-	suggestion, err := suggestpkg.Generate(cmd.Context(), engine, suggestpkg.Options{SkillPath: skillPath})
+	suggestion, err := suggestpkg.Generate(cmd.Context(), engine, suggestpkg.Options{
+		SkillPath:  skillPath,
+		GraderDocs: waza.GraderDocsFS,
+	})
 	if err != nil {
 		return err
 	}

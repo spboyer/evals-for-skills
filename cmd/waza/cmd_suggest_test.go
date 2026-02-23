@@ -12,8 +12,9 @@ import (
 )
 
 type suggestTestEngine struct {
-	output string
-	err    error
+	outputs []string // sequential outputs for each Execute call
+	err     error
+	callIdx int
 }
 
 func (e *suggestTestEngine) Initialize(context.Context) error { return nil }
@@ -22,7 +23,13 @@ func (e *suggestTestEngine) Execute(_ context.Context, _ *execution.ExecutionReq
 	if e.err != nil {
 		return nil, e.err
 	}
-	return &execution.ExecutionResponse{FinalOutput: e.output, Success: true}, nil
+	idx := e.callIdx
+	e.callIdx++
+	if idx < len(e.outputs) {
+		return &execution.ExecutionResponse{FinalOutput: e.outputs[idx], Success: true}, nil
+	}
+	// fallback to last output if more calls than outputs
+	return &execution.ExecutionResponse{FinalOutput: e.outputs[len(e.outputs)-1], Success: true}, nil
 }
 
 func (e *suggestTestEngine) Shutdown(context.Context) error { return nil }
@@ -78,8 +85,12 @@ tasks:
         prompt: "hello"
 `
 
+	selectionOutput := "graders:\n  - code\n"
+
 	orig := newSuggestEngine
-	newSuggestEngine = func(string) execution.AgentEngine { return &suggestTestEngine{output: engineOutput} }
+	newSuggestEngine = func(string) execution.AgentEngine {
+		return &suggestTestEngine{outputs: []string{selectionOutput, engineOutput}}
+	}
 	t.Cleanup(func() { newSuggestEngine = orig })
 
 	cmd := newSuggestCommand()
@@ -132,8 +143,12 @@ fixtures:
       fixture
 `
 
+	selectionOutput := "graders:\n  - code\n"
+
 	orig := newSuggestEngine
-	newSuggestEngine = func(string) execution.AgentEngine { return &suggestTestEngine{output: engineOutput} }
+	newSuggestEngine = func(string) execution.AgentEngine {
+		return &suggestTestEngine{outputs: []string{selectionOutput, engineOutput}}
+	}
 	t.Cleanup(func() { newSuggestEngine = orig })
 
 	cmd := newSuggestCommand()
