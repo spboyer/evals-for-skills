@@ -18,6 +18,7 @@ var graderSummary = map[string]string{
 	"behavior":         "Behavior constraints: validate tool call counts, token usage, required/forbidden tools",
 	"action_sequence":  "Action sequence: validate tool call sequence matches expected pattern (exact/in_order/any_order)",
 	"skill_invocation": "Skill invocation: verify dependent skills were invoked in correct sequence",
+	"tool_constraint":  "Tool constraints: validate tool usage patterns, turn/token limits",
 	"diff":             "File diff: compare workspace files against expected snapshots or line fragments",
 }
 
