@@ -3,6 +3,7 @@ package execution
 import (
 	"os"
 	"path/filepath"
+	"runtime"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -31,7 +32,11 @@ func TestSetupWorkspaceResources_WritesFiles(t *testing.T) {
 }
 
 func TestSetupWorkspaceResources_RejectsAbsolutePath(t *testing.T) {
-	err := setupWorkspaceResources(t.TempDir(), []ResourceFile{{Path: "/etc/passwd", Content: "x"}})
+	absPath := "/etc/passwd"
+	if runtime.GOOS == "windows" {
+		absPath = `C:\etc\passwd`
+	}
+	err := setupWorkspaceResources(t.TempDir(), []ResourceFile{{Path: absPath, Content: "x"}})
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "must be relative")
 }

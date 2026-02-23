@@ -4,6 +4,7 @@ import (
 	"context"
 	"os"
 	"path/filepath"
+	"runtime"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -63,10 +64,15 @@ func TestMockEngine_Execute_ReplacesWorkspace(t *testing.T) {
 func TestMockEngine_Execute_SetupResourcesError(t *testing.T) {
 	engine := NewMockEngine("test-model")
 
+	absPath := "/absolute/path.txt"
+	if runtime.GOOS == "windows" {
+		absPath = `C:\absolute\path.txt`
+	}
+
 	resp, err := engine.Execute(context.Background(), &ExecutionRequest{
 		Message: "hello",
 		Resources: []ResourceFile{{
-			Path:    "/absolute/path.txt",
+			Path:    absPath,
 			Content: "x",
 		}},
 	})
