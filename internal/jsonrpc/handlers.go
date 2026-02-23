@@ -198,6 +198,17 @@ func (h *HandlerContext) handleEvalValidate(_ context.Context, params json.RawMe
 		return &EvalValidateResult{Valid: false, Errors: errs}, nil
 	}
 
+	// Deep schema validation: re-parse YAML into generic form → JSON → validate
+	var rawEval any
+	if err := yaml.Unmarshal(data, &rawEval); err == nil {
+		if jsonBytes, err := json.Marshal(rawEval); err == nil {
+			var instance any
+			if err := json.Unmarshal(jsonBytes, &instance); err == nil {
+				errs = append(errs, validateEvalSchema(instance)...)
+			}
+		}
+	}
+
 	if verr := spec.Validate(); verr != nil {
 		errs = append(errs, verr.Error())
 	}
@@ -210,10 +221,61 @@ func (h *HandlerContext) handleEvalValidate(_ context.Context, params json.RawMe
 		errs = append(errs, "executor is required")
 	}
 
+	// Validate referenced task files
+	evalDir := filepath.Dir(p.Path)
+	for _, pattern := range spec.Tasks {
+		fullPattern := filepath.Join(evalDir, pattern)
+		matches, globErr := filepath.Glob(fullPattern)
+		if globErr != nil {
+			errs = append(errs, fmt.Sprintf("task glob error: %v", globErr))
+			continue
+		}
+		for _, taskPath := range matches {
+			taskErrs := validateTaskFile(taskPath, evalDir)
+			errs = append(errs, taskErrs...)
+		}
+	}
+
 	return &EvalValidateResult{
 		Valid:  len(errs) == 0,
 		Errors: errs,
 	}, nil
+}
+
+// validateTaskFile loads a task YAML, converts to JSON, and validates against
+// the task schema. Returns errors prefixed with the relative task filename.
+func validateTaskFile(taskPath, evalDir string) []string {
+	relPath, err := filepath.Rel(evalDir, taskPath)
+	if err != nil {
+		relPath = filepath.Base(taskPath)
+	}
+
+	data, err := os.ReadFile(taskPath)
+	if err != nil {
+		return []string{fmt.Sprintf("%s: read error: %v", relPath, err)}
+	}
+
+	var rawTask any
+	if err := yaml.Unmarshal(data, &rawTask); err != nil {
+		return []string{fmt.Sprintf("%s: parse error: %v", relPath, err)}
+	}
+
+	jsonBytes, err := json.Marshal(rawTask)
+	if err != nil {
+		return []string{fmt.Sprintf("%s: json convert error: %v", relPath, err)}
+	}
+
+	var instance any
+	if err := json.Unmarshal(jsonBytes, &instance); err != nil {
+		return []string{fmt.Sprintf("%s: json parse error: %v", relPath, err)}
+	}
+
+	schemaErrs := validateTaskSchema(instance)
+	var result []string
+	for _, e := range schemaErrs {
+		result = append(result, fmt.Sprintf("%s: %s", relPath, e))
+	}
+	return result
 }
 
 // --- eval.run ---

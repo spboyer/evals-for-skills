@@ -263,3 +263,140 @@ func TestGenerateNextSteps(t *testing.T) {
 		assert.Contains(t, strings.Join(steps, " "), "Reduce SKILL.md by 100 tokens")
 	})
 }
+
+func TestCheckCommandWithValidEvalSchema(t *testing.T) {
+	tmpDir := t.TempDir()
+
+	// Create SKILL.md
+	skillContent := `---
+name: schema-test
+description: A test skill for schema validation.
+---
+
+# Schema Test Skill
+
+Body content.
+`
+	require.NoError(t, os.WriteFile(filepath.Join(tmpDir, "SKILL.md"), []byte(skillContent), 0644))
+
+	// Create valid eval.yaml
+	evalContent := `name: test-eval
+skill: schema-test
+version: "1.0"
+config:
+  trials_per_task: 1
+  timeout_seconds: 60
+  executor: mock
+  model: gpt-4o
+metrics:
+  - name: accuracy
+    weight: 1.0
+    threshold: 0.8
+tasks:
+  - "tasks/*.yaml"
+`
+	require.NoError(t, os.WriteFile(filepath.Join(tmpDir, "eval.yaml"), []byte(evalContent), 0644))
+
+	// Create valid task
+	tasksDir := filepath.Join(tmpDir, "tasks")
+	require.NoError(t, os.MkdirAll(tasksDir, 0755))
+	taskContent := `id: task-1
+name: Basic task
+inputs:
+  prompt: "Test prompt"
+`
+	require.NoError(t, os.WriteFile(filepath.Join(tasksDir, "basic.yaml"), []byte(taskContent), 0644))
+
+	cmd := newCheckCommand()
+	var output bytes.Buffer
+	cmd.SetOut(&output)
+	cmd.SetErr(&output)
+	cmd.SetArgs([]string{tmpDir})
+
+	err := cmd.Execute()
+	assert.NoError(t, err)
+
+	result := output.String()
+	assert.Contains(t, result, "eval.yaml schema valid")
+	assert.Contains(t, result, "1 task file(s) validated")
+	assert.NotContains(t, result, "Eval Schema:")
+}
+
+func TestCheckCommandWithInvalidEvalSchema(t *testing.T) {
+	tmpDir := t.TempDir()
+
+	// Create SKILL.md
+	skillContent := `---
+name: schema-test
+description: A test skill for schema validation.
+---
+
+# Schema Test Skill
+
+Body content.
+`
+	require.NoError(t, os.WriteFile(filepath.Join(tmpDir, "SKILL.md"), []byte(skillContent), 0644))
+
+	// Create invalid eval.yaml (bad executor)
+	evalContent := `name: test-eval
+skill: schema-test
+version: "1.0"
+config:
+  trials_per_task: 1
+  timeout_seconds: 60
+  executor: invalid-engine
+  model: gpt-4o
+metrics:
+  - name: accuracy
+    weight: 1.0
+    threshold: 0.8
+tasks:
+  - "tasks/*.yaml"
+`
+	require.NoError(t, os.WriteFile(filepath.Join(tmpDir, "eval.yaml"), []byte(evalContent), 0644))
+
+	cmd := newCheckCommand()
+	var output bytes.Buffer
+	cmd.SetOut(&output)
+	cmd.SetErr(&output)
+	cmd.SetArgs([]string{tmpDir})
+
+	err := cmd.Execute()
+	assert.NoError(t, err)
+
+	result := output.String()
+	assert.Contains(t, result, "Eval Schema:")
+	assert.Contains(t, result, "executor")
+	assert.Contains(t, result, "Fix")
+	assert.Contains(t, result, "schema error")
+}
+
+func TestCheckCommandNoEvalSkipsSchemaValidation(t *testing.T) {
+	tmpDir := t.TempDir()
+
+	// Create SKILL.md with no eval.yaml
+	skillContent := `---
+name: no-eval-test
+description: A test skill without eval.
+---
+
+# No Eval Skill
+
+Body content.
+`
+	require.NoError(t, os.WriteFile(filepath.Join(tmpDir, "SKILL.md"), []byte(skillContent), 0644))
+
+	cmd := newCheckCommand()
+	var output bytes.Buffer
+	cmd.SetOut(&output)
+	cmd.SetErr(&output)
+	cmd.SetArgs([]string{tmpDir})
+
+	err := cmd.Execute()
+	assert.NoError(t, err)
+
+	result := output.String()
+	assert.NotContains(t, result, "Schema Validation")
+	assert.NotContains(t, result, "Eval Schema")
+	assert.NotContains(t, result, "Task Schema")
+}

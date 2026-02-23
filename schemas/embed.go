@@ -1,0 +1,9 @@
+package schemas
+
+import _ "embed"
+
+//go:embed eval.schema.json
+var EvalSchemaJSON string
+
+//go:embed task.schema.json
+var TaskSchemaJSON string

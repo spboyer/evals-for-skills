@@ -307,7 +307,7 @@ func initCommandE(cmd *cobra.Command, args []string, noSkill bool) error {
 
 	wazaConfigContent := ""
 	if needConfigPrompt {
-		wazaConfigContent = fmt.Sprintf(`# yaml-language-server: $schema=https://raw.githubusercontent.com/spboyer/waza/main/schemas/waza-config.schema.json
+		wazaConfigContent = fmt.Sprintf(`# yaml-language-server: $schema=https://raw.githubusercontent.com/spboyer/waza/main/schemas/config.schema.json
 # Waza project configuration
 # These defaults are used by 'waza new' when generating eval.yaml files
 # and by 'waza run' as fallback values when not specified in eval.yaml.

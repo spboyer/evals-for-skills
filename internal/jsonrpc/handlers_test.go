@@ -118,11 +118,17 @@ tasks:
 func TestHandler_EvalValidate_Valid(t *testing.T) {
 	dir := t.TempDir()
 	evalContent := `name: valid-eval
+skill: test-skill
+version: "1.0"
 config:
   trials_per_task: 1
   timeout_seconds: 30
   executor: mock
   model: test
+metrics:
+  - name: accuracy
+    weight: 1.0
+    threshold: 0.8
 tasks:
   - "tasks/*.yaml"
 `
@@ -137,7 +143,7 @@ tasks:
 	require.NoError(t, err)
 	var result EvalValidateResult
 	require.NoError(t, json.Unmarshal(data, &result))
-	assert.True(t, result.Valid)
+	assert.True(t, result.Valid, "expected valid but got errors: %v", result.Errors)
 	assert.Empty(t, result.Errors)
 }
 
@@ -320,4 +326,282 @@ func TestAllMethodsRegistered(t *testing.T) {
 	for _, method := range expected {
 		assert.NotNil(t, registry.Lookup(method), "method %q should be registered", method)
 	}
+}
+
+// --- Schema validation tests ---
+
+func TestHandler_EvalValidate_Schema_InvalidGraderType(t *testing.T) {
+	dir := t.TempDir()
+	evalContent := `name: grader-type-eval
+skill: test-skill
+version: "1.0"
+config:
+  trials_per_task: 1
+  timeout_seconds: 30
+  executor: mock
+  model: test
+metrics:
+  - name: accuracy
+    weight: 1.0
+    threshold: 0.8
+graders:
+  - type: bogus_grader
+    name: bad-grader
+tasks:
+  - "tasks/*.yaml"
+`
+	evalPath := filepath.Join(dir, "eval.yaml")
+	require.NoError(t, os.WriteFile(evalPath, []byte(evalContent), 0644))
+
+	server := newTestServer()
+	resp := rpcCall(t, server, "eval.validate", map[string]string{"path": evalPath})
+	assert.Nil(t, resp.Error)
+
+	data, err := json.Marshal(resp.Result)
+	require.NoError(t, err)
+	var result EvalValidateResult
+	require.NoError(t, json.Unmarshal(data, &result))
+	assert.False(t, result.Valid, "expected invalid for bogus grader type")
+
+	found := false
+	for _, e := range result.Errors {
+		if strings.Contains(e, "schema:") && strings.Contains(e, "graders") {
+			found = true
+			break
+		}
+	}
+	assert.True(t, found, "expected schema error mentioning graders, got: %v", result.Errors)
+}
+
+func TestHandler_EvalValidate_Schema_MissingRequiredName(t *testing.T) {
+	dir := t.TempDir()
+	// Missing "name" which is required by the schema
+	evalContent := `skill: test-skill
+version: "1.0"
+config:
+  trials_per_task: 1
+  timeout_seconds: 30
+  executor: mock
+  model: test
+metrics:
+  - name: accuracy
+    weight: 1.0
+    threshold: 0.8
+tasks:
+  - "tasks/*.yaml"
+`
+	evalPath := filepath.Join(dir, "eval.yaml")
+	require.NoError(t, os.WriteFile(evalPath, []byte(evalContent), 0644))
+
+	server := newTestServer()
+	resp := rpcCall(t, server, "eval.validate", map[string]string{"path": evalPath})
+	assert.Nil(t, resp.Error)
+
+	data, err := json.Marshal(resp.Result)
+	require.NoError(t, err)
+	var result EvalValidateResult
+	require.NoError(t, json.Unmarshal(data, &result))
+	assert.False(t, result.Valid, "expected invalid for missing name")
+
+	found := false
+	for _, e := range result.Errors {
+		if strings.Contains(e, "name") {
+			found = true
+			break
+		}
+	}
+	assert.True(t, found, "expected error about missing 'name', got: %v", result.Errors)
+}
+
+func TestHandler_EvalValidate_Schema_ActionSequenceMissingConfig(t *testing.T) {
+	dir := t.TempDir()
+	// action_sequence grader requires config with expected_actions
+	evalContent := `name: action-seq-eval
+skill: test-skill
+version: "1.0"
+config:
+  trials_per_task: 1
+  timeout_seconds: 30
+  executor: mock
+  model: test
+metrics:
+  - name: accuracy
+    weight: 1.0
+    threshold: 0.8
+graders:
+  - type: action_sequence
+    name: seq-check
+tasks:
+  - "tasks/*.yaml"
+`
+	evalPath := filepath.Join(dir, "eval.yaml")
+	require.NoError(t, os.WriteFile(evalPath, []byte(evalContent), 0644))
+
+	server := newTestServer()
+	resp := rpcCall(t, server, "eval.validate", map[string]string{"path": evalPath})
+	assert.Nil(t, resp.Error)
+
+	data, err := json.Marshal(resp.Result)
+	require.NoError(t, err)
+	var result EvalValidateResult
+	require.NoError(t, json.Unmarshal(data, &result))
+	assert.False(t, result.Valid, "expected invalid for action_sequence without config")
+
+	found := false
+	for _, e := range result.Errors {
+		if strings.Contains(e, "schema:") && strings.Contains(e, "config") {
+			found = true
+			break
+		}
+	}
+	assert.True(t, found, "expected schema error about missing config, got: %v", result.Errors)
+}
+
+// --- Task validation tests ---
+
+func TestHandler_EvalValidate_WithValidTasks(t *testing.T) {
+	dir := t.TempDir()
+
+	evalContent := `name: valid-eval
+skill: test-skill
+version: "1.0"
+config:
+  trials_per_task: 1
+  timeout_seconds: 30
+  executor: mock
+  model: test
+metrics:
+  - name: accuracy
+    weight: 1.0
+    threshold: 0.8
+tasks:
+  - "tasks/*.yaml"
+`
+	evalPath := filepath.Join(dir, "eval.yaml")
+	require.NoError(t, os.WriteFile(evalPath, []byte(evalContent), 0644))
+
+	tasksDir := filepath.Join(dir, "tasks")
+	require.NoError(t, os.MkdirAll(tasksDir, 0755))
+
+	taskContent := `id: task-1
+name: Basic Task
+inputs:
+  prompt: "Explain hello world"
+`
+	require.NoError(t, os.WriteFile(filepath.Join(tasksDir, "basic.yaml"), []byte(taskContent), 0644))
+
+	server := newTestServer()
+	resp := rpcCall(t, server, "eval.validate", map[string]string{"path": evalPath})
+	assert.Nil(t, resp.Error)
+
+	data, err := json.Marshal(resp.Result)
+	require.NoError(t, err)
+	var result EvalValidateResult
+	require.NoError(t, json.Unmarshal(data, &result))
+	assert.True(t, result.Valid, "expected valid but got errors: %v", result.Errors)
+	assert.Empty(t, result.Errors)
+}
+
+func TestHandler_EvalValidate_WithInvalidTask(t *testing.T) {
+	dir := t.TempDir()
+
+	evalContent := `name: invalid-task-eval
+skill: test-skill
+version: "1.0"
+config:
+  trials_per_task: 1
+  timeout_seconds: 30
+  executor: mock
+  model: test
+metrics:
+  - name: accuracy
+    weight: 1.0
+    threshold: 0.8
+tasks:
+  - "tasks/*.yaml"
+`
+	evalPath := filepath.Join(dir, "eval.yaml")
+	require.NoError(t, os.WriteFile(evalPath, []byte(evalContent), 0644))
+
+	tasksDir := filepath.Join(dir, "tasks")
+	require.NoError(t, os.MkdirAll(tasksDir, 0755))
+
+	// Missing required "id" field
+	taskContent := `name: Bad Task
+inputs:
+  prompt: "Do something"
+`
+	require.NoError(t, os.WriteFile(filepath.Join(tasksDir, "bad.yaml"), []byte(taskContent), 0644))
+
+	server := newTestServer()
+	resp := rpcCall(t, server, "eval.validate", map[string]string{"path": evalPath})
+	assert.Nil(t, resp.Error)
+
+	data, err := json.Marshal(resp.Result)
+	require.NoError(t, err)
+	var result EvalValidateResult
+	require.NoError(t, json.Unmarshal(data, &result))
+	assert.False(t, result.Valid, "expected invalid for task missing id")
+
+	found := false
+	for _, e := range result.Errors {
+		if strings.Contains(e, "bad.yaml") && strings.Contains(e, "id") {
+			found = true
+			break
+		}
+	}
+	assert.True(t, found, "expected task error about missing 'id', got: %v", result.Errors)
+}
+
+func TestHandler_EvalValidate_TaskMissingPrompt(t *testing.T) {
+	dir := t.TempDir()
+
+	evalContent := `name: missing-prompt-eval
+skill: test-skill
+version: "1.0"
+config:
+  trials_per_task: 1
+  timeout_seconds: 30
+  executor: mock
+  model: test
+metrics:
+  - name: accuracy
+    weight: 1.0
+    threshold: 0.8
+tasks:
+  - "tasks/*.yaml"
+`
+	evalPath := filepath.Join(dir, "eval.yaml")
+	require.NoError(t, os.WriteFile(evalPath, []byte(evalContent), 0644))
+
+	tasksDir := filepath.Join(dir, "tasks")
+	require.NoError(t, os.MkdirAll(tasksDir, 0755))
+
+	// Missing required "inputs.prompt"
+	taskContent := `id: task-no-prompt
+name: No Prompt Task
+inputs:
+  context:
+    key: value
+`
+	require.NoError(t, os.WriteFile(filepath.Join(tasksDir, "noprompt.yaml"), []byte(taskContent), 0644))
+
+	server := newTestServer()
+	resp := rpcCall(t, server, "eval.validate", map[string]string{"path": evalPath})
+	assert.Nil(t, resp.Error)
+
+	data, err := json.Marshal(resp.Result)
+	require.NoError(t, err)
+	var result EvalValidateResult
+	require.NoError(t, json.Unmarshal(data, &result))
+	assert.False(t, result.Valid, "expected invalid for task missing prompt")
+
+	found := false
+	for _, e := range result.Errors {
+		if strings.Contains(e, "noprompt.yaml") && strings.Contains(e, "prompt") {
+			found = true
+			break
+		}
+	}
+	assert.True(t, found, "expected task error about missing 'prompt', got: %v", result.Errors)
 }

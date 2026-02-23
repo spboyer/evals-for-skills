@@ -10,8 +10,10 @@ import (
 	"github.com/spboyer/waza/cmd/waza/dev"
 	"github.com/spboyer/waza/internal/skill"
 	internalTokens "github.com/spboyer/waza/internal/tokens"
+	"github.com/spboyer/waza/internal/validation"
 	"github.com/spboyer/waza/internal/workspace"
 	"github.com/spf13/cobra"
+	"gopkg.in/yaml.v3"
 )
 
 func newCheckCommand() *cobra.Command {
@@ -53,6 +55,9 @@ type readinessReport struct {
 	hasEval         bool
 	skillName       string
 	skillPath       string
+	evalPath        string              // resolved path to eval.yaml (empty if not found)
+	evalSchemaErrs  []string            // eval.yaml schema validation errors
+	taskSchemaErrs  map[string][]string // per-task-file schema errors (key = relative path)
 }
 
 func runCheck(cmd *cobra.Command, args []string) error {
@@ -115,8 +120,8 @@ func printCheckSummaryTable(w interface{ Write([]byte) (int, error) }, reports [
 	fmt.Fprintf(w, "═══════════════════════════════════════════════\n")                            //nolint:errcheck
 	fmt.Fprintf(w, " CHECK SUMMARY\n")                                                             //nolint:errcheck
 	fmt.Fprintf(w, "═══════════════════════════════════════════════\n\n")                          //nolint:errcheck
-	fmt.Fprintf(w, "%-25s %-15s %-12s %-8s %s\n", "Skill", "Compliance", "Tokens", "Spec", "Eval") //nolint:errcheck
-	fmt.Fprintf(w, "%s\n", strings.Repeat("─", 68))                                                //nolint:errcheck
+	fmt.Fprintf(w, "%-25s %-15s %-12s %-8s %-8s %s\n", "Skill", "Compliance", "Tokens", "Spec", "Schema", "Eval") //nolint:errcheck
+	fmt.Fprintf(w, "%s\n", strings.Repeat("─", 76))                                                               //nolint:errcheck
 
 	for _, r := range reports {
 		name := r.skillName
@@ -131,12 +136,18 @@ func printCheckSummaryTable(w interface{ Write([]byte) (int, error) }, reports [
 		if r.specResult != nil && !r.specResult.Passed() {
 			specStatus = "❌"
 		}
+		schemaStatus := "✅"
+		if len(r.evalSchemaErrs) > 0 || len(r.taskSchemaErrs) > 0 {
+			schemaStatus = "❌"
+		} else if !r.hasEval {
+			schemaStatus = "—"
+		}
 		evalStatus := "✅"
 		if !r.hasEval {
 			evalStatus = "⚠️"
 		}
-		fmt.Fprintf(w, "%-25s %-15s %s %d/%-6d %s       %s\n", //nolint:errcheck
-			name, r.complianceLevel, tokenStatus, r.tokenCount, r.tokenLimit, specStatus, evalStatus)
+		fmt.Fprintf(w, "%-25s %-15s %s %d/%-6d %s       %s      %s\n", //nolint:errcheck
+			name, r.complianceLevel, tokenStatus, r.tokenCount, r.tokenLimit, specStatus, schemaStatus, evalStatus)
 	}
 	fmt.Fprintf(w, "\n") //nolint:errcheck
 }
@@ -196,6 +207,8 @@ func checkReadiness(skillDir string) (*readinessReport, error) {
 		if ctx, ctxErr := workspace.DetectContext(wd); ctxErr == nil && ctx.Type != workspace.ContextNone {
 			if evalPath, findErr := workspace.FindEval(ctx, sk.Frontmatter.Name); findErr == nil && evalPath != "" {
 				report.hasEval = true
+				report.evalPath = evalPath
+				report.evalSchemaErrs, report.taskSchemaErrs, _ = validation.ValidateEvalFile(evalPath)
 				return report, nil
 			}
 		}
@@ -203,6 +216,8 @@ func checkReadiness(skillDir string) (*readinessReport, error) {
 	evalPath := filepath.Join(skillDir, "eval.yaml")
 	if _, err := os.Stat(evalPath); err == nil {
 		report.hasEval = true
+		report.evalPath = evalPath
+		report.evalSchemaErrs, report.taskSchemaErrs, _ = validation.ValidateEvalFile(evalPath)
 	}
 
 	return report, nil
@@ -307,6 +322,40 @@ func displayReadinessReport(out interface{ Write([]byte) (int, error) }, report 
 	}
 	fmt.Fprintf(w, "\n")
 
+	// 4. Schema Validation (only when eval exists)
+	if report.hasEval {
+		hasEvalSchemaErrs := len(report.evalSchemaErrs) > 0
+		hasTaskSchemaErrs := len(report.taskSchemaErrs) > 0
+
+		if hasEvalSchemaErrs {
+			fmt.Fprintf(w, "📐 Eval Schema: %d error(s)\n", len(report.evalSchemaErrs))
+			for _, e := range report.evalSchemaErrs {
+				fmt.Fprintf(w, "   ❌ %s\n", e)
+			}
+			fmt.Fprintf(w, "\n")
+		}
+		if hasTaskSchemaErrs {
+			fmt.Fprintf(w, "📐 Task Schema: %d file(s) with errors\n", len(report.taskSchemaErrs))
+			for file, errs := range report.taskSchemaErrs {
+				fmt.Fprintf(w, "   %s:\n", file)
+				for _, e := range errs {
+					fmt.Fprintf(w, "     ❌ %s\n", e)
+				}
+			}
+			fmt.Fprintf(w, "\n")
+		}
+		if !hasEvalSchemaErrs && !hasTaskSchemaErrs {
+			fmt.Fprintf(w, "📐 Schema Validation: Passed\n")
+			fmt.Fprintf(w, "   ✅ eval.yaml schema valid\n")
+			// Count validated task files
+			taskCount := countValidatedTasks(report)
+			if taskCount > 0 {
+				fmt.Fprintf(w, "   ✅ %d task file(s) validated\n", taskCount)
+			}
+			fmt.Fprintf(w, "\n")
+		}
+	}
+
 	// Overall Readiness Assessment
 	fmt.Fprintf(w, "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n")
 	fmt.Fprintf(w, "📈 Overall Readiness\n")
@@ -314,7 +363,9 @@ func displayReadinessReport(out interface{ Write([]byte) (int, error) }, report 
 
 	isReady := report.complianceLevel.AtLeast(dev.AdherenceMediumHigh) &&
 		!report.tokenExceeded &&
-		(report.specResult == nil || report.specResult.Passed())
+		(report.specResult == nil || report.specResult.Passed()) &&
+		len(report.evalSchemaErrs) == 0 &&
+		len(report.taskSchemaErrs) == 0
 
 	if isReady {
 		fmt.Fprintf(w, "✅ Your skill is ready for submission!\n\n")
@@ -384,5 +435,44 @@ func generateNextSteps(report *readinessReport) []string {
 		steps = append(steps, "Create an evaluation suite with 'waza init' or 'waza generate SKILL.md'")
 	}
 
+	// Schema errors (after eval check)
+	if len(report.evalSchemaErrs) > 0 {
+		steps = append(steps, fmt.Sprintf("Fix %d schema error(s) in eval.yaml", len(report.evalSchemaErrs)))
+	}
+	if len(report.taskSchemaErrs) > 0 {
+		totalErrs := 0
+		for _, errs := range report.taskSchemaErrs {
+			totalErrs += len(errs)
+		}
+		steps = append(steps, fmt.Sprintf("Fix %d schema error(s) across %d task file(s)", totalErrs, len(report.taskSchemaErrs)))
+	}
+
 	return steps
+}
+
+// countValidatedTasks counts task files that were validated (resolved from eval.yaml).
+// It re-resolves the task globs from the eval file to determine count.
+func countValidatedTasks(report *readinessReport) int {
+	if report.evalPath == "" {
+		return 0
+	}
+	data, err := os.ReadFile(report.evalPath)
+	if err != nil {
+		return 0
+	}
+	var spec struct {
+		Tasks []string `yaml:"tasks"`
+	}
+	if err := yaml.Unmarshal(data, &spec); err != nil {
+		return 0
+	}
+	baseDir := filepath.Dir(report.evalPath)
+	count := 0
+	for _, pattern := range spec.Tasks {
+		matches, err := filepath.Glob(filepath.Join(baseDir, pattern))
+		if err == nil {
+			count += len(matches)
+		}
+	}
+	return count
 }
