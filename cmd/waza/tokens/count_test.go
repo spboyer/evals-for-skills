@@ -17,17 +17,18 @@ func TestCount_TableFormat(t *testing.T) {
 	cmd.SetOut(out)
 	require.NoError(t, cmd.Execute())
 
-	expected := `File                                Tokens     Chars   Lines
-------------------------------------------------------------
-testdata/count/README.md                 6        27       1
-testdata/count/SKILL.md                424      1608      83
-testdata/count/references/one.md         6        35       1
-testdata/count/references/two.md         6        40       1
-------------------------------------------------------------
-Total                                  442      1710      86
+	expected := strings.Join([]string{`File                                Tokens     Chars   Lines`,
+		`------------------------------------------------------------`,
+		`testdata/count/README.md                 6        27       1`,
+		`testdata/count/SKILL.md                424      1608      83`,
+		`testdata/count/references/one.md         6        35       1`,
+		`testdata/count/references/two.md         6        40       1`,
+		`------------------------------------------------------------`,
+		`Total                                  442      1710      86`,
+		``,
+		`4 file(s) scanned`,
+		``}, "\n")
 
-4 file(s) scanned
-`
 	require.Equal(t, expected, out.String())
 }
 
