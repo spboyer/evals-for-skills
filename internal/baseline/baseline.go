@@ -9,11 +9,11 @@ import (
 // BaselineResult pairs a task's baseline (no skill) and skill-enabled results
 // with computed improvement metrics.
 type BaselineResult struct {
-	TaskName    string                `json:"task_name"`
-	Baseline    *models.RunResult     `json:"baseline"`
-	WithSkill   *models.RunResult     `json:"with_skill"`
-	Improvement float64               `json:"improvement"`
-	Breakdown   ImprovementBreakdown  `json:"improvement_breakdown"`
+	TaskName    string               `json:"task_name"`
+	Baseline    *models.RunResult    `json:"baseline"`
+	WithSkill   *models.RunResult    `json:"with_skill"`
+	Improvement float64              `json:"improvement"`
+	Breakdown   ImprovementBreakdown `json:"improvement_breakdown"`
 }
 
 // ImprovementBreakdown captures per-dimension deltas between baseline and skill runs.

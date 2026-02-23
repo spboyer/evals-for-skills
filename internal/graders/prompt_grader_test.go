@@ -302,8 +302,8 @@ func TestPairwiseBuildPrompt(t *testing.T) {
 
 func TestNormalizePairwiseWinner(t *testing.T) {
 	tests := []struct {
-		winner    string
-		expected  string
+		winner   string
+		expected string
 	}{
 		{"A", "baseline"},
 		{"B", "skill"},

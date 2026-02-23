@@ -171,17 +171,17 @@ type StatisticalSummary struct {
 
 // SkillImpactMetric represents A/B comparison for a single task
 type SkillImpactMetric struct {
-	PassRateWithSkills float64               `json:"pass_rate_with_skills"`
-	PassRateBaseline   float64               `json:"pass_rate_baseline"`
-	Delta              float64               `json:"delta"`
-	PercentChange      float64               `json:"percent_change"`
-	Pairwise           *PairwiseResult       `json:"pairwise,omitempty"`
+	PassRateWithSkills float64         `json:"pass_rate_with_skills"`
+	PassRateBaseline   float64         `json:"pass_rate_baseline"`
+	Delta              float64         `json:"delta"`
+	PercentChange      float64         `json:"percent_change"`
+	Pairwise           *PairwiseResult `json:"pairwise,omitempty"`
 }
 
 // PairwiseResult captures the outcome of a pairwise LLM judge comparison.
 type PairwiseResult struct {
-	Winner             string `json:"winner"`              // "baseline", "skill", or "tie"
-	Magnitude          string `json:"magnitude"`           // "much-better", "slightly-better", "equal", etc.
+	Winner             string `json:"winner"`    // "baseline", "skill", or "tie"
+	Magnitude          string `json:"magnitude"` // "much-better", "slightly-better", "equal", etc.
 	Reasoning          string `json:"reasoning"`
 	PositionConsistent bool   `json:"position_consistent"` // true if result held after position swap
 }

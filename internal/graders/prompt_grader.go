@@ -290,11 +290,11 @@ func (p *promptGrader) gradePairwise(ctx context.Context, gradingContext *Contex
 			Feedback: fmt.Sprintf("pairwise: winner=%s, magnitude=%s, consistent=%v",
 				finalWinner, finalMagnitude, positionConsistent),
 			Details: map[string]any{
-				"pairwise":  pairwise,
-				"pass1":     resultAB,
-				"pass2":     resultBA,
-				"prompt":    p.args.Prompt,
-				"mode":      "pairwise",
+				"pairwise": pairwise,
+				"pass1":    resultAB,
+				"pass2":    resultBA,
+				"prompt":   p.args.Prompt,
+				"mode":     "pairwise",
 			},
 		}, nil
 	})
