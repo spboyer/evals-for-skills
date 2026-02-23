@@ -259,3 +259,89 @@ func TestLoadPromptGrader(t *testing.T) {
 		name: "without-continue-session",
 	}, grader)
 }
+
+func TestPairwiseMode_Validation(t *testing.T) {
+	// Pairwise mode requires a prompt
+	_, err := NewPromptGrader("pairwise-grader", PromptGraderArgs{
+		Model: "gpt-4o",
+		Mode:  "pairwise",
+	})
+	require.ErrorContains(t, err, "required field 'prompt' is missing")
+}
+
+func TestPairwiseMode_FallsBackToIndependent(t *testing.T) {
+	// When mode is pairwise but no baseline output is available, falls back to independent
+	skipIfCopilotNotEnabled(t)
+
+	grader, err := NewPromptGrader("pairwise-grader", PromptGraderArgs{
+		Prompt: "Check that the output mentions 'hello'. If it does, call set_waza_grade_pass. Otherwise call set_waza_grade_fail.",
+		Model:  basicModel,
+		Mode:   "pairwise",
+	})
+	require.NoError(t, err)
+
+	results, err := grader.Grade(context.Background(), &Context{
+		Output:         "hello world",
+		BaselineOutput: "", // empty => falls back to independent
+	})
+	require.NoError(t, err)
+	require.NotNil(t, results)
+	// Should grade independently since no baseline output
+	require.Equal(t, models.GraderKindPrompt, results.Type)
+}
+
+func TestPairwiseBuildPrompt(t *testing.T) {
+	prompt := buildPairwisePrompt("Is the code correct?", "output A content", "output B content", "A", "B")
+	require.Contains(t, prompt, "Output A")
+	require.Contains(t, prompt, "Output B")
+	require.Contains(t, prompt, "output A content")
+	require.Contains(t, prompt, "output B content")
+	require.Contains(t, prompt, "Is the code correct?")
+	require.Contains(t, prompt, "set_pairwise_winner")
+}
+
+func TestNormalizePairwiseWinner(t *testing.T) {
+	tests := []struct {
+		winner    string
+		expected  string
+	}{
+		{"A", "baseline"},
+		{"B", "skill"},
+		{"tie", "tie"},
+		{"unknown", "tie"},
+	}
+
+	for _, tt := range tests {
+		got := normalizePairwiseWinner(tt.winner, "A", "B", "baseline", "skill")
+		require.Equal(t, tt.expected, got, "winner=%s", tt.winner)
+	}
+}
+
+func TestPairwiseWinnerToScore(t *testing.T) {
+	require.Equal(t, 1.0, pairwiseWinnerToScore("skill"))
+	require.Equal(t, 0.5, pairwiseWinnerToScore("tie"))
+	require.Equal(t, 0.0, pairwiseWinnerToScore("baseline"))
+}
+
+func TestPairwiseMode_Live(t *testing.T) {
+	skipIfCopilotNotEnabled(t)
+
+	grader, err := NewPromptGrader("pairwise-quality", PromptGraderArgs{
+		Prompt: "Which output better explains what a goroutine is? Pick the one that is more accurate and complete.",
+		Model:  basicModel,
+		Mode:   "pairwise",
+	})
+	require.NoError(t, err)
+
+	results, err := grader.Grade(context.Background(), &Context{
+		Output:         "A goroutine is a lightweight thread of execution managed by the Go runtime. They are multiplexed onto OS threads and are very cheap to create (a few KB of stack).",
+		BaselineOutput: "goroutine is a thing in Go",
+	})
+	require.NoError(t, err)
+	require.NotNil(t, results)
+	require.Equal(t, "pairwise", results.Details["mode"])
+
+	pairwise, ok := results.Details["pairwise"].(*models.PairwiseResult)
+	require.True(t, ok, "pairwise detail should be *models.PairwiseResult")
+	require.Contains(t, []string{"skill", "baseline", "tie"}, pairwise.Winner)
+}

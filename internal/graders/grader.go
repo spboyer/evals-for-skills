@@ -46,6 +46,10 @@ type Context struct {
 
 	// SessionID from this evaluation run.
 	SessionID string
+
+	// BaselineOutput is the agent output from the baseline (no-skill) run.
+	// Populated when running in baseline mode; used by pairwise prompt grading.
+	BaselineOutput string
 }
 
 // Create creates a validator from the global registry

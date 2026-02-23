@@ -186,3 +186,70 @@ func TestEvaluationOutcome_BaselineFieldsOmittedWhenFalse(t *testing.T) {
 	_, hasBaselineOutcome := raw["baseline_outcome"]
 	assert.False(t, hasBaselineOutcome, "baseline_outcome should be omitted when nil")
 }
+
+func TestPairwiseResult_JSONSerialization(t *testing.T) {
+	pr := &PairwiseResult{
+		Winner:             "skill",
+		Magnitude:          "slightly-better",
+		Reasoning:          "Output B was more detailed",
+		PositionConsistent: true,
+	}
+
+	data, err := json.Marshal(pr)
+	require.NoError(t, err)
+
+	var decoded PairwiseResult
+	err = json.Unmarshal(data, &decoded)
+	require.NoError(t, err)
+
+	assert.Equal(t, "skill", decoded.Winner)
+	assert.Equal(t, "slightly-better", decoded.Magnitude)
+	assert.Equal(t, "Output B was more detailed", decoded.Reasoning)
+	assert.True(t, decoded.PositionConsistent)
+}
+
+func TestSkillImpactMetric_PairwiseOmittedWhenNil(t *testing.T) {
+	metric := &SkillImpactMetric{
+		PassRateWithSkills: 0.8,
+		PassRateBaseline:   0.5,
+		Delta:              0.3,
+		PercentChange:      60.0,
+		Pairwise:           nil,
+	}
+
+	data, err := json.Marshal(metric)
+	require.NoError(t, err)
+
+	var raw map[string]any
+	err = json.Unmarshal(data, &raw)
+	require.NoError(t, err)
+	_, hasPairwise := raw["pairwise"]
+	assert.False(t, hasPairwise, "pairwise should be omitted when nil")
+}
+
+func TestSkillImpactMetric_PairwiseIncluded(t *testing.T) {
+	metric := &SkillImpactMetric{
+		PassRateWithSkills: 0.8,
+		PassRateBaseline:   0.5,
+		Delta:              0.3,
+		PercentChange:      60.0,
+		Pairwise: &PairwiseResult{
+			Winner:             "skill",
+			Magnitude:          "much-better",
+			Reasoning:          "Skill output was significantly more thorough",
+			PositionConsistent: true,
+		},
+	}
+
+	data, err := json.Marshal(metric)
+	require.NoError(t, err)
+
+	var decoded SkillImpactMetric
+	err = json.Unmarshal(data, &decoded)
+	require.NoError(t, err)
+
+	require.NotNil(t, decoded.Pairwise)
+	assert.Equal(t, "skill", decoded.Pairwise.Winner)
+	assert.Equal(t, "much-better", decoded.Pairwise.Magnitude)
+	assert.True(t, decoded.Pairwise.PositionConsistent)
+}
