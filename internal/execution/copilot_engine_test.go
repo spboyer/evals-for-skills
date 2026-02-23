@@ -4,12 +4,41 @@ import (
 	"context"
 	"errors"
 	"os"
+	"os/exec"
+	"path/filepath"
+	"runtime"
+	"strings"
 	"testing"
 
 	copilot "github.com/github/copilot-sdk/go"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
+
+var scriptExts = map[string]bool{
+	".sh": true, ".bash": true, ".zsh": true,
+	".bat": true, ".cmd": true, ".ps1": true,
+	".py": true, ".rb": true, ".js": true,
+}
+
+func requireCopilotCLI(t *testing.T) {
+	t.Helper()
+
+	path, err := exec.LookPath("copilot")
+	if err != nil {
+		t.Skip("copilot CLI not found on PATH")
+	}
+
+	// skip if the "copilot" we found is a script rather than a binary because in
+	// that case it's probably an install helper stub rather than the actual CLI
+	ext := strings.ToLower(filepath.Ext(path))
+	if scriptExts[ext] {
+		t.Skipf("copilot at %s is a script (%s)", path, ext)
+	}
+	if runtime.GOOS == "windows" && ext != ".exe" && ext != "" {
+		t.Skipf("copilot at %s has unexpected extension %s", path, ext)
+	}
+}
 
 type fakeCopilotClient struct {
 	startErr         error
@@ -108,6 +137,8 @@ func TestJoinStrings(t *testing.T) {
 }
 
 func TestCopilotEngine_Execute_SetupResourcesErrorRotatesWorkspace(t *testing.T) {
+	requireCopilotCLI(t)
+
 	engine := NewCopilotEngineBuilder("test-model").Build()
 	previousWorkspace := t.TempDir()
 	engine.workspace = previousWorkspace
