@@ -33,6 +33,7 @@ const (
 	GraderKindActionSequence  GraderKind = "action_sequence"
 	GraderKindSkillInvocation GraderKind = "skill_invocation"
 	GraderKindDiff            GraderKind = "diff"
+	GraderKindToolConstraint  GraderKind = "tool_constraint"
 )
 
 // EvaluationOutcome represents the complete result of an evaluation run
