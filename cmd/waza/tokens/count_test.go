@@ -148,8 +148,8 @@ func TestCount_SpecificPath(t *testing.T) {
 	require.Equal(t, 1, result.TotalFiles)
 	require.Equal(t, 424, result.TotalTokens)
 
-	require.Contains(t, result.Files, filepath.Join("testdata", "count", "SKILL.md"))
-	entry := result.Files[filepath.Join("testdata", "count", "SKILL.md")]
+	require.Contains(t, result.Files, "testdata/count/SKILL.md")
+	entry := result.Files["testdata/count/SKILL.md"]
 	require.Equal(t, 424, entry.Tokens)
 	require.Equal(t, 1608, entry.Characters)
 	require.Equal(t, 83, entry.Lines)
