@@ -175,7 +175,7 @@ func TestCopilotExecute_RequiredFields(t *testing.T) {
 		ER    ExecutionRequest
 		Error string
 	}{
-		{ER: ExecutionRequest{Timeout: 0}, Error: "non-zero Timeout is required"},
+		{ER: ExecutionRequest{Timeout: 0}, Error: "positive Timeout is required"},
 	}
 
 	for _, td := range testCases {
@@ -208,7 +208,7 @@ func (m sessionConfigMatcher) Matches(x any) bool {
 		c.WorkingDirectory = ""
 		require.Equal(m.t, m.expected, c)
 	default:
-		require.FailNow(m.t, "Unhandled session configuration type %T", c)
+		require.FailNow(m.t, "Unhandled session configuration type %T", tempC)
 	}
 
 	return true

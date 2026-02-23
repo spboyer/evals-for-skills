@@ -123,21 +123,6 @@ func (mr *MockcopilotClientMockRecorder) CreateSession(ctx, config any) *gomock.
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateSession", reflect.TypeOf((*MockcopilotClient)(nil).CreateSession), ctx, config)
 }
 
-// ListModels mocks base method.
-func (m *MockcopilotClient) ListModels(ctx context.Context) ([]copilot.ModelInfo, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ListModels", ctx)
-	ret0, _ := ret[0].([]copilot.ModelInfo)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// ListModels indicates an expected call of ListModels.
-func (mr *MockcopilotClientMockRecorder) ListModels(ctx any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListModels", reflect.TypeOf((*MockcopilotClient)(nil).ListModels), ctx)
-}
-
 // ResumeSessionWithOptions mocks base method.
 func (m *MockcopilotClient) ResumeSessionWithOptions(ctx context.Context, sessionID string, config *copilot.ResumeSessionConfig) (copilotSession, error) {
 	m.ctrl.T.Helper()
@@ -151,20 +136,6 @@ func (m *MockcopilotClient) ResumeSessionWithOptions(ctx context.Context, sessio
 func (mr *MockcopilotClientMockRecorder) ResumeSessionWithOptions(ctx, sessionID, config any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ResumeSessionWithOptions", reflect.TypeOf((*MockcopilotClient)(nil).ResumeSessionWithOptions), ctx, sessionID, config)
-}
-
-// Start mocks base method.
-func (m *MockcopilotClient) Start(ctx context.Context) error {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Start", ctx)
-	ret0, _ := ret[0].(error)
-	return ret0
-}
-
-// Start indicates an expected call of Start.
-func (mr *MockcopilotClientMockRecorder) Start(ctx any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Start", reflect.TypeOf((*MockcopilotClient)(nil).Start), ctx)
 }
 
 // Stop mocks base method.
