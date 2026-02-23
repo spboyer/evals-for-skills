@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"sync"
 	"time"
 
 	copilot "github.com/github/copilot-sdk/go"
@@ -14,12 +15,14 @@ import (
 type MockEngine struct {
 	modelID   string
 	workspace string
+	mtx       *sync.Mutex
 }
 
 // NewMockEngine creates a new mock engine
 func NewMockEngine(modelID string) *MockEngine {
 	return &MockEngine{
 		modelID: modelID,
+		mtx:     &sync.Mutex{},
 	}
 }
 
@@ -28,6 +31,9 @@ func (m *MockEngine) Initialize(ctx context.Context) error {
 }
 
 func (m *MockEngine) Execute(ctx context.Context, req *ExecutionRequest) (*ExecutionResponse, error) {
+	m.mtx.Lock()
+	defer m.mtx.Unlock()
+
 	start := time.Now()
 
 	// Clean up any previous workspace before creating a new one
