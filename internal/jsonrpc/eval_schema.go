@@ -68,10 +68,7 @@ func validateAgainstSchema(schema *jsonschema.Schema, instance any) []string {
 // collectSchemaErrors recursively collects leaf validation errors.
 func collectSchemaErrors(ve *jsonschema.ValidationError, errs *[]string) {
 	if len(ve.Causes) == 0 {
-		var parts []string
-		for _, s := range ve.InstanceLocation {
-			parts = append(parts, s)
-		}
+		parts := append([]string{}, ve.InstanceLocation...)
 		loc := "/"
 		if len(parts) > 0 {
 			loc = "/" + strings.Join(parts, "/")
