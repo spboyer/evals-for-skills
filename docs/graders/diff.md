@@ -18,12 +18,17 @@ Compares post-execution workspace files against expected snapshots and/or line f
 
 **Options:**
 
+| Option | Type | Description |
+|--------|------|-------------|
+| `expected_files` | list[object] | **Required.** List of file expectations (see below) |
+| `context_dir` | string | Base directory for resolving snapshot paths. Defaults to the `--context-dir` CLI flag value |
+
 Each entry in `expected_files` defines one file to check:
 
 | Option | Type | Description |
 |--------|------|-------------|
 | `path` | string | **Required.** Workspace-relative path to the file to check |
-| `snapshot` | string | Path to an expected file (relative to context/fixtures dir). Content must match exactly |
+| `snapshot` | string | Path to an expected file (relative to `context_dir`). Content must match exactly |
 | `contains` | list[str] | Line fragments that must appear (`+` prefix) or must not appear (`-` prefix) |
 
 At least one of `snapshot` or `contains` must be specified per entry.

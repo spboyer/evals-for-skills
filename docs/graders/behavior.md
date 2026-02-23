@@ -28,4 +28,8 @@ Validates agent behavior patterns like tool call counts, token usage, and execut
 
 **Note:** `required_tools` and `forbidden_tools` use exact string matching on tool names; patterns, wildcards, or regular expressions are not supported.
 
-**Scoring:** Composite score based on all behavior constraints passed/failed.
+At least one option must be configured.
+
+**Scoring:** `passed_checks / total_checks`
+
+Each configured option counts as one check, except `required_tools` and `forbidden_tools` which contribute one check per entry.
