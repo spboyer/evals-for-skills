@@ -226,7 +226,7 @@ func TestCount_AbsoluteFilePath(t *testing.T) {
 	require.NoError(t, json.Unmarshal(out.Bytes(), &result))
 
 	require.Equal(t, 1, result.TotalFiles)
-	require.Contains(t, result.Files, filepath.Join("testdata", "count", "SKILL.md"))
+	require.Contains(t, result.Files, "testdata/count/SKILL.md")
 
 	t.Run("multiple files", func(t *testing.T) {
 		a, err := filepath.Abs(filepath.Join("testdata", "count", "SKILL.md"))
@@ -243,8 +243,8 @@ func TestCount_AbsoluteFilePath(t *testing.T) {
 		require.NoError(t, json.Unmarshal(out.Bytes(), &result))
 
 		require.Equal(t, 2, result.TotalFiles)
-		require.Contains(t, result.Files, filepath.Join("testdata", "count", "SKILL.md"))
-		require.Contains(t, result.Files, filepath.Join("testdata", "count", "references", "one.md"))
+		require.Contains(t, result.Files, "testdata/count/SKILL.md")
+		require.Contains(t, result.Files, "testdata/count/references/one.md")
 	})
 }
 
