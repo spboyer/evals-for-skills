@@ -7,6 +7,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"github.com/spboyer/waza/internal/execution"
 	"github.com/spboyer/waza/internal/models"
@@ -55,9 +56,9 @@ func Generate(ctx context.Context, engine execution.AgentEngine, opts Options) (
 	}
 
 	resp, err := engine.Execute(ctx, &execution.ExecutionRequest{
-		TestID:     "waza-suggest",
-		Message:    prompt,
-		TimeoutSec: timeoutSec,
+		TestID:  "waza-suggest",
+		Message: prompt,
+		Timeout: time.Duration(timeoutSec) * time.Second,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("getting suggestions: %w", err)

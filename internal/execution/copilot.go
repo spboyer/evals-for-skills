@@ -13,58 +13,6 @@ import (
 	"github.com/spboyer/waza/internal/utils"
 )
 
-type copilotSession interface {
-	On(copilot.SessionEventHandler) func()
-	Send(context.Context, copilot.MessageOptions) (string, error)
-	SessionID() string
-}
-
-type copilotClient interface {
-	Start(context.Context) error
-	Stop() error
-	CreateSession(context.Context, *copilot.SessionConfig) (copilotSession, error)
-}
-
-type sdkSession struct {
-	session *copilot.Session
-}
-
-func (s *sdkSession) On(handler copilot.SessionEventHandler) func() {
-	return s.session.On(handler)
-}
-
-func (s *sdkSession) Send(ctx context.Context, options copilot.MessageOptions) (string, error) {
-	return s.session.Send(ctx, options)
-}
-
-func (s *sdkSession) SessionID() string {
-	return s.session.SessionID
-}
-
-type sdkClient struct {
-	client *copilot.Client
-}
-
-func (c *sdkClient) Start(ctx context.Context) error {
-	return c.client.Start(ctx)
-}
-
-func (c *sdkClient) Stop() error {
-	return c.client.Stop()
-}
-
-func (c *sdkClient) CreateSession(ctx context.Context, config *copilot.SessionConfig) (copilotSession, error) {
-	session, err := c.client.CreateSession(ctx, config)
-	if err != nil {
-		return nil, err
-	}
-	return &sdkSession{session: session}, nil
-}
-
-var newCopilotClient = func(opts *copilot.ClientOptions) copilotClient {
-	return &sdkClient{client: copilot.NewClient(opts)}
-}
-
 // CopilotEngine integrates with GitHub Copilot SDK
 type CopilotEngine struct {
 	defaultModelID string
@@ -216,6 +164,36 @@ func (e *CopilotEngine) Execute(ctx context.Context, req *ExecutionRequest) (*Ex
 	return resp, nil
 }
 
+// Shutdown cleans up resources
+func (e *CopilotEngine) Shutdown(ctx context.Context) error {
+	if err := e.client.Stop(); err != nil {
+		// Log but continue cleanup
+		slog.Info("failed to stop client", "error", err)
+	}
+
+	// remove the workspace folders - should be safe now that all the copilot sessions are shut down
+	// and the tests are complete.
+	workspaces := func() []string {
+		e.workspacesMu.Lock()
+		defer e.workspacesMu.Unlock()
+		workspaces := e.workspaces
+		e.workspaces = nil
+		return workspaces
+	}()
+
+	for _, ws := range workspaces {
+		if ws != "" {
+			if err := os.RemoveAll(ws); err != nil {
+				// errors here probably indicate some issue with our code continuing to lock files
+				// even after tests have completed...
+				slog.Warn("failed to cleanup stale workspace", "path", ws, "error", err)
+			}
+		}
+	}
+
+	return nil
+}
+
 func (e *CopilotEngine) extractReqParams(req *ExecutionRequest) (modelID string, sourceDir string, err error) {
 	modelID = e.defaultModelID
 
@@ -284,36 +262,6 @@ func (e *CopilotEngine) setupWorkspace(resources []ResourceFile) (string, error)
 	}
 
 	return workspaceDir, nil
-}
-
-// Shutdown cleans up resources
-func (e *CopilotEngine) Shutdown(ctx context.Context) error {
-	if err := e.client.Stop(); err != nil {
-		// Log but continue cleanup
-		slog.Info("failed to stop client", "error", err)
-	}
-
-	// remove the workspace folders - should be safe now that all the copilot sessions are shut down
-	// and the tests are complete.
-	workspaces := func() []string {
-		e.workspacesMu.Lock()
-		defer e.workspacesMu.Unlock()
-		workspaces := e.workspaces
-		e.workspaces = nil
-		return workspaces
-	}()
-
-	for _, ws := range workspaces {
-		if ws != "" {
-			if err := os.RemoveAll(ws); err != nil {
-				// errors here probably indicate some issue with our code continuing to lock files
-				// even after tests have completed...
-				slog.Warn("failed to cleanup stale workspace", "path", ws, "error", err)
-			}
-		}
-	}
-
-	return nil
 }
 
 func joinStrings(parts []string) string {
