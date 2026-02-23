@@ -17,7 +17,7 @@ const evalYAMLSchemaSummary = `Top-level eval.yaml fields:
   - executor (mock|copilot-sdk)
   - model (string)
 - graders[]: Each entry MUST be an object with "type" and "name" fields (never a bare string).
-  - type (code|prompt|regex|file|keyword|json_schema|program|behavior|action_sequence|skill_invocation|diff)
+  - type (code|prompt|regex|file|keyword|json_schema|program|behavior|action_sequence|skill_invocation|diff|tool_constraint)
   - name (string, required)
   - config (map, required fields depend on type — see grader documentation below)
 - metrics[]:
