@@ -194,3 +194,43 @@ Weighted scoring lets users express that some graders matter more than others (e
 **Why:** The docs site should be a self-contained starting point for users downloading waza. Having binaries, install commands, and changelog highlights in one place reduces friction. Linking to GitHub Releases for history avoids maintaining two changelog surfaces.
 
 **Pattern for future releases:** When cutting a new version, update the releases.mdx page — change the version number, update the changelog highlights, and update download URLs. The CHANGELOG.md remains the source of truth; the releases page is a curated summary of the latest.
+
+## 2026-02-21: LinkScorer architecture
+
+**By:** Linus (Backend Developer)
+**Date:** 2026-02-21
+**Issue:** #406
+
+**What:** The `LinkScorer` lives in `cmd/waza/dev/links.go` alongside the other scorers (`HeuristicScorer`, `SpecScorer`, `McpScorer`). It follows the same pattern: takes `*skill.Skill`, returns a `*LinkResult` with categorized issues.
+
+For the MCP server (`internal/mcp/server.go`), a lightweight `quickLinkCheck` helper does regex-based link extraction instead of importing `cmd/waza/dev`. This avoids an `internal/ → cmd/` import cycle while still surfacing broken links in the MCP tool response.
+
+**Why:** `internal/` packages cannot import `cmd/` packages — that's a Go anti-pattern. Rather than extracting a new `internal/linkcheck/` package (which would split the scorer pattern), the MCP server does a simpler scan (regex on SKILL.md only, local links only, no BFS orphan detection). The full analysis lives in `waza check`; the MCP tool is a lightweight readiness signal.
+
+**Impact:**
+- `cmd/waza/dev/links.go` — full LinkScorer with goldmark AST, concurrent URL checking, BFS orphan detection
+- `cmd/waza/cmd_check.go` — new linkResult field, 📎 Links display section, readiness gate, next steps
+- `internal/mcp/server.go` — new fields on `skillCheckResult`, `quickLinkCheck` helper
+- `internal/mcp/tools.go` — updated description
+- goldmark promoted from indirect to direct dependency in go.mod
+
+## 2026-02-24: LinkScorer test contract for spec-first testing
+
+**By:** Basher (Tester / QA)
+**Date:** 2026-02-24
+**Issue:** #406
+
+**What:** Established the test contract for `LinkScorer` in `cmd/waza/dev/links_test.go` based on the issue #406 specification. The tests define the expected API surface:
+
+- **Types:** `LinkScorer`, `LinkResult`, `LinkIssue`, `OrphanedFile`
+- **API:** `(*LinkScorer).Score(skillDir string) *LinkResult`
+- **Fields on `LinkResult`:** `LinkIssues`, `OrphanedFiles`, `URLIssues`, `LocalPass`, `LocalTotal`, `URLPass`, `URLTotal`
+- **Fields on `LinkIssue`:** `File`, `Line`, `Link`, `Reason`
+- **Fields on `OrphanedFile`:** `File`, `Reason`
+
+**Why:** Tests written spec-first (before implementation) serve as the acceptance criteria contract. Linus is implementing `links.go` in parallel — these tests ensure the implementation matches the agreed API from issue #406 without requiring coordination on internal details.
+
+**Impact:**
+- Linus's implementation must use these exact type names and field names to pass the tests
+- If the implementation needs different field names, the tests and issue spec should be updated together
+- The `makeSkillDir` helper is reusable for any future filesystem-based scorer tests

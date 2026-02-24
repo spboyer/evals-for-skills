@@ -91,3 +91,7 @@ All code roles now use `claude-opus-4.6`. Docs/Scribe/diversity use `gemini-3-pr
 - **Display:** `DisplayAdvisory()` integrated into `DisplayScore()` after spec compliance; uses ✅/⚠️/ℹ️ icons for positive/warning/info
 - **Counting helpers:** `countModules` (## and ### headings), `countNumberedSteps` (regex), `countCodeBlocks` (``` fence pairs)
 - **Test count:** 28 new tests in `advisory_test.go`, all passing alongside existing dev tests
+
+## 📌 Team update (2026-02-24): LinkScorer test contract
+
+Test contract written spec-first in links_test.go defines API surface for LinkScorer (#406). Tests establish expected types (LinkScorer, LinkResult, LinkIssue, OrphanedFile) and field names before implementation. Decided by Basher. See decisions.md for full details.

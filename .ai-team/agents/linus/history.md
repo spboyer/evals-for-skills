@@ -99,3 +99,7 @@ All code roles now use `claude-opus-4.6`. Docs/Scribe/diversity use `gemini-3-pr
 - **Files changed:** `cmd/waza/dev/links.go` (new), `cmd/waza/dev/links_test.go` (new), `cmd/waza/cmd_check.go`, `internal/mcp/server.go`, `internal/mcp/tools.go`, `go.mod`
 - **What:** Added `LinkScorer` that validates local links (broken, directory, scope escape), external URLs (HEAD+GET fallback, concurrent pool of 5, deduplication), and orphaned files (BFS from SKILL.md through references/). Uses goldmark AST for link extraction. Wired into `waza check` with 📎 Links display section, readiness gate, and summary table column. MCP server gets `quickLinkCheck` (regex-based, lightweight) to avoid cmd→internal import cycle.
 - **Key learning:** `internal/` can't import `cmd/` — the MCP server needs a lightweight inline helper rather than reusing the full LinkScorer. The goldmark AST correctly ignores links inside code blocks, which is exactly what we want. BFS orphan detection needs normalized paths for cross-platform comparison (case-insensitive on Windows).
+
+## 📌 Team update (2026-02-24): LinkScorer architecture & test contract
+
+Architecture decision: LinkScorer lives in cmd/waza/dev/links.go (full AST-based analysis). MCP server uses lightweight quickLinkCheck helper (avoids import cycle). Test contract written spec-first in links_test.go defines API surface. Decided by Linus & Basher. See decisions.md for full details.
