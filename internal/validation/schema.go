@@ -9,8 +9,13 @@ import (
 
 	"github.com/santhosh-tekuri/jsonschema/v6"
 	"github.com/spboyer/waza/schemas"
+	"golang.org/x/text/language"
+	"golang.org/x/text/message"
 	"gopkg.in/yaml.v3"
 )
+
+// defaultPrinter is used to format schema validation error messages.
+var defaultPrinter = message.NewPrinter(language.English)
 
 // evalSchema is the compiled JSON Schema for eval.yaml files.
 var evalSchema *jsonschema.Schema
@@ -131,7 +136,7 @@ func collectSchemaErrors(ve *jsonschema.ValidationError, errs *[]string) {
 		if len(ve.InstanceLocation) > 0 {
 			loc = "/" + strings.Join(ve.InstanceLocation, "/")
 		}
-		*errs = append(*errs, fmt.Sprintf("%s: %v", loc, ve.ErrorKind))
+		*errs = append(*errs, fmt.Sprintf("%s: %s", loc, ve.ErrorKind.LocalizedString(defaultPrinter)))
 		return
 	}
 	for _, c := range ve.Causes {
