@@ -7,6 +7,8 @@ import (
 	"log/slog"
 	"os"
 	"path/filepath"
+	"regexp"
+	"strings"
 
 	"github.com/spboyer/waza/internal/jsonrpc"
 	"github.com/spboyer/waza/internal/webapi"
@@ -253,10 +255,14 @@ type skillCheckParams struct {
 }
 
 type skillCheckResult struct {
-	SkillPath string `json:"skillPath"`
-	HasSkill  bool   `json:"hasSkill"`
-	HasEval   bool   `json:"hasEval"`
-	Message   string `json:"message"`
+	SkillPath     string   `json:"skillPath"`
+	HasSkill      bool     `json:"hasSkill"`
+	HasEval       bool     `json:"hasEval"`
+	BrokenLinks   int      `json:"brokenLinks"`
+	OrphanedFiles int      `json:"orphanedFiles"`
+	DeadURLs      int      `json:"deadURLs"`
+	LinkIssues    []string `json:"linkIssues,omitempty"`
+	Message       string   `json:"message"`
 }
 
 func (s *Server) callSkillCheck(args json.RawMessage) (any, *jsonrpc.Error) {
@@ -293,6 +299,13 @@ func (s *Server) callSkillCheck(args json.RawMessage) (any, *jsonrpc.Error) {
 		}
 	}
 
+	// Lightweight link check on SKILL.md
+	if result.HasSkill {
+		broken, issues := quickLinkCheck(absPath)
+		result.BrokenLinks = broken
+		result.LinkIssues = issues
+	}
+
 	switch {
 	case result.HasSkill && result.HasEval:
 		result.Message = "Skill has both SKILL.md and eval — ready for deeper check with waza check"
@@ -305,6 +318,37 @@ func (s *Server) callSkillCheck(args json.RawMessage) (any, *jsonrpc.Error) {
 	}
 
 	return &result, nil
+}
+
+// mdLinkPattern matches markdown link syntax [text](target).
+var mdLinkPattern = regexp.MustCompile(`\[[^\]]*\]\(([^)]+)\)`)
+
+// quickLinkCheck does a fast regex-based scan of SKILL.md for broken local links.
+func quickLinkCheck(skillDir string) (broken int, issues []string) {
+	data, err := os.ReadFile(filepath.Join(skillDir, "SKILL.md"))
+	if err != nil {
+		return 0, nil
+	}
+	matches := mdLinkPattern.FindAllSubmatch(data, -1)
+	for _, m := range matches {
+		target := string(m[1])
+		if strings.HasPrefix(target, "http") || strings.HasPrefix(target, "mailto:") ||
+			strings.HasPrefix(target, "mdc:") || strings.HasPrefix(target, "#") {
+			continue
+		}
+		if idx := strings.Index(target, "#"); idx >= 0 {
+			target = target[:idx]
+		}
+		if target == "" {
+			continue
+		}
+		resolved := filepath.Join(skillDir, filepath.FromSlash(target))
+		if _, err := os.Stat(resolved); err != nil {
+			broken++
+			issues = append(issues, fmt.Sprintf("broken link: %s", target))
+		}
+	}
+	return broken, issues
 }
 
 // resolveDir returns the given dir or falls back to CWD.

@@ -112,7 +112,7 @@ func ToolsDef() []Tool {
 		},
 		{
 			Name:        "waza_skill_check",
-			Description: "Check if a skill is ready for submission (compliance, tokens, eval)",
+			Description: "Check if a skill is ready for submission (compliance, tokens, links, eval)",
 			InputSchema: json.RawMessage(`{
 				"type": "object",
 				"properties": {

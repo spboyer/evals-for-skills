@@ -49,6 +49,7 @@ type readinessReport struct {
 	complianceLevel dev.AdherenceLevel
 	specResult      *dev.SpecResult
 	mcpResult       *dev.McpResult
+	linkResult      *dev.LinkResult
 	tokenCount      int
 	tokenLimit      int
 	tokenExceeded   bool
@@ -120,8 +121,8 @@ func printCheckSummaryTable(w interface{ Write([]byte) (int, error) }, reports [
 	fmt.Fprintf(w, "═══════════════════════════════════════════════\n")                                           //nolint:errcheck
 	fmt.Fprintf(w, " CHECK SUMMARY\n")                                                                            //nolint:errcheck
 	fmt.Fprintf(w, "═══════════════════════════════════════════════\n\n")                                         //nolint:errcheck
-	fmt.Fprintf(w, "%-25s %-15s %-12s %-8s %-8s %s\n", "Skill", "Compliance", "Tokens", "Spec", "Schema", "Eval") //nolint:errcheck
-	fmt.Fprintf(w, "%s\n", strings.Repeat("─", 77))                                                               //nolint:errcheck
+	fmt.Fprintf(w, "%-25s %-15s %-12s %-8s %-8s %-8s %s\n", "Skill", "Compliance", "Tokens", "Spec", "Links", "Schema", "Eval") //nolint:errcheck
+	fmt.Fprintf(w, "%s\n", strings.Repeat("─", 85))                                                                              //nolint:errcheck
 
 	for _, r := range reports {
 		name := r.skillName
@@ -142,12 +143,18 @@ func printCheckSummaryTable(w interface{ Write([]byte) (int, error) }, reports [
 		} else if !r.hasEval {
 			schemaStatus = "—"
 		}
+		linkStatus := "✅"
+		if r.linkResult != nil && !r.linkResult.Passed() {
+			linkStatus = "⚠️"
+		} else if r.linkResult == nil {
+			linkStatus = "—"
+		}
 		evalStatus := "✅"
 		if !r.hasEval {
 			evalStatus = "⚠️"
 		}
-		fmt.Fprintf(w, "%-25s %-15s %s %d/%-6d %s       %s      %s\n", //nolint:errcheck
-			name, r.complianceLevel, tokenStatus, r.tokenCount, r.tokenLimit, specStatus, schemaStatus, evalStatus)
+		fmt.Fprintf(w, "%-25s %-15s %s %d/%-6d %s       %s      %s      %s\n", //nolint:errcheck
+			name, r.complianceLevel, tokenStatus, r.tokenCount, r.tokenLimit, specStatus, linkStatus, schemaStatus, evalStatus)
 	}
 	fmt.Fprintf(w, "\n") //nolint:errcheck
 }
@@ -188,6 +195,10 @@ func checkReadiness(skillDir string) (*readinessReport, error) {
 	// 3c. Run MCP integration checks
 	mcpScorer := &dev.McpScorer{}
 	report.mcpResult = mcpScorer.Score(&sk)
+
+	// 3d. Run link validation
+	linkScorer := &dev.LinkScorer{}
+	report.linkResult = linkScorer.Score(&sk)
 
 	// 4. Check token budget
 	counter, err := internalTokens.NewCounter(internalTokens.TokenizerDefault)
@@ -300,6 +311,41 @@ func displayReadinessReport(out interface{ Write([]byte) (int, error) }, report 
 		fmt.Fprintf(w, "\n")
 	}
 
+	// 1d. Link Validation
+	if report.linkResult != nil {
+		fmt.Fprintf(w, "📎 Links: %d/%d valid\n", report.linkResult.ValidLinks, report.linkResult.TotalLinks)
+		if report.linkResult.Passed() {
+			if report.linkResult.TotalLinks == 0 {
+				fmt.Fprintf(w, "   — No links found.\n")
+			} else {
+				fmt.Fprintf(w, "   ✅ All links valid.\n")
+			}
+		} else {
+			problems := len(report.linkResult.BrokenLinks) + len(report.linkResult.DirectoryLinks) +
+				len(report.linkResult.ScopeEscapes) + len(report.linkResult.DeadURLs)
+			fmt.Fprintf(w, "   ⚠️  %d link issue(s) found.\n", problems)
+		}
+		for _, bl := range report.linkResult.BrokenLinks {
+			fmt.Fprintf(w, "   ❌ [%s] → %s: %s\n", bl.Source, bl.Target, bl.Reason)
+		}
+		for _, dl := range report.linkResult.DirectoryLinks {
+			fmt.Fprintf(w, "   ⚠️  [%s] → %s: %s\n", dl.Source, dl.Target, dl.Reason)
+		}
+		for _, se := range report.linkResult.ScopeEscapes {
+			fmt.Fprintf(w, "   ❌ [%s] → %s: %s\n", se.Source, se.Target, se.Reason)
+		}
+		for _, du := range report.linkResult.DeadURLs {
+			fmt.Fprintf(w, "   ⚠️  [%s] → %s: %s\n", du.Source, du.Target, du.Reason)
+		}
+		if len(report.linkResult.OrphanedFiles) > 0 {
+			fmt.Fprintf(w, "   Orphaned files in references/:\n")
+			for _, f := range report.linkResult.OrphanedFiles {
+				fmt.Fprintf(w, "   ⚠️  %s\n", f)
+			}
+		}
+		fmt.Fprintf(w, "\n")
+	}
+
 	// 2. Token Budget Check
 	fmt.Fprintf(w, "📊 Token Budget: %d / %d tokens\n", report.tokenCount, report.tokenLimit)
 	if report.tokenExceeded {
@@ -364,6 +410,7 @@ func displayReadinessReport(out interface{ Write([]byte) (int, error) }, report 
 	isReady := report.complianceLevel.AtLeast(dev.AdherenceMediumHigh) &&
 		!report.tokenExceeded &&
 		(report.specResult == nil || report.specResult.Passed()) &&
+		(report.linkResult == nil || report.linkResult.Passed()) &&
 		len(report.evalSchemaErrs) == 0 &&
 		len(report.taskSchemaErrs) == 0
 
@@ -421,6 +468,19 @@ func generateNextSteps(report *readinessReport) []string {
 			if iss.Severity == "error" {
 				steps = append(steps, fmt.Sprintf("Fix spec violation [%s]: %s", iss.Rule, iss.Message))
 			}
+		}
+	}
+
+	// Link validation issues
+	if report.linkResult != nil && !report.linkResult.Passed() {
+		if len(report.linkResult.BrokenLinks) > 0 {
+			steps = append(steps, fmt.Sprintf("Fix %d broken link(s) — targets do not exist", len(report.linkResult.BrokenLinks)))
+		}
+		if len(report.linkResult.ScopeEscapes) > 0 {
+			steps = append(steps, fmt.Sprintf("Fix %d link(s) that escape the skill directory", len(report.linkResult.ScopeEscapes)))
+		}
+		if len(report.linkResult.OrphanedFiles) > 0 {
+			steps = append(steps, fmt.Sprintf("Link or remove %d orphaned file(s) in references/", len(report.linkResult.OrphanedFiles)))
 		}
 	}
 
