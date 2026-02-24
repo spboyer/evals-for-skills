@@ -7,6 +7,8 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+
+	"github.com/spboyer/waza/internal/projectconfig"
 )
 
 // ValidateName rejects names with path-traversal characters or empty names.
@@ -44,39 +46,15 @@ func TitleCase(s string) string {
 // ReadProjectDefaults reads engine and model from .waza.yaml if it exists.
 // Falls back to copilot-sdk and claude-sonnet-4.6.
 func ReadProjectDefaults() (engine, model string) {
-	engine = "copilot-sdk"
-	model = "claude-sonnet-4.6"
-
 	dir, err := os.Getwd()
 	if err != nil {
-		return
+		return "copilot-sdk", "claude-sonnet-4.6"
 	}
-	for i := 0; i < 10; i++ {
-		configPath := filepath.Join(dir, ".waza.yaml")
-		data, err := os.ReadFile(configPath)
-		if err == nil {
-			for _, line := range strings.Split(string(data), "\n") {
-				line = strings.TrimSpace(line)
-				if strings.HasPrefix(line, "engine:") {
-					if v := strings.TrimSpace(strings.TrimPrefix(line, "engine:")); v != "" {
-						engine = v
-					}
-				}
-				if strings.HasPrefix(line, "model:") {
-					if v := strings.TrimSpace(strings.TrimPrefix(line, "model:")); v != "" {
-						model = v
-					}
-				}
-			}
-			return
-		}
-		parent := filepath.Dir(dir)
-		if parent == dir {
-			break
-		}
-		dir = parent
+	cfg, err := projectconfig.Load(dir)
+	if err != nil {
+		return "copilot-sdk", "claude-sonnet-4.6"
 	}
-	return
+	return cfg.Defaults.Engine, cfg.Defaults.Model
 }
 
 // EvalYAML returns a default eval.yaml template for the given skill name.

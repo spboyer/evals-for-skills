@@ -5,13 +5,13 @@ import (
 	"io"
 	"os"
 	"path/filepath"
-	"strings"
 
 	"github.com/charmbracelet/huh"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/spf13/cobra"
 	"golang.org/x/term"
 
+	"github.com/spboyer/waza/internal/projectconfig"
 	"github.com/spboyer/waza/internal/scaffold"
 	"github.com/spboyer/waza/internal/workspace"
 )
@@ -152,20 +152,9 @@ func initCommandE(cmd *cobra.Command, args []string, noSkill bool) error {
 	// If .waza.yaml exists, read engine/model from it so scaffolded evals
 	// match the project's actual config instead of hardcoded defaults.
 	if !needConfigPrompt {
-		if data, err := os.ReadFile(wazaConfigPath); err == nil {
-			for _, line := range strings.Split(string(data), "\n") {
-				line = strings.TrimSpace(line)
-				if strings.HasPrefix(line, "engine:") {
-					if v := strings.TrimSpace(strings.TrimPrefix(line, "engine:")); v != "" {
-						engine = v
-					}
-				}
-				if strings.HasPrefix(line, "model:") {
-					if v := strings.TrimSpace(strings.TrimPrefix(line, "model:")); v != "" {
-						model = v
-					}
-				}
-			}
+		if cfg, err := projectconfig.Load(absDir); err == nil {
+			engine = cfg.Defaults.Engine
+			model = cfg.Defaults.Model
 		}
 	}
 
