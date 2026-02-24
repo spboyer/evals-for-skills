@@ -58,7 +58,6 @@
     "inputs": {
       "type": "object",
       "required": ["prompt"],
-      "additionalProperties": false,
       "description": "Input stimulus for the task.",
       "properties": {
         "prompt": {

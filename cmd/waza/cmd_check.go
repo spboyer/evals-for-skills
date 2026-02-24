@@ -121,7 +121,7 @@ func printCheckSummaryTable(w interface{ Write([]byte) (int, error) }, reports [
 	fmt.Fprintf(w, " CHECK SUMMARY\n")                                                                            //nolint:errcheck
 	fmt.Fprintf(w, "═══════════════════════════════════════════════\n\n")                                         //nolint:errcheck
 	fmt.Fprintf(w, "%-25s %-15s %-12s %-8s %-8s %s\n", "Skill", "Compliance", "Tokens", "Spec", "Schema", "Eval") //nolint:errcheck
-	fmt.Fprintf(w, "%s\n", strings.Repeat("─", 76))                                                               //nolint:errcheck
+	fmt.Fprintf(w, "%s\n", strings.Repeat("─", 77))                                                               //nolint:errcheck
 
 	for _, r := range reports {
 		name := r.skillName
