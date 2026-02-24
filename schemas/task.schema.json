@@ -62,7 +62,6 @@
       "properties": {
         "prompt": {
           "type": "string",
-          "minLength": 1,
           "description": "The prompt message sent to the agent."
         },
         "context": {
