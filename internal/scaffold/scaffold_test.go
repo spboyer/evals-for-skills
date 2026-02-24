@@ -5,6 +5,7 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/spboyer/waza/internal/validation"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -124,4 +125,18 @@ func TestReadProjectDefaults_WithConfig(t *testing.T) {
 	engine, model := ReadProjectDefaults()
 	assert.Equal(t, "mock", engine)
 	assert.Equal(t, "gpt-4o", model)
+}
+
+func TestEvalYAML_SchemaCompliant(t *testing.T) {
+	content := EvalYAML("test-skill", "mock", "gpt-4o")
+	errs := validation.ValidateEvalBytes([]byte(content))
+	require.Empty(t, errs, "scaffolded eval.yaml should pass schema validation: %v", errs)
+}
+
+func TestTaskFiles_SchemaCompliant(t *testing.T) {
+	tasks := TaskFiles("test-skill")
+	for name, content := range tasks {
+		errs := validation.ValidateTaskBytes([]byte(content))
+		require.Empty(t, errs, "scaffolded task %s should pass schema validation: %v", name, errs)
+	}
 }

@@ -91,6 +91,11 @@ config:
   parallel: false
   executor: %s
   model: %s
+metrics:
+  - name: task_completion
+    weight: 1.0
+    threshold: 0.8
+    description: Did the skill complete the assigned task?
 graders:
   - type: code
     name: has_output
@@ -100,7 +105,8 @@ graders:
   - type: regex
     name: relevant_content
     config:
-      pattern: "(?i)(explain|describe|analyze|implement)"
+      must_match:
+        - "(?i)(explain|describe|analyze|implement)"
 tasks:
   - "tasks/*.yaml"
 `, name, name, name, engine, model)
