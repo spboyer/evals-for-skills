@@ -24,6 +24,36 @@ const (
 // maxParentWalk is the maximum number of parent directories to walk up when searching.
 const maxParentWalk = 10
 
+// DetectOption configures workspace detection behaviour.
+type DetectOption func(*detectOptions)
+
+type detectOptions struct {
+	skillsDir string // subdirectory name for skills (default "skills")
+	evalsDir  string // subdirectory name for evals (default "evals")
+}
+
+func defaultDetectOptions() detectOptions {
+	return detectOptions{skillsDir: "skills", evalsDir: "evals"}
+}
+
+// WithSkillsDir overrides the skills subdirectory name used during detection.
+func WithSkillsDir(dir string) DetectOption {
+	return func(o *detectOptions) {
+		if dir != "" {
+			o.skillsDir = dir
+		}
+	}
+}
+
+// WithEvalsDir overrides the evals subdirectory name used during detection.
+func WithEvalsDir(dir string) DetectOption {
+	return func(o *detectOptions) {
+		if dir != "" {
+			o.evalsDir = dir
+		}
+	}
+}
+
 // SkillInfo holds information about a discovered skill.
 type SkillInfo struct {
 	Name      string // skill name from SKILL.md frontmatter
@@ -34,9 +64,10 @@ type SkillInfo struct {
 
 // WorkspaceContext represents the detected workspace.
 type WorkspaceContext struct {
-	Type   ContextType
-	Root   string      // workspace root directory
-	Skills []SkillInfo // discovered skills
+	Type     ContextType
+	Root     string      // workspace root directory
+	Skills   []SkillInfo // discovered skills
+	EvalsDir string      // configured evals subdirectory name (default "evals")
 }
 
 // DetectContext analyzes the given directory to determine workspace type.
@@ -45,7 +76,12 @@ type WorkspaceContext struct {
 // 2. Walk up parents for SKILL.md → single-skill (nested inside skill dir)
 // 3. Check for skills/ directory with SKILL.md children → multi-skill
 // 4. Scan CWD for child dirs containing SKILL.md → multi-skill
-func DetectContext(dir string) (*WorkspaceContext, error) {
+func DetectContext(dir string, opts ...DetectOption) (*WorkspaceContext, error) {
+	o := defaultDetectOptions()
+	for _, fn := range opts {
+		fn(&o)
+	}
+
 	absDir, err := filepath.Abs(dir)
 	if err != nil {
 		return nil, fmt.Errorf("resolving absolute path: %w", err)
@@ -54,9 +90,10 @@ func DetectContext(dir string) (*WorkspaceContext, error) {
 	// 1. Check if SKILL.md exists in the given directory
 	if info, ok := tryParseSkill(absDir); ok {
 		return &WorkspaceContext{
-			Type:   ContextSingleSkill,
-			Root:   absDir,
-			Skills: []SkillInfo{info},
+			Type:     ContextSingleSkill,
+			Root:     absDir,
+			Skills:   []SkillInfo{info},
+			EvalsDir: o.evalsDir,
 		}, nil
 	}
 
@@ -71,22 +108,24 @@ func DetectContext(dir string) (*WorkspaceContext, error) {
 
 		if info, ok := tryParseSkill(current); ok {
 			return &WorkspaceContext{
-				Type:   ContextSingleSkill,
-				Root:   current,
-				Skills: []SkillInfo{info},
+				Type:     ContextSingleSkill,
+				Root:     current,
+				Skills:   []SkillInfo{info},
+				EvalsDir: o.evalsDir,
 			}, nil
 		}
 	}
 
-	// 3. Check for skills/ subdirectory with SKILL.md children
-	skillsDir := filepath.Join(absDir, "skills")
+	// 3. Check for configured skills subdirectory with SKILL.md children
+	skillsDir := filepath.Join(absDir, o.skillsDir)
 	if isDir(skillsDir) {
 		skills := scanForSkills(skillsDir)
 		if len(skills) > 0 {
 			return &WorkspaceContext{
-				Type:   ContextMultiSkill,
-				Root:   absDir,
-				Skills: skills,
+				Type:     ContextMultiSkill,
+				Root:     absDir,
+				Skills:   skills,
+				EvalsDir: o.evalsDir,
 			}, nil
 		}
 	}
@@ -95,17 +134,19 @@ func DetectContext(dir string) (*WorkspaceContext, error) {
 	skills := scanForSkills(absDir)
 	if len(skills) > 0 {
 		return &WorkspaceContext{
-			Type:   ContextMultiSkill,
-			Root:   absDir,
-			Skills: skills,
+			Type:     ContextMultiSkill,
+			Root:     absDir,
+			Skills:   skills,
+			EvalsDir: o.evalsDir,
 		}, nil
 	}
 
 	// Nothing found
 	return &WorkspaceContext{
-		Type:   ContextNone,
-		Root:   absDir,
-		Skills: nil,
+		Type:     ContextNone,
+		Root:     absDir,
+		Skills:   nil,
+		EvalsDir: o.evalsDir,
 	}, nil
 }
 
@@ -130,8 +171,13 @@ func FindEval(ctx *WorkspaceContext, skillName string) (string, error) {
 		return "", err
 	}
 
+	evalsDir := ctx.EvalsDir
+	if evalsDir == "" {
+		evalsDir = "evals"
+	}
+
 	// Priority 1: separated convention
-	separated := filepath.Join(ctx.Root, "evals", skillName, "eval.yaml")
+	separated := filepath.Join(ctx.Root, evalsDir, skillName, "eval.yaml")
 	if isFile(separated) {
 		return separated, nil
 	}

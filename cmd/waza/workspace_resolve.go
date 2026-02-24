@@ -4,8 +4,25 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/spboyer/waza/internal/projectconfig"
 	"github.com/spboyer/waza/internal/workspace"
 )
+
+// configDetectOptions returns workspace DetectOptions derived from project config.
+func configDetectOptions() []workspace.DetectOption {
+	wd, err := os.Getwd()
+	if err != nil {
+		return nil
+	}
+	cfg, err := projectconfig.Load(wd)
+	if err != nil {
+		return nil
+	}
+	return []workspace.DetectOption{
+		workspace.WithSkillsDir(cfg.Paths.Skills),
+		workspace.WithEvalsDir(cfg.Paths.Evals),
+	}
+}
 
 // resolveWorkspace uses workspace detection to resolve skills from CLI args.
 // When a skill name is given, ctx.Skills is narrowed to that single skill.
@@ -20,7 +37,7 @@ func resolveWorkspace(args []string) (*workspace.WorkspaceContext, error) {
 	if err != nil {
 		return nil, fmt.Errorf("getting working directory: %w", err)
 	}
-	ctx, err := workspace.DetectContext(wd)
+	ctx, err := workspace.DetectContext(wd, configDetectOptions()...)
 	if err != nil {
 		return nil, fmt.Errorf("detecting workspace: %w", err)
 	}
@@ -55,7 +72,7 @@ func resolveEvalPath(si *workspace.SkillInfo) (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("getting working directory: %w", err)
 	}
-	ctx, err := workspace.DetectContext(wd)
+	ctx, err := workspace.DetectContext(wd, configDetectOptions()...)
 	if err != nil {
 		return "", fmt.Errorf("detecting workspace: %w", err)
 	}

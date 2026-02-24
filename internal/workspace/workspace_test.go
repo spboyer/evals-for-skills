@@ -377,3 +377,52 @@ func TestTryParseSkill_EmptyFrontmatterName_FallsBackToDirName(t *testing.T) {
 		t.Errorf("expected name %q, got %q", "another-skill", info.Name)
 	}
 }
+
+func TestDetectContext_WithCustomSkillsDir(t *testing.T) {
+	root := t.TempDir()
+	writeFile(t, filepath.Join(root, "my-skills", "alpha", "SKILL.md"), skillMD("alpha"))
+
+	// Default detection should NOT find skills under my-skills/
+	ctx, err := DetectContext(root)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if ctx.Type != ContextNone {
+		t.Fatalf("expected ContextNone, got %v", ctx.Type)
+	}
+
+	// With custom skills dir, should find skills
+	ctx, err = DetectContext(root, WithSkillsDir("my-skills"))
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if ctx.Type != ContextMultiSkill {
+		t.Fatalf("expected ContextMultiSkill, got %v", ctx.Type)
+	}
+	if len(ctx.Skills) != 1 || ctx.Skills[0].Name != "alpha" {
+		t.Errorf("expected 1 skill named 'alpha', got %v", ctx.Skills)
+	}
+}
+
+func TestFindEval_WithCustomEvalsDir(t *testing.T) {
+	root := t.TempDir()
+	writeFile(t, filepath.Join(root, "my-skills", "my-skill", "SKILL.md"), skillMD("my-skill"))
+	writeFile(t, filepath.Join(root, "my-evals", "my-skill", "eval.yaml"), "name: test\n")
+
+	ctx, err := DetectContext(root, WithSkillsDir("my-skills"), WithEvalsDir("my-evals"))
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if ctx.EvalsDir != "my-evals" {
+		t.Fatalf("expected EvalsDir 'my-evals', got %q", ctx.EvalsDir)
+	}
+
+	evalPath, err := FindEval(ctx, "my-skill")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	expected := filepath.Join(root, "my-evals", "my-skill", "eval.yaml")
+	if evalPath != expected {
+		t.Errorf("expected %q, got %q", expected, evalPath)
+	}
+}

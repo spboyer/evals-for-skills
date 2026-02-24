@@ -139,6 +139,14 @@ func runCommandE(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("--output and --output-dir are mutually exclusive")
 	}
 
+	// Apply config defaults for output-dir when not explicitly set
+	if outputDir == "" && !cmd.Flags().Changed("output-dir") && outputPath == "" {
+		wd, _ := os.Getwd() //nolint:errcheck
+		if cfg, err := projectconfig.Load(wd); err == nil && cfg.Paths.Results != "results/" {
+			outputDir = cfg.Paths.Results
+		}
+	}
+
 	// Handle --discover mode
 	if discoverFlag {
 		return runDiscoverMode(cmd, args)

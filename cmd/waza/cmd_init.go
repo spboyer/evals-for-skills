@@ -145,9 +145,13 @@ func initCommandE(cmd *cobra.Command, args []string, noSkill bool) error {
 
 	// --- Phase 2: Configuration (if .waza.yaml missing) ---
 	var engine, model string
+	var skillsPath, evalsPath, resultsPath string
 	var createSkill, scaffoldMissing bool
 	engine = "copilot-sdk"
 	model = "claude-sonnet-4.6"
+	skillsPath = "skills/"
+	evalsPath = "evals/"
+	resultsPath = "results/"
 
 	// If .waza.yaml exists, read engine/model from it so scaffolded evals
 	// match the project's actual config instead of hardcoded defaults.
@@ -155,6 +159,9 @@ func initCommandE(cmd *cobra.Command, args []string, noSkill bool) error {
 		if cfg, err := projectconfig.Load(absDir); err == nil {
 			engine = cfg.Defaults.Engine
 			model = cfg.Defaults.Model
+			skillsPath = cfg.Paths.Skills
+			evalsPath = cfg.Paths.Evals
+			resultsPath = cfg.Paths.Results
 		}
 	}
 
@@ -214,6 +221,43 @@ func initCommandE(cmd *cobra.Command, args []string, noSkill bool) error {
 				if err := modelForm.Run(); err != nil {
 					model = "claude-sonnet-4.6"
 				}
+			}
+
+			// Paths prompts — pre-detect existing directories
+			detectedSkills := skillsPath
+			detectedEvals := evalsPath
+			detectedResults := resultsPath
+			if fi, err := os.Stat(filepath.Join(absDir, skillsPath)); err == nil && fi.IsDir() {
+				detectedSkills = skillsPath
+			}
+			if fi, err := os.Stat(filepath.Join(absDir, evalsPath)); err == nil && fi.IsDir() {
+				detectedEvals = evalsPath
+			}
+			if fi, err := os.Stat(filepath.Join(absDir, resultsPath)); err == nil && fi.IsDir() {
+				detectedResults = resultsPath
+			}
+
+			pathsForm := huh.NewForm(
+				huh.NewGroup(
+					huh.NewInput().
+						Title("Skills directory").
+						Description("Where skill definitions live").
+						Value(&detectedSkills),
+					huh.NewInput().
+						Title("Evals directory").
+						Description("Where evaluation suites live").
+						Value(&detectedEvals),
+					huh.NewInput().
+						Title("Results directory").
+						Description("Where evaluation results are saved").
+						Value(&detectedResults),
+				),
+			).WithInput(cmd.InOrStdin()).WithOutput(out)
+
+			if err := pathsForm.Run(); err == nil {
+				skillsPath = detectedSkills
+				evalsPath = detectedEvals
+				resultsPath = detectedResults
 			}
 		}
 
@@ -296,21 +340,14 @@ func initCommandE(cmd *cobra.Command, args []string, noSkill bool) error {
 
 	wazaConfigContent := ""
 	if needConfigPrompt {
-		wazaConfigContent = fmt.Sprintf(`# yaml-language-server: $schema=https://raw.githubusercontent.com/spboyer/waza/main/schemas/config.schema.json
-# Waza project configuration
-# These defaults are used by 'waza new' when generating eval.yaml files
-# and by 'waza run' as fallback values when not specified in eval.yaml.
-defaults:
-  engine: %s
-  model: %s
-`, engine, model)
+		wazaConfigContent = generateWazaConfig(engine, model, skillsPath, evalsPath, resultsPath)
 	}
 
 	configLabel := fmt.Sprintf("Project defaults (%s, %s)", engine, model)
 
 	items := []initItem{
-		{filepath.Join(absDir, "skills"), "Skill definitions", true, ""},
-		{filepath.Join(absDir, "evals"), "Evaluation suites", true, ""},
+		{filepath.Join(absDir, skillsPath), "Skill definitions", true, ""},
+		{filepath.Join(absDir, evalsPath), "Evaluation suites", true, ""},
 		{filepath.Join(absDir, ".waza.yaml"), configLabel, false, wazaConfigContent},
 		{filepath.Join(absDir, ".github", "workflows", "eval.yml"), "CI pipeline", false, initCIWorkflow()},
 		{filepath.Join(absDir, ".gitignore"), "Build artifacts excluded", false, initGitignore()},
@@ -418,11 +455,17 @@ defaults:
 
 // scaffoldMissingEvals creates eval suites for skills that lack them.
 func scaffoldMissingEvals(absDir string, inventory []skillEntry, engine, model string) {
+	// Load configured evals path
+	evalsDir := "evals"
+	if cfg, err := projectconfig.Load(absDir); err == nil {
+		evalsDir = cfg.Paths.Evals
+	}
+
 	for _, inv := range inventory {
 		if inv.HasEval {
 			continue
 		}
-		evalDir := filepath.Join(absDir, "evals", inv.Name)
+		evalDir := filepath.Join(absDir, evalsDir, inv.Name)
 		tasksDir := filepath.Join(evalDir, "tasks")
 		fixturesDir := filepath.Join(evalDir, "fixtures")
 
@@ -537,4 +580,56 @@ func initReadme(projectName string) string {
    git push
    `+"`"+``+"`"+``+"`"+`
 `, projectName)
+}
+
+// generateWazaConfig produces the expanded .waza.yaml content with all config sections.
+func generateWazaConfig(engine, model, skillsPath, evalsPath, resultsPath string) string {
+	return fmt.Sprintf(`# yaml-language-server: $schema=https://raw.githubusercontent.com/spboyer/waza/main/schemas/config.schema.json
+
+# Project structure
+paths:
+  skills: %s
+  evals: %s
+  results: %s
+
+# Execution defaults
+defaults:
+  engine: %s
+  model: %s
+  # judge_model: ""
+  # timeout: 300
+  # parallel: false
+  # workers: 4
+  # verbose: false
+  # session_log: false
+
+# cache:
+#   enabled: false
+#   dir: .waza-cache
+
+# server:
+#   port: 3000
+#   results_dir: .
+
+# dev:
+#   model: claude-sonnet-4-20250514
+#   target: medium-high
+#   max_iterations: 5
+
+# tokens:
+#   warning_threshold: 2500
+#   fallback_limit: 2000
+#   limits:
+#     defaults:
+#       "SKILL.md": 500
+#       "references/**/*.md": 1000
+#       "docs/**/*.md": 1500
+#       "*.md": 2000
+#     overrides:
+#       "README.md": 3000
+#       "CONTRIBUTING.md": 2500
+
+# graders:
+#   program_timeout: 30
+`, skillsPath, evalsPath, resultsPath, engine, model)
 }
