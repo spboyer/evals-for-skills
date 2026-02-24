@@ -121,3 +121,80 @@ func TestLoadLimitsConfig_NoFile(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, DefaultLimits, cfg)
 }
+
+func TestLoadConfig_WazaYAML(t *testing.T) {
+	dir := t.TempDir()
+	yaml := `tokens:
+  limits:
+    defaults:
+      "*.md": 800
+    overrides:
+      "README.md": 1600
+`
+	err := os.WriteFile(filepath.Join(dir, ".waza.yaml"), []byte(yaml), 0644)
+	require.NoError(t, err)
+
+	cfg, err := LoadConfig(dir)
+	require.NoError(t, err)
+	require.Equal(t, 800, cfg.Defaults["*.md"])
+	require.Equal(t, 1600, cfg.Overrides["README.md"])
+}
+
+func TestLoadConfig_JSONFallback(t *testing.T) {
+	dir := t.TempDir()
+	jsonData := `{"defaults":{"*.md":900},"overrides":{"A.md":1800}}`
+	err := os.WriteFile(filepath.Join(dir, ".token-limits.json"), []byte(jsonData), 0644)
+	require.NoError(t, err)
+	// No .waza.yaml → should fall back to JSON file
+
+	cfg, err := LoadConfig(dir)
+	require.NoError(t, err)
+	require.Equal(t, 900, cfg.Defaults["*.md"])
+	require.Equal(t, 1800, cfg.Overrides["A.md"])
+}
+
+func TestLoadConfig_WazaYAMLWins(t *testing.T) {
+	dir := t.TempDir()
+	yaml := `tokens:
+  limits:
+    defaults:
+      "*.md": 700
+    overrides:
+      "B.md": 1400
+`
+	err := os.WriteFile(filepath.Join(dir, ".waza.yaml"), []byte(yaml), 0644)
+	require.NoError(t, err)
+
+	jsonData := `{"defaults":{"*.md":999},"overrides":{"B.md":9999}}`
+	err = os.WriteFile(filepath.Join(dir, ".token-limits.json"), []byte(jsonData), 0644)
+	require.NoError(t, err)
+
+	// Capture stderr for the note
+	oldStderr := os.Stderr
+	r, w, _ := os.Pipe()
+	os.Stderr = w
+
+	cfg, err := LoadConfig(dir)
+	require.NoError(t, err)
+
+	w.Close()
+	var buf [512]byte
+	n, _ := r.Read(buf[:])
+	os.Stderr = oldStderr
+
+	// .waza.yaml values should win
+	require.Equal(t, 700, cfg.Defaults["*.md"])
+	require.Equal(t, 1400, cfg.Overrides["B.md"])
+
+	// Note should be logged
+	require.Contains(t, string(buf[:n]), "token limits loaded from .waza.yaml")
+}
+
+func TestLoadConfig_NeitherFile(t *testing.T) {
+	dir := t.TempDir()
+	// No .waza.yaml, no .token-limits.json → built-in defaults
+
+	cfg, err := LoadConfig(dir)
+	require.NoError(t, err)
+	require.Equal(t, defaultLimits, cfg)
+}
