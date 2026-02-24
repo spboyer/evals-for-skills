@@ -1,6 +1,7 @@
 # Skill Invocation Grader Example
 # Demonstrates the skill_invocation grader type
 
+id: skill-invocation-001
 name: orchestration-flow
 description: |
   Verify that an orchestration skill invokes dependent skills in the correct order.
@@ -10,9 +11,10 @@ description: |
   - Three matching modes: exact_match, in_order, any_order
   - The allow_extra flag for controlling extra invocations
 
-prompt: |
-  Create a deployment workflow that prepares the environment, deploys the application,
-  and then monitors the deployment status.
+inputs:
+  prompt: |
+    Create a deployment workflow that prepares the environment, deploys the application,
+    and then monitors the deployment status.
 
 # Task-specific graders
 graders:
