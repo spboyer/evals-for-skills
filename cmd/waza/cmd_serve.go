@@ -10,6 +10,7 @@ import (
 
 	"github.com/spboyer/waza/internal/jsonrpc"
 	"github.com/spboyer/waza/internal/mcp"
+	"github.com/spboyer/waza/internal/projectconfig"
 	"github.com/spboyer/waza/internal/webserver"
 	"github.com/spf13/cobra"
 )
@@ -44,6 +45,15 @@ JSON-RPC methods (when using --tcp or stdin/stdout):
   run.status     Get run status
   run.cancel     Cancel a running eval`,
 		RunE: func(cmd *cobra.Command, args []string) error {
+			// Apply .waza.yaml defaults when CLI flags not explicitly set.
+			cfg, _ := projectconfig.Load(".")
+			if !cmd.Flags().Changed("port") && cfg.Server.Port > 0 {
+				httpPort = cfg.Server.Port
+			}
+			if !cmd.Flags().Changed("results-dir") && cfg.Server.ResultsDir != "" {
+				resultsDir = cfg.Server.ResultsDir
+			}
+
 			logger := slog.Default()
 
 			// JSON-RPC TCP mode
