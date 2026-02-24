@@ -5,6 +5,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/spboyer/waza/internal/scoring"
 	"github.com/stretchr/testify/require"
 )
 
@@ -16,7 +17,7 @@ import (
 
 func TestDisplayScore_LowScore(t *testing.T) {
 	skill := makeSkill("my-skill", "Short description")
-	result := (&HeuristicScorer{}).Score(skill)
+	result := (&scoring.HeuristicScorer{}).Score(skill)
 
 	var buf bytes.Buffer
 	DisplayScore(&buf, skill, result)
@@ -45,7 +46,7 @@ USE FOR: "extract PDF text", "rotate PDF".
 DO NOT USE FOR: creating PDFs (use document-creator).
 INVOKES: pdf-tools MCP for extraction.
 FOR SINGLE OPERATIONS: Use pdf-tools directly.`)
-	result := (&HeuristicScorer{}).Score(skill)
+	result := (&scoring.HeuristicScorer{}).Score(skill)
 
 	var buf bytes.Buffer
 	DisplayScore(&buf, skill, result)
@@ -74,7 +75,7 @@ func TestDisplayScore_ShowsTriggerCounts(t *testing.T) {
 		`Process things with great care and attention to detail over many steps.
 USE FOR: "process data", "transform files", "validate input".
 DO NOT USE FOR: deleting files (use file-manager).`)
-	result := (&HeuristicScorer{}).Score(skill)
+	result := (&scoring.HeuristicScorer{}).Score(skill)
 
 	var buf bytes.Buffer
 	DisplayScore(&buf, skill, result)
@@ -94,7 +95,7 @@ Spec Compliance: 5/8 passed
 }
 
 func TestDisplayIssues_ShowsAllIssues(t *testing.T) {
-	issues := []Issue{
+	issues := []scoring.Issue{
 		{Rule: "description-length", Message: "Description is 30 chars (need 150+)", Severity: "error"},
 		{Rule: "name-format", Message: "Name must be lowercase", Severity: "error"},
 		{Rule: "token-soft-limit", Message: "Over soft limit", Severity: "warning"},
@@ -112,7 +113,7 @@ func TestDisplayIssues_ShowsAllIssues(t *testing.T) {
 }
 
 func TestDisplayIssues_ErrorIcon(t *testing.T) {
-	issues := []Issue{
+	issues := []scoring.Issue{
 		{Rule: "test", Message: "An error issue", Severity: "error"},
 	}
 
@@ -126,7 +127,7 @@ func TestDisplayIssues_ErrorIcon(t *testing.T) {
 }
 
 func TestDisplayIssues_WarningIcon(t *testing.T) {
-	issues := []Issue{
+	issues := []scoring.Issue{
 		{Rule: "test", Message: "A warning issue", Severity: "warning"},
 	}
 
@@ -140,13 +141,13 @@ func TestDisplayIssues_WarningIcon(t *testing.T) {
 }
 
 func TestDisplaySummary_BoxFormat(t *testing.T) {
-	before := &ScoreResult{
-		Level:            AdherenceLow,
+	before := &scoring.ScoreResult{
+		Level:            scoring.AdherenceLow,
 		TriggerCount:     0,
 		AntiTriggerCount: 0,
 	}
-	after := &ScoreResult{
-		Level:            AdherenceMediumHigh,
+	after := &scoring.ScoreResult{
+		Level:            scoring.AdherenceMediumHigh,
 		TriggerCount:     5,
 		AntiTriggerCount: 3,
 	}
@@ -171,8 +172,8 @@ func TestDisplaySummary_BoxFormat(t *testing.T) {
 }
 
 func TestDisplaySummary_ContainsBoxCharacters(t *testing.T) {
-	before := &ScoreResult{Level: AdherenceLow}
-	after := &ScoreResult{Level: AdherenceMedium}
+	before := &scoring.ScoreResult{Level: scoring.AdherenceLow}
+	after := &scoring.ScoreResult{Level: scoring.AdherenceMedium}
 
 	var buf bytes.Buffer
 	DisplaySummary(&buf, "box-test", before, after, 100, 200)
@@ -194,8 +195,8 @@ func TestDisplaySummary_ContainsBoxCharacters(t *testing.T) {
 }
 
 func TestDisplaySummary_TokenStatus_UnderBudget(t *testing.T) {
-	before := &ScoreResult{Level: AdherenceLow}
-	after := &ScoreResult{Level: AdherenceMediumHigh}
+	before := &scoring.ScoreResult{Level: scoring.AdherenceLow}
+	after := &scoring.ScoreResult{Level: scoring.AdherenceMediumHigh}
 
 	var buf bytes.Buffer
 	DisplaySummary(&buf, "token-test", before, after, 100, 385)
@@ -217,8 +218,8 @@ func TestDisplaySummary_TokenStatus_UnderBudget(t *testing.T) {
 }
 
 func TestDisplaySummary_TokenStatus_OverSoftLimit(t *testing.T) {
-	before := &ScoreResult{Level: AdherenceLow}
-	after := &ScoreResult{Level: AdherenceMediumHigh}
+	before := &scoring.ScoreResult{Level: scoring.AdherenceLow}
+	after := &scoring.ScoreResult{Level: scoring.AdherenceMediumHigh}
 
 	var buf bytes.Buffer
 	DisplaySummary(&buf, "token-test", before, after, 100, 600)
@@ -240,8 +241,8 @@ func TestDisplaySummary_TokenStatus_OverSoftLimit(t *testing.T) {
 }
 
 func TestDisplaySummary_TokenStatus_OverHardLimit(t *testing.T) {
-	before := &ScoreResult{Level: AdherenceLow}
-	after := &ScoreResult{Level: AdherenceMediumHigh}
+	before := &scoring.ScoreResult{Level: scoring.AdherenceLow}
+	after := &scoring.ScoreResult{Level: scoring.AdherenceMediumHigh}
 
 	var buf bytes.Buffer
 	DisplaySummary(&buf, "token-test", before, after, 100, 6000)
@@ -263,8 +264,8 @@ func TestDisplaySummary_TokenStatus_OverHardLimit(t *testing.T) {
 }
 
 func TestDisplaySummary_ShowsBEFOREandAFTER(t *testing.T) {
-	before := &ScoreResult{Level: AdherenceLow, TriggerCount: 0, AntiTriggerCount: 0}
-	after := &ScoreResult{Level: AdherenceHigh, TriggerCount: 7, AntiTriggerCount: 2}
+	before := &scoring.ScoreResult{Level: scoring.AdherenceLow, TriggerCount: 0, AntiTriggerCount: 0}
+	after := &scoring.ScoreResult{Level: scoring.AdherenceHigh, TriggerCount: 7, AntiTriggerCount: 2}
 
 	var buf bytes.Buffer
 	DisplaySummary(&buf, "summary-test", before, after, 50, 400)
@@ -298,7 +299,7 @@ func TestDisplayIterationHeader(t *testing.T) {
 
 func TestDisplayTargetReached(t *testing.T) {
 	var buf bytes.Buffer
-	DisplayTargetReached(&buf, AdherenceHigh)
+	DisplayTargetReached(&buf, scoring.AdherenceHigh)
 
 	want := `
 ✅ Target adherence level High reached!
@@ -308,7 +309,7 @@ func TestDisplayTargetReached(t *testing.T) {
 
 func TestDisplayMaxIterations(t *testing.T) {
 	var buf bytes.Buffer
-	DisplayMaxIterations(&buf, AdherenceMedium)
+	DisplayMaxIterations(&buf, scoring.AdherenceMedium)
 
 	want := `
 ⏱️  Max iterations reached. Current level: Medium

@@ -8,6 +8,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/spboyer/waza/internal/scoring"
 	"github.com/stretchr/testify/require"
 )
 
@@ -31,8 +32,8 @@ Does things.
 	skill, err := readSkillFile(filepath.Join(skillDir, "SKILL.md"))
 	require.NoError(t, err)
 
-	result := (&HeuristicScorer{}).Score(skill)
-	require.Equal(t, AdherenceLow, result.Level)
+	result := (&scoring.HeuristicScorer{}).Score(skill)
+	require.Equal(t, scoring.AdherenceLow, result.Level)
 	require.NotEmpty(t, result.Issues)
 }
 
@@ -61,9 +62,9 @@ A well-documented skill.
 	skill, err := readSkillFile(filepath.Join(skillDir, "SKILL.md"))
 	require.NoError(t, err)
 
-	result := (&HeuristicScorer{}).Score(skill)
-	require.Equal(t, AdherenceHigh, result.Level)
-	require.True(t, result.Level.AtLeast(AdherenceMediumHigh),
+	result := (&scoring.HeuristicScorer{}).Score(skill)
+	require.Equal(t, scoring.AdherenceHigh, result.Level)
+	require.True(t, result.Level.AtLeast(scoring.AdherenceMediumHigh),
 		"High skill should pass MediumHigh target check")
 }
 
@@ -89,8 +90,8 @@ Handles document processing.
 	skill, err := readSkillFile(filepath.Join(skillDir, "SKILL.md"))
 	require.NoError(t, err)
 
-	result := (&HeuristicScorer{}).Score(skill)
-	require.Equal(t, AdherenceMedium, result.Level,
+	result := (&scoring.HeuristicScorer{}).Score(skill)
+	require.Equal(t, scoring.AdherenceMedium, result.Level,
 		"has triggers but no anti-triggers => Medium")
 
 	var buf bytes.Buffer
@@ -121,27 +122,27 @@ func TestDevLoop_ScoreProgressionPath(t *testing.T) {
 
 	// Step 0: Long enough but no markers → Low (no triggers)
 	skill := makeSkill("progress-skill", base)
-	scorer := &HeuristicScorer{}
+	scorer := &scoring.HeuristicScorer{}
 	r := scorer.Score(skill)
-	require.Equal(t, AdherenceLow, r.Level, "no triggers => Low")
+	require.Equal(t, scoring.AdherenceLow, r.Level, "no triggers => Low")
 
 	// Step 1: Add triggers → Medium
 	withTriggers := base + "\nUSE FOR: \"process data\", \"transform files\"."
 	skill = makeSkill("progress-skill", withTriggers)
 	r = scorer.Score(skill)
-	require.Equal(t, AdherenceMedium, r.Level, "triggers but no anti => Medium")
+	require.Equal(t, scoring.AdherenceMedium, r.Level, "triggers but no anti => Medium")
 
 	// Step 2: Add anti-triggers → Medium-High
 	withAnti := withTriggers + "\nDO NOT USE FOR: deleting files (use file-manager)."
 	skill = makeSkill("progress-skill", withAnti)
 	r = scorer.Score(skill)
-	require.Equal(t, AdherenceMediumHigh, r.Level, "triggers + anti => Medium-High")
+	require.Equal(t, scoring.AdherenceMediumHigh, r.Level, "triggers + anti => Medium-High")
 
 	// Step 3: Add routing → High
 	withRouting := "**WORKFLOW SKILL** - " + withAnti + "\nINVOKES: data-tools for processing."
 	skill = makeSkill("progress-skill", withRouting)
 	r = scorer.Score(skill)
-	require.Equal(t, AdherenceHigh, r.Level, "triggers + anti + routing => High")
+	require.Equal(t, scoring.AdherenceHigh, r.Level, "triggers + anti + routing => High")
 }
 
 func TestDevLoop_RunDevLoop_AlreadyCompliant(t *testing.T) {
@@ -169,7 +170,7 @@ Already meets Medium-High target.
 	var buf bytes.Buffer
 	cfg := &devConfig{
 		SkillDir:      skillDir,
-		Target:        AdherenceMediumHigh,
+		Target:        scoring.AdherenceMediumHigh,
 		MaxIterations: 1,
 		Auto:          true,
 		Out:           &buf,
@@ -218,7 +219,7 @@ description: "Short"
 	var buf bytes.Buffer
 	cfg := &devConfig{
 		SkillDir:      skillDir,
-		Target:        AdherenceHigh, // very high target
+		Target:        scoring.AdherenceHigh, // very high target
 		MaxIterations: 1,
 		Auto:          true,
 		Out:           &buf,
@@ -310,7 +311,7 @@ description: "Short"
 	var buf bytes.Buffer
 	cfg := &devConfig{
 		SkillDir:      skillDir,
-		Target:        AdherenceHigh,
+		Target:        scoring.AdherenceHigh,
 		MaxIterations: 10,
 		Auto:          true,
 		Out:           &buf,
@@ -422,10 +423,10 @@ Spec Compliance: 6/8 passed
 
 	final, err := readSkillFile(filepath.Join(skillDir, "SKILL.md"))
 	require.NoError(t, err)
-	desc := final.Frontmatter.Description
-	require.True(t, containsAny(desc, triggerPatterns), "should have triggers")
-	require.True(t, containsAny(desc, antiTriggerPatterns), "should have anti-triggers")
-	require.True(t, containsAny(desc, routingClarityPatterns), "should have routing clarity")
+	desc := strings.ToLower(final.Frontmatter.Description)
+	require.True(t, strings.Contains(desc, "use for:"), "should have triggers")
+	require.True(t, strings.Contains(desc, "do not use for:"), "should have anti-triggers")
+	require.True(t, strings.Contains(desc, "invokes:"), "should have routing clarity")
 }
 
 func TestDevLoop_NoSummaryWhenDeclined(t *testing.T) {
@@ -449,7 +450,7 @@ description: "Short"
 	var buf bytes.Buffer
 	cfg := &devConfig{
 		SkillDir:      skillDir,
-		Target:        AdherenceHigh,
+		Target:        scoring.AdherenceHigh,
 		MaxIterations: 3,
 		Auto:          false,
 		Out:           &buf,

@@ -1,4 +1,4 @@
-package internal
+package checks
 
 import (
 	"encoding/json"
@@ -12,7 +12,8 @@ import (
 )
 
 const (
-	fallbackLimit    = 2000
+	// FallbackLimit is the default token limit when no pattern matches.
+	FallbackLimit    = 2000
 	maxPatternLength = 500
 )
 
@@ -23,8 +24,8 @@ type TokenLimitsConfig struct {
 	Overrides   map[string]int `json:"overrides"`
 }
 
-// defaultLimits is the fallback configuration when no .token-limits.json exists.
-var defaultLimits = TokenLimitsConfig{
+// DefaultLimits is the fallback configuration when no .token-limits.json exists.
+var DefaultLimits = TokenLimitsConfig{
 	Defaults: map[string]int{
 		"SKILL.md":           500,
 		"references/**/*.md": 1000,
@@ -37,13 +38,13 @@ var defaultLimits = TokenLimitsConfig{
 	},
 }
 
-// LoadConfig unmarshals dir/.token-limits.json or returns [defaultLimits].
-func LoadConfig(dir string) (TokenLimitsConfig, error) {
+// LoadLimitsConfig unmarshals dir/.token-limits.json or returns [DefaultLimits].
+func LoadLimitsConfig(dir string) (TokenLimitsConfig, error) {
 	path := filepath.Join(dir, ".token-limits.json")
 	data, err := os.ReadFile(path)
 	if err != nil {
 		if errors.Is(err, os.ErrNotExist) {
-			return defaultLimits, nil
+			return DefaultLimits, nil
 		}
 		return TokenLimitsConfig{}, fmt.Errorf("reading %q: %w", path, err)
 	}
@@ -60,20 +61,18 @@ func LoadConfig(dir string) (TokenLimitsConfig, error) {
 	return cfg, nil
 }
 
-// NormalizePath converts backslashes to forward slashes.
-func NormalizePath(filePath string) string {
+// normalizePath converts backslashes to forward slashes.
+func normalizePath(filePath string) string {
 	return strings.ReplaceAll(filePath, `\`, "/")
 }
 
-// GlobToRegex converts a glob pattern to a compiled regex.
-func GlobToRegex(pattern string) (*regexp.Regexp, error) {
+// globToRegex converts a glob pattern to a compiled regex.
+func globToRegex(pattern string) (*regexp.Regexp, error) {
 	if len(pattern) > maxPatternLength {
 		return nil, fmt.Errorf("pattern too long (max %d characters)", maxPatternLength)
 	}
 
 	re := regexp.QuoteMeta(pattern)
-	// Undo quoting for our glob characters — order matters:
-	// first handle ** (globstar), then *
 	re = strings.ReplaceAll(re, `\*\*`, "{{GLOBSTAR}}")
 	re = strings.ReplaceAll(re, `\*`, `[^/]*`)
 	re = strings.ReplaceAll(re, "{{GLOBSTAR}}", `.*?`)
@@ -84,16 +83,15 @@ func GlobToRegex(pattern string) (*regexp.Regexp, error) {
 	return regexp.Compile(`(?:^|/)` + re + `$`)
 }
 
-// MatchesPattern checks whether filePath matches a glob pattern.
-func MatchesPattern(filePath, pattern string) bool {
-	normalized := NormalizePath(filePath)
+// matchesPattern checks whether filePath matches a glob pattern.
+func matchesPattern(filePath, pattern string) bool {
+	normalized := normalizePath(filePath)
 
-	// Simple filename (no slashes, no wildcards) — match by suffix
 	if !strings.Contains(pattern, "/") && !strings.Contains(pattern, "*") {
 		return normalized == pattern || strings.HasSuffix(normalized, "/"+pattern)
 	}
 
-	re, err := GlobToRegex(pattern)
+	re, err := globToRegex(pattern)
 	if err != nil {
 		return false
 	}
@@ -110,7 +108,6 @@ func patternSpecificity(pattern string) int {
 
 	score += (strings.Count(pattern, "/")) * 100
 
-	// Count single stars (not globstars)
 	temp := strings.ReplaceAll(pattern, "**", "")
 	score += strings.Count(temp, "*") * 10
 
@@ -128,16 +125,14 @@ type LimitResult struct {
 
 // GetLimitForFile determines the token limit for a file.
 func GetLimitForFile(filePath string, cfg TokenLimitsConfig) LimitResult {
-	normalized := NormalizePath(filePath)
+	normalized := normalizePath(filePath)
 
-	// Check overrides first (exact matches)
 	for overridePath, limit := range cfg.Overrides {
 		if normalized == overridePath || strings.HasSuffix(normalized, "/"+overridePath) {
 			return LimitResult{Limit: limit, Pattern: overridePath}
 		}
 	}
 
-	// Sort defaults by specificity (highest first)
 	type entry struct {
 		pattern string
 		limit   int
@@ -151,10 +146,10 @@ func GetLimitForFile(filePath string, cfg TokenLimitsConfig) LimitResult {
 	})
 
 	for _, e := range entries {
-		if MatchesPattern(normalized, e.pattern) {
+		if matchesPattern(normalized, e.pattern) {
 			return LimitResult{Limit: e.limit, Pattern: e.pattern}
 		}
 	}
 
-	return LimitResult{Limit: fallbackLimit, Pattern: "none"}
+	return LimitResult{Limit: FallbackLimit, Pattern: "none"}
 }

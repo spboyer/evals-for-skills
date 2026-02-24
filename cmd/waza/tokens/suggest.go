@@ -15,8 +15,9 @@ import (
 	"time"
 	"unicode/utf8"
 
-	"github.com/spboyer/waza/cmd/waza/tokens/internal"
+	"github.com/spboyer/waza/internal/checks"
 	"github.com/spboyer/waza/internal/execution"
+	"github.com/spboyer/waza/internal/skill"
 	"github.com/spboyer/waza/internal/spinner"
 	"github.com/spboyer/waza/internal/tokens"
 	"github.com/spboyer/waza/internal/workspace"
@@ -121,14 +122,21 @@ func runSuggest(cmd *cobra.Command, args []string) error {
 		args = nil
 	}
 
-	cfg, err := internal.LoadConfig(rootDir)
+	checker := &checks.TokenLimitsChecker{
+		Paths: args,
+	}
+	limitsData, err := checker.Limits(skill.Skill{Path: filepath.Join(rootDir, "SKILL.md")})
 	if err != nil {
 		return err
 	}
 
-	files, err := findMarkdownFiles(args, rootDir)
-	if err != nil {
-		return err
+	// Build a map from file path to resolved limit for use in analysis
+	limitsByFile := make(map[string]int, len(limitsData.Results))
+	var files []string
+	for _, r := range limitsData.Results {
+		absPath := filepath.Join(rootDir, filepath.FromSlash(r.File))
+		files = append(files, absPath)
+		limitsByFile[r.File] = r.Limit
 	}
 
 	counter, err := tokens.NewCounter(tokens.TokenizerDefault)
@@ -215,7 +223,7 @@ func runSuggest(cmd *cobra.Command, args []string) error {
 		stopSpinner()
 	} else {
 		for _, f := range files {
-			a, err := analyzeFile(counter, f, rootDir, cfg)
+			a, err := analyzeFile(counter, f, rootDir, limitsByFile)
 			if err != nil {
 				fmt.Fprintf(errOut, "⚠️  Error analyzing %s: %s\n", f, err) //nolint:errcheck
 				continue
@@ -287,7 +295,7 @@ func findDuplicates(text string, minLen int) []string {
 }
 
 // analyzeFile generates suggestions for a single file using simple heuristics.
-func analyzeFile(counter tokens.Counter, filePath, rootDir string, cfg internal.TokenLimitsConfig) (*fileAnalysis, error) {
+func analyzeFile(counter tokens.Counter, filePath, rootDir string, limitsByFile map[string]int) (*fileAnalysis, error) {
 	content, err := os.ReadFile(filePath)
 	if err != nil {
 		return nil, err
@@ -300,7 +308,10 @@ func analyzeFile(counter tokens.Counter, filePath, rootDir string, cfg internal.
 	text := string(content)
 	r := countTokens(counter, text, rel)
 	lines := strings.Split(text, "\n")
-	lr := internal.GetLimitForFile(r.Path, cfg)
+	limit, ok := limitsByFile[r.Path]
+	if !ok {
+		limit = checks.FallbackLimit
+	}
 
 	var suggestions []suggestion
 
@@ -403,10 +414,10 @@ func analyzeFile(counter tokens.Counter, filePath, rootDir string, cfg internal.
 	}
 
 	// Check if file exceeds limit
-	if r.Tokens > lr.Limit {
+	if r.Tokens > limit {
 		suggestions = append(suggestions, suggestion{
 			Line:             1,
-			Issue:            fmt.Sprintf("File exceeds token limit (%d/%d)", r.Tokens, lr.Limit),
+			Issue:            fmt.Sprintf("File exceeds token limit (%d/%d)", r.Tokens, limit),
 			Suggestion:       "Split content into multiple files or use reference documents",
 			EstimatedSavings: 0,
 		})

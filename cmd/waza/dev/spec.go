@@ -7,6 +7,7 @@ import (
 	"strings"
 	"unicode/utf8"
 
+	"github.com/spboyer/waza/internal/scoring"
 	"github.com/spboyer/waza/internal/skill"
 )
 
@@ -29,7 +30,7 @@ type SpecScorer struct{}
 
 // SpecResult holds the output from spec compliance checks.
 type SpecResult struct {
-	Issues []Issue
+	Issues []scoring.Issue
 	Pass   int // number of checks that passed
 	Total  int // total checks run
 }
@@ -50,7 +51,7 @@ func (SpecScorer) Score(sk *skill.Skill) *SpecResult {
 
 	if sk == nil {
 		r.Total = 1
-		r.Issues = append(r.Issues, Issue{
+		r.Issues = append(r.Issues, scoring.Issue{
 			Rule:     "spec-frontmatter",
 			Message:  "Skill is nil",
 			Severity: "error",
@@ -74,7 +75,7 @@ func (SpecScorer) Score(sk *skill.Skill) *SpecResult {
 func specFrontmatter(sk *skill.Skill, r *SpecResult) {
 	r.Total++
 	if sk.FrontmatterRaw == nil {
-		r.Issues = append(r.Issues, Issue{
+		r.Issues = append(r.Issues, scoring.Issue{
 			Rule:     "spec-frontmatter",
 			Message:  "YAML frontmatter is missing",
 			Severity: "error",
@@ -89,7 +90,7 @@ func specFrontmatter(sk *skill.Skill, r *SpecResult) {
 		missing = append(missing, "description")
 	}
 	if len(missing) > 0 {
-		r.Issues = append(r.Issues, Issue{
+		r.Issues = append(r.Issues, scoring.Issue{
 			Rule:     "spec-frontmatter",
 			Message:  fmt.Sprintf("Required frontmatter fields missing: %s", strings.Join(missing, ", ")),
 			Severity: "error",
@@ -112,7 +113,7 @@ func specAllowedFields(sk *skill.Skill, r *SpecResult) {
 		}
 	}
 	if len(unknown) > 0 {
-		r.Issues = append(r.Issues, Issue{
+		r.Issues = append(r.Issues, scoring.Issue{
 			Rule:     "spec-allowed-fields",
 			Message:  fmt.Sprintf("Unknown frontmatter fields: %s", strings.Join(unknown, ", ")),
 			Severity: "warning",
@@ -131,7 +132,7 @@ func specName(sk *skill.Skill, r *SpecResult) {
 		return
 	}
 	if strings.HasPrefix(name, "-") || strings.HasSuffix(name, "-") {
-		r.Issues = append(r.Issues, Issue{
+		r.Issues = append(r.Issues, scoring.Issue{
 			Rule:     "spec-name",
 			Message:  "Name must not start or end with a hyphen",
 			Severity: "error",
@@ -139,7 +140,7 @@ func specName(sk *skill.Skill, r *SpecResult) {
 		return
 	}
 	if strings.Contains(name, "--") {
-		r.Issues = append(r.Issues, Issue{
+		r.Issues = append(r.Issues, scoring.Issue{
 			Rule:     "spec-name",
 			Message:  "Name must not contain consecutive hyphens (--)",
 			Severity: "error",
@@ -147,7 +148,7 @@ func specName(sk *skill.Skill, r *SpecResult) {
 		return
 	}
 	if !namePattern.MatchString(name) {
-		r.Issues = append(r.Issues, Issue{
+		r.Issues = append(r.Issues, scoring.Issue{
 			Rule:     "spec-name",
 			Message:  "Name must contain only lowercase alphanumeric characters and hyphens",
 			Severity: "error",
@@ -165,7 +166,7 @@ func specDirMatch(sk *skill.Skill, r *SpecResult) {
 	}
 	dir := filepath.Base(filepath.Dir(sk.Path))
 	if dir != sk.Frontmatter.Name {
-		r.Issues = append(r.Issues, Issue{
+		r.Issues = append(r.Issues, scoring.Issue{
 			Rule:     "spec-dir-match",
 			Message:  fmt.Sprintf("Directory %q does not match skill name %q", dir, sk.Frontmatter.Name),
 			Severity: "error",
@@ -185,7 +186,7 @@ func specDescription(sk *skill.Skill, r *SpecResult) {
 	}
 	length := utf8.RuneCountInString(desc)
 	if length > 1024 {
-		r.Issues = append(r.Issues, Issue{
+		r.Issues = append(r.Issues, scoring.Issue{
 			Rule:     "spec-description",
 			Message:  fmt.Sprintf("Description is %d characters (max 1024)", length),
 			Severity: "error",
@@ -213,7 +214,7 @@ func specCompatibility(sk *skill.Skill, r *SpecResult) {
 		return
 	}
 	if utf8.RuneCountInString(s) > 500 {
-		r.Issues = append(r.Issues, Issue{
+		r.Issues = append(r.Issues, scoring.Issue{
 			Rule:     "spec-compatibility",
 			Message:  fmt.Sprintf("Compatibility field is %d characters (max 500)", utf8.RuneCountInString(s)),
 			Severity: "error",
@@ -230,7 +231,7 @@ func specLicense(sk *skill.Skill, r *SpecResult) {
 		return
 	}
 	if _, ok := sk.FrontmatterRaw["license"]; !ok {
-		r.Issues = append(r.Issues, Issue{
+		r.Issues = append(r.Issues, scoring.Issue{
 			Rule:     "spec-license",
 			Message:  "Consider adding a 'license' field (e.g., MIT, Apache-2.0)",
 			Severity: "warning",
@@ -248,7 +249,7 @@ func specVersion(sk *skill.Skill, r *SpecResult) {
 	}
 	meta, ok := sk.FrontmatterRaw["metadata"]
 	if !ok {
-		r.Issues = append(r.Issues, Issue{
+		r.Issues = append(r.Issues, scoring.Issue{
 			Rule:     "spec-version",
 			Message:  "Consider adding 'metadata.version' for versioning",
 			Severity: "warning",
@@ -257,7 +258,7 @@ func specVersion(sk *skill.Skill, r *SpecResult) {
 	}
 	metaMap, isMap := meta.(map[string]any)
 	if !isMap {
-		r.Issues = append(r.Issues, Issue{
+		r.Issues = append(r.Issues, scoring.Issue{
 			Rule:     "spec-version",
 			Message:  "Consider adding 'metadata.version' for versioning",
 			Severity: "warning",
@@ -265,7 +266,7 @@ func specVersion(sk *skill.Skill, r *SpecResult) {
 		return
 	}
 	if _, hasVersion := metaMap["version"]; !hasVersion {
-		r.Issues = append(r.Issues, Issue{
+		r.Issues = append(r.Issues, scoring.Issue{
 			Rule:     "spec-version",
 			Message:  "Consider adding 'metadata.version' for versioning",
 			Severity: "warning",

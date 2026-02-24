@@ -11,8 +11,8 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/spboyer/waza/cmd/waza/tokens/internal"
-	"github.com/spboyer/waza/internal/tokens"
+	"github.com/spboyer/waza/internal/checks"
+	"github.com/spboyer/waza/internal/skill"
 	"github.com/spboyer/waza/internal/workspace"
 	"github.com/spf13/cobra"
 )
@@ -85,6 +85,8 @@ func runCheck(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("getting current directory: %w", err)
 	}
 
+	var paths []string
+
 	// If the first arg looks like a skill name (not a path), resolve via workspace
 	if len(args) > 0 && !workspace.LooksLikePath(args[0]) {
 		ctx, ctxErr := workspace.DetectContext(rootDir)
@@ -96,42 +98,26 @@ func runCheck(cmd *cobra.Command, args []string) error {
 			return findErr
 		}
 		rootDir = si.Dir
-		args = nil // reset paths since we're scoping to skill dir
+	} else {
+		paths = args
 	}
 
-	cfg, err := internal.LoadConfig(rootDir)
+	checker := &checks.TokenLimitsChecker{
+		Paths: paths,
+	}
+	limitsData, err := checker.Limits(skill.Skill{Path: filepath.Join(rootDir, "SKILL.md")})
 	if err != nil {
 		return err
 	}
 
-	files, err := findMarkdownFiles(args, rootDir)
-	if err != nil {
-		return err
-	}
-
-	counter, err := tokens.NewCounter(tokens.TokenizerDefault)
-	if err != nil {
-		return err
-	}
 	var results []checkResult
-	for _, f := range files {
-		content, err := os.ReadFile(f)
-		if err != nil {
-			return fmt.Errorf("⚠️  Error reading %s: %w", f, err)
-		}
-		rel, err := filepath.Rel(rootDir, f)
-		if err != nil {
-			rel = f
-		}
-		r := countTokens(counter, string(content), rel)
-
-		lr := internal.GetLimitForFile(r.Path, cfg)
+	for _, r := range limitsData.Results {
 		results = append(results, checkResult{
-			File:     r.Path,
+			File:     r.File,
 			Tokens:   r.Tokens,
-			Limit:    lr.Limit,
-			Pattern:  lr.Pattern,
-			Exceeded: r.Tokens > lr.Limit,
+			Limit:    r.Limit,
+			Pattern:  r.Pattern,
+			Exceeded: r.Exceeded,
 		})
 	}
 

@@ -8,8 +8,9 @@ import (
 	"strings"
 
 	"github.com/spboyer/waza/cmd/waza/dev"
+	"github.com/spboyer/waza/internal/checks"
+	"github.com/spboyer/waza/internal/scoring"
 	"github.com/spboyer/waza/internal/skill"
-	internalTokens "github.com/spboyer/waza/internal/tokens"
 	"github.com/spboyer/waza/internal/validation"
 	"github.com/spboyer/waza/internal/workspace"
 	"github.com/spf13/cobra"
@@ -45,11 +46,11 @@ You can also specify a skill name or path:
 }
 
 type readinessReport struct {
-	complianceScore *dev.ScoreResult
-	complianceLevel dev.AdherenceLevel
 	specResult      *dev.SpecResult
 	mcpResult       *dev.McpResult
 	linkResult      *dev.LinkResult
+	complianceScore *scoring.ScoreResult
+	complianceLevel scoring.AdherenceLevel
 	tokenCount      int
 	tokenLimit      int
 	tokenExceeded   bool
@@ -62,17 +63,32 @@ type readinessReport struct {
 }
 
 func runCheck(cmd *cobra.Command, args []string) error {
-	// Try workspace detection first
-	skills, err := resolveSkillsFromArgs(args)
-	if err == nil && len(skills) > 0 {
-		return runCheckForSkills(cmd, skills)
+	// If arg looks like a file path, use it directly
+	if len(args) > 0 && workspace.LooksLikePath(args[0]) {
+		skillDir := args[0]
+		if !filepath.IsAbs(skillDir) {
+			wd, err := os.Getwd()
+			if err != nil {
+				return fmt.Errorf("getting working directory: %w", err)
+			}
+			skillDir = filepath.Join(wd, skillDir)
+		}
+		report, err := checkReadiness(skillDir, nil)
+		if err != nil {
+			return err
+		}
+		displayReadinessReport(cmd.OutOrStdout(), report)
+		return nil
 	}
 
-	// Fallback: explicit path (backward compatible)
-	skillDir := "."
-	if len(args) > 0 {
-		skillDir = args[0]
+	// Try workspace detection
+	wsCtx, err := resolveWorkspace(args)
+	if err == nil && len(wsCtx.Skills) > 0 {
+		return runCheckForSkills(cmd, wsCtx)
 	}
+
+	// Fallback: current directory
+	skillDir := "."
 	if !filepath.IsAbs(skillDir) {
 		wd, err := os.Getwd()
 		if err != nil {
@@ -81,7 +97,7 @@ func runCheck(cmd *cobra.Command, args []string) error {
 		skillDir = filepath.Join(wd, skillDir)
 	}
 
-	report, err := checkReadiness(skillDir)
+	report, err := checkReadiness(skillDir, nil)
 	if err != nil {
 		return err
 	}
@@ -90,19 +106,19 @@ func runCheck(cmd *cobra.Command, args []string) error {
 	return nil
 }
 
-func runCheckForSkills(cmd *cobra.Command, skills []workspace.SkillInfo) error {
+func runCheckForSkills(cmd *cobra.Command, wsCtx *workspace.WorkspaceContext) error {
 	w := cmd.OutOrStdout()
 	var reports []*readinessReport
 
-	for i, si := range skills {
-		if len(skills) > 1 {
+	for i, si := range wsCtx.Skills {
+		if len(wsCtx.Skills) > 1 {
 			if i > 0 {
 				fmt.Fprintln(w) //nolint:errcheck
 			}
 			fmt.Fprintf(w, "\n=== %s ===\n", si.Name) //nolint:errcheck
 		}
 
-		report, err := checkReadiness(si.Dir)
+		report, err := checkReadiness(si.Dir, wsCtx)
 		if err != nil {
 			return fmt.Errorf("checking skill %s: %w", si.Name, err)
 		}
@@ -110,7 +126,7 @@ func runCheckForSkills(cmd *cobra.Command, skills []workspace.SkillInfo) error {
 		displayReadinessReport(w, report)
 	}
 
-	if len(skills) > 1 {
+	if len(wsCtx.Skills) > 1 {
 		printCheckSummaryTable(w, reports)
 	}
 	return nil
@@ -159,7 +175,7 @@ func printCheckSummaryTable(w interface{ Write([]byte) (int, error) }, reports [
 	fmt.Fprintf(w, "\n") //nolint:errcheck
 }
 
-func checkReadiness(skillDir string) (*readinessReport, error) {
+func checkReadiness(skillDir string, wsCtx *workspace.WorkspaceContext) (*readinessReport, error) {
 	report := &readinessReport{}
 
 	// 1. Check for SKILL.md
@@ -184,9 +200,12 @@ func checkReadiness(skillDir string) (*readinessReport, error) {
 	report.skillName = sk.Frontmatter.Name
 
 	// 3. Run compliance scoring
-	scorer := &dev.HeuristicScorer{}
-	report.complianceScore = scorer.Score(&sk)
-	report.complianceLevel = report.complianceScore.Level
+	complianceData, err := (&checks.ComplianceScoreChecker{}).Score(sk)
+	if err != nil {
+		return nil, err
+	}
+	report.complianceScore = complianceData.Score
+	report.complianceLevel = complianceData.Level
 
 	// 3b. Run spec compliance checks
 	specScorer := &dev.SpecScorer{}
@@ -201,34 +220,51 @@ func checkReadiness(skillDir string) (*readinessReport, error) {
 	report.linkResult = linkScorer.Score(&sk)
 
 	// 4. Check token budget
-	counter, err := internalTokens.NewCounter(internalTokens.TokenizerDefault)
+	tokenData, err := (&checks.TokenBudgetChecker{}).Budget(sk)
 	if err != nil {
-		return report, err
+		return nil, err
 	}
-	tokens := counter.Count(string(data))
-	report.tokenCount = tokens
+	report.tokenCount = tokenData.TokenCount
+	report.tokenLimit = tokenData.TokenLimit
+	report.tokenExceeded = tokenData.Exceeded
 
 	// Use default token limit for SKILL.md (500 tokens is the standard)
 	report.tokenLimit = 500
 	report.tokenExceeded = report.tokenCount > report.tokenLimit
 
 	// 5. Check for eval.yaml (try workspace-aware detection first, then co-located)
-	wd, wdErr := os.Getwd()
-	if wdErr == nil {
-		if ctx, ctxErr := workspace.DetectContext(wd); ctxErr == nil && ctx.Type != workspace.ContextNone {
-			if evalPath, findErr := workspace.FindEval(ctx, sk.Frontmatter.Name); findErr == nil && evalPath != "" {
-				report.hasEval = true
-				report.evalPath = evalPath
-				report.evalSchemaErrs, report.taskSchemaErrs, _ = validation.ValidateEvalFile(evalPath)
-				return report, nil
+	if wsCtx != nil {
+		if evalPath, findErr := workspace.FindEval(wsCtx, sk.Frontmatter.Name); findErr == nil && evalPath != "" {
+			report.hasEval = true
+			report.evalPath = evalPath
+		}
+	}
+	if !report.hasEval {
+		// Try workspace detection from the working directory
+		if wd, wdErr := os.Getwd(); wdErr == nil {
+			if autoCtx, ctxErr := workspace.DetectContext(wd); ctxErr == nil {
+				if evalPath, findErr := workspace.FindEval(autoCtx, sk.Frontmatter.Name); findErr == nil && evalPath != "" {
+					report.hasEval = true
+					report.evalPath = evalPath
+				}
 			}
 		}
 	}
-	evalPath := filepath.Join(skillDir, "eval.yaml")
-	if _, err := os.Stat(evalPath); err == nil {
-		report.hasEval = true
-		report.evalPath = evalPath
-		report.evalSchemaErrs, report.taskSchemaErrs, _ = validation.ValidateEvalFile(evalPath)
+	if !report.hasEval {
+		colocated := filepath.Join(skillDir, "eval.yaml")
+		if _, err := os.Stat(colocated); err == nil {
+			report.hasEval = true
+			report.evalPath = colocated
+		}
+	}
+
+	// 6. Validate eval.yaml and task schemas
+	if report.hasEval && report.evalPath != "" {
+		evalErrs, taskErrs, valErr := validation.ValidateEvalFile(report.evalPath)
+		if valErr == nil {
+			report.evalSchemaErrs = evalErrs
+			report.taskSchemaErrs = taskErrs
+		}
 	}
 
 	return report, nil
@@ -251,11 +287,11 @@ func displayReadinessReport(out interface{ Write([]byte) (int, error) }, report 
 	// 1. Compliance Check
 	fmt.Fprintf(w, "📋 Compliance Score: %s\n", report.complianceLevel)
 	switch report.complianceLevel {
-	case dev.AdherenceHigh:
+	case scoring.AdherenceHigh:
 		fmt.Fprintf(w, "   ✅ Excellent! Your skill meets all compliance requirements.\n")
-	case dev.AdherenceMediumHigh:
+	case scoring.AdherenceMediumHigh:
 		fmt.Fprintf(w, "   ⚠️  Good, but could be improved. Missing routing clarity.\n")
-	case dev.AdherenceMedium:
+	case scoring.AdherenceMedium:
 		fmt.Fprintf(w, "   ⚠️  Needs improvement. Missing anti-triggers and routing clarity.\n")
 	default:
 		fmt.Fprintf(w, "   ❌ Needs significant improvement. Description too short or missing triggers.\n")
@@ -408,7 +444,7 @@ func displayReadinessReport(out interface{ Write([]byte) (int, error) }, report 
 	fmt.Fprintf(w, "📈 Overall Readiness\n")
 	fmt.Fprintf(w, "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n")
 
-	isReady := report.complianceLevel.AtLeast(dev.AdherenceMediumHigh) &&
+	isReady := report.complianceLevel.AtLeast(scoring.AdherenceMediumHigh) &&
 		!report.tokenExceeded &&
 		(report.specResult == nil || report.specResult.Passed()) &&
 		(report.linkResult == nil || report.linkResult.Passed()) &&
@@ -445,7 +481,7 @@ func generateNextSteps(report *readinessReport) []string {
 
 	// Compliance issues (highest priority)
 	// Use AtLeast method for proper comparison
-	if !report.complianceLevel.AtLeast(dev.AdherenceHigh) {
+	if !report.complianceLevel.AtLeast(scoring.AdherenceHigh) {
 		if report.complianceScore.DescriptionLen < 150 {
 			steps = append(steps, "Expand your description to at least 150 characters with clear usage guidelines")
 		}

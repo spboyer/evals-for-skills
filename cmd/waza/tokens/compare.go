@@ -11,8 +11,8 @@ import (
 	"strings"
 	"unicode/utf8"
 
-	"github.com/spboyer/waza/cmd/waza/tokens/internal"
 	"github.com/spboyer/waza/cmd/waza/tokens/internal/git"
+	"github.com/spboyer/waza/internal/checks"
 	"github.com/spboyer/waza/internal/tokens"
 	"github.com/spf13/cobra"
 )
@@ -120,13 +120,13 @@ func runCompare(cmd *cobra.Command, args []string) error {
 
 	// When --strict, load token limits and mark files that exceed their budget
 	if strict {
-		cfg, cfgErr := internal.LoadConfig(rootDir)
+		cfg, cfgErr := checks.LoadLimitsConfig(rootDir)
 		if cfgErr != nil {
 			return cfgErr
 		}
 		for i := range comparisons {
 			if comparisons[i].After != nil {
-				lr := internal.GetLimitForFile(comparisons[i].File, cfg)
+				lr := checks.GetLimitForFile(comparisons[i].File, cfg)
 				comparisons[i].Limit = lr.Limit
 				comparisons[i].Exceeded = comparisons[i].After.Tokens > lr.Limit
 			}
@@ -295,7 +295,7 @@ func compareRefs(baseRef, headRef, rootDir string) ([]fileComparison, error) {
 		}
 
 		comparisons = append(comparisons, fileComparison{
-			File:          internal.NormalizePath(file),
+			File:          strings.ReplaceAll(file, `\`, "/"),
 			Before:        before,
 			After:         after,
 			Diff:          delta,

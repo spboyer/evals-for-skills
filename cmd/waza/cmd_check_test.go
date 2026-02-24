@@ -7,8 +7,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/spboyer/waza/cmd/waza/dev"
 	"github.com/spboyer/waza/internal/scaffold"
+	"github.com/spboyer/waza/internal/scoring"
 	"github.com/spboyer/waza/internal/validation"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -191,7 +191,7 @@ Body content here.
 	err := os.WriteFile(skillPath, []byte(skillContent), 0644)
 	require.NoError(t, err)
 
-	report, err := checkReadiness(tmpDir)
+	report, err := checkReadiness(tmpDir, nil)
 	assert.NoError(t, err)
 	assert.NotNil(t, report)
 	assert.Equal(t, "readiness-test", report.skillName)
@@ -205,13 +205,13 @@ func TestGenerateNextSteps(t *testing.T) {
 	// Test with high compliance - should have no steps
 	t.Run("high compliance no issues", func(t *testing.T) {
 		report := &readinessReport{
-			complianceLevel: dev.AdherenceHigh,
+			complianceLevel: scoring.AdherenceHigh,
 			tokenCount:      400,
 			tokenLimit:      500,
 			tokenExceeded:   false,
 			hasEval:         true,
-			complianceScore: &dev.ScoreResult{
-				Level:             dev.AdherenceHigh,
+			complianceScore: &scoring.ScoreResult{
+				Level:             scoring.AdherenceHigh,
 				DescriptionLen:    200,
 				HasTriggers:       true,
 				HasAntiTriggers:   true,
@@ -225,13 +225,13 @@ func TestGenerateNextSteps(t *testing.T) {
 	// Test with low compliance - should have multiple steps
 	t.Run("low compliance", func(t *testing.T) {
 		report := &readinessReport{
-			complianceLevel: dev.AdherenceLow,
+			complianceLevel: scoring.AdherenceLow,
 			tokenCount:      400,
 			tokenLimit:      500,
 			tokenExceeded:   false,
 			hasEval:         false,
-			complianceScore: &dev.ScoreResult{
-				Level:             dev.AdherenceLow,
+			complianceScore: &scoring.ScoreResult{
+				Level:             scoring.AdherenceLow,
 				DescriptionLen:    100,
 				HasTriggers:       false,
 				HasAntiTriggers:   false,
@@ -247,13 +247,13 @@ func TestGenerateNextSteps(t *testing.T) {
 	// Test with token issues
 	t.Run("token exceeded", func(t *testing.T) {
 		report := &readinessReport{
-			complianceLevel: dev.AdherenceHigh,
+			complianceLevel: scoring.AdherenceHigh,
 			tokenCount:      600,
 			tokenLimit:      500,
 			tokenExceeded:   true,
 			hasEval:         true,
-			complianceScore: &dev.ScoreResult{
-				Level:             dev.AdherenceHigh,
+			complianceScore: &scoring.ScoreResult{
+				Level:             scoring.AdherenceHigh,
 				DescriptionLen:    200,
 				HasTriggers:       true,
 				HasAntiTriggers:   true,
@@ -450,7 +450,7 @@ This skill analyzes code and provides explanations.
 	t.Chdir(dir)
 
 	// Directly call checkReadiness on the skill directory
-	report, err := checkReadiness(skillDir)
+	report, err := checkReadiness(skillDir, nil)
 	require.NoError(t, err)
 	require.NotNil(t, report)
 	require.True(t, report.hasEval, "scaffolded workspace should have eval detected")

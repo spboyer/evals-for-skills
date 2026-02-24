@@ -13,6 +13,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/spboyer/waza/internal/scoring"
 	"github.com/spboyer/waza/internal/skill"
 	"github.com/yuin/goldmark"
 	"github.com/yuin/goldmark/ast"
@@ -35,7 +36,7 @@ type LinkResult struct {
 	OrphanedFiles  []string
 	TotalLinks     int
 	ValidLinks     int
-	Issues         []Issue
+	Issues         []scoring.Issue
 }
 
 // Passed returns true when no link errors were found.
@@ -446,27 +447,27 @@ func appendUnique(slice []string, item string) []string {
 // buildLinkSummaryIssues populates the Issues field from categorized problems.
 func buildLinkSummaryIssues(r *LinkResult) {
 	if len(r.BrokenLinks) > 0 {
-		r.Issues = append(r.Issues, Issue{
+		r.Issues = append(r.Issues, scoring.Issue{
 			Rule: "link-broken", Message: fmt.Sprintf("%d broken link(s) found", len(r.BrokenLinks)), Severity: "error",
 		})
 	}
 	if len(r.DirectoryLinks) > 0 {
-		r.Issues = append(r.Issues, Issue{
+		r.Issues = append(r.Issues, scoring.Issue{
 			Rule: "link-directory", Message: fmt.Sprintf("%d link(s) point to directories instead of files", len(r.DirectoryLinks)), Severity: "warning",
 		})
 	}
 	if len(r.ScopeEscapes) > 0 {
-		r.Issues = append(r.Issues, Issue{
+		r.Issues = append(r.Issues, scoring.Issue{
 			Rule: "link-scope", Message: fmt.Sprintf("%d link(s) escape the skill directory", len(r.ScopeEscapes)), Severity: "error",
 		})
 	}
 	if len(r.DeadURLs) > 0 {
-		r.Issues = append(r.Issues, Issue{
+		r.Issues = append(r.Issues, scoring.Issue{
 			Rule: "link-dead-url", Message: fmt.Sprintf("%d dead external URL(s) found", len(r.DeadURLs)), Severity: "warning",
 		})
 	}
 	if len(r.OrphanedFiles) > 0 {
-		r.Issues = append(r.Issues, Issue{
+		r.Issues = append(r.Issues, scoring.Issue{
 			Rule: "link-orphan", Message: fmt.Sprintf("%d file(s) in references/ not linked from SKILL.md", len(r.OrphanedFiles)), Severity: "warning",
 		})
 	}

@@ -5,6 +5,7 @@ import (
 	"regexp"
 	"strings"
 
+	"github.com/spboyer/waza/internal/scoring"
 	"github.com/spboyer/waza/internal/skill"
 )
 
@@ -36,7 +37,7 @@ type McpResult struct {
 	PrereqsDocumented    bool
 	CliFallbackDescribed bool
 	NameCollisions       []string
-	Issues               []Issue
+	Issues               []scoring.Issue
 	SubScore             int // 0–4
 }
 
@@ -81,7 +82,7 @@ func checkToolsTable(text string, r *McpResult) {
 		r.ToolsTablePresent = true
 		return
 	}
-	r.Issues = append(r.Issues, Issue{
+	r.Issues = append(r.Issues, scoring.Issue{
 		Rule:     "mcp-tools-table",
 		Message:  "No MCP tools table found — add a Markdown table listing tools used",
 		Severity: "warning",
@@ -109,7 +110,7 @@ func checkPrerequisites(text string, r *McpResult) {
 			return
 		}
 	}
-	r.Issues = append(r.Issues, Issue{
+	r.Issues = append(r.Issues, scoring.Issue{
 		Rule:     "mcp-prerequisites",
 		Message:  "MCP prerequisites not documented — describe which MCP servers are needed",
 		Severity: "warning",
@@ -138,7 +139,7 @@ func checkCliFallback(text string, r *McpResult) {
 			return
 		}
 	}
-	r.Issues = append(r.Issues, Issue{
+	r.Issues = append(r.Issues, scoring.Issue{
 		Rule:     "mcp-cli-fallback",
 		Message:  "No CLI fallback documented — describe behavior when MCP is unavailable",
 		Severity: "warning",
@@ -155,7 +156,7 @@ func checkNameCollisions(desc string, r *McpResult) {
 		}
 	}
 	if len(r.NameCollisions) > 0 {
-		r.Issues = append(r.Issues, Issue{
+		r.Issues = append(r.Issues, scoring.Issue{
 			Rule:     "mcp-name-collision",
 			Message:  fmt.Sprintf("Tool names conflict with built-ins: %s", strings.Join(r.NameCollisions, ", ")),
 			Severity: "error",

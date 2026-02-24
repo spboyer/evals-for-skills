@@ -223,31 +223,31 @@ func resolveSpecPaths(args []string) ([]skillSpecPath, error) {
 			return []skillSpecPath{{specPath: arg}}, nil
 		}
 		// Treat as skill name
-		skills, err := resolveSkillsFromArgs(args)
+		wsCtx, err := resolveWorkspace(args)
 		if err != nil {
 			return nil, err
 		}
-		if len(skills) == 0 {
+		if len(wsCtx.Skills) == 0 {
 			return nil, fmt.Errorf("skill %q not found", arg)
 		}
-		evalPath, err := resolveEvalPath(&skills[0])
+		evalPath, err := resolveEvalPath(&wsCtx.Skills[0])
 		if err != nil {
 			return nil, err
 		}
-		return []skillSpecPath{{specPath: evalPath, skillName: skills[0].Name}}, nil
+		return []skillSpecPath{{specPath: evalPath, skillName: wsCtx.Skills[0].Name}}, nil
 	}
 
 	// No args — workspace detection
-	skills, err := resolveSkillsFromArgs(nil)
+	wsCtx, err := resolveWorkspace(nil)
 	if err != nil {
 		return nil, fmt.Errorf("no eval.yaml specified and workspace detection failed: %w", err)
 	}
 
 	var paths []skillSpecPath
-	for _, si := range skills {
+	for _, si := range wsCtx.Skills {
 		evalPath, err := resolveEvalPath(&si)
 		if err != nil {
-			if len(skills) == 1 {
+			if len(wsCtx.Skills) == 1 {
 				return nil, err
 			}
 			fmt.Printf("⚠️  Skipping %s: %v\n", si.Name, err)

@@ -11,6 +11,7 @@ import (
 	"unicode/utf8"
 
 	"github.com/spboyer/waza/internal/scaffold"
+	"github.com/spboyer/waza/internal/scoring"
 	"github.com/spboyer/waza/internal/skill"
 	"github.com/spboyer/waza/internal/workspace"
 	"github.com/spf13/cobra"
@@ -21,13 +22,13 @@ type devConfig struct {
 	ModelID       string
 	Copilot       bool
 	Context       context.Context
-	Target        AdherenceLevel
+	Target        scoring.AdherenceLevel
 	MaxIterations int
 	Auto          bool
 	Out           io.Writer
 	Err           io.Writer
 	In            io.Reader
-	Scorer        Scorer
+	Scorer        scoring.Scorer
 }
 
 func runDev(cmd *cobra.Command, args []string) error {
@@ -78,7 +79,7 @@ func runDev(cmd *cobra.Command, args []string) error {
 		return errors.New("--filter requires --all")
 	}
 
-	target := AdherenceMediumHigh
+	target := scoring.AdherenceMediumHigh
 	maxIter := 5
 	auto := false
 	if !copilotMode {
@@ -86,7 +87,7 @@ func runDev(cmd *cobra.Command, args []string) error {
 		if targetErr != nil {
 			return targetErr
 		}
-		target, targetErr = ParseAdherenceLevel(targetStr)
+		target, targetErr = scoring.ParseAdherenceLevel(targetStr)
 		if targetErr != nil {
 			return targetErr
 		}
@@ -152,7 +153,7 @@ func runDev(cmd *cobra.Command, args []string) error {
 		Out:           cmd.OutOrStdout(),
 		Err:           cmd.ErrOrStderr(),
 		In:            cmd.InOrStdin(),
-		Scorer:        &HeuristicScorer{},
+		Scorer:        &scoring.HeuristicScorer{},
 	}
 
 	if cfg.Copilot {
@@ -165,14 +166,14 @@ func runDev(cmd *cobra.Command, args []string) error {
 // batchSkillResult holds before/after state for the batch summary table.
 type batchSkillResult struct {
 	Name         string
-	BeforeLevel  AdherenceLevel
-	AfterLevel   AdherenceLevel
+	BeforeLevel  scoring.AdherenceLevel
+	AfterLevel   scoring.AdherenceLevel
 	BeforeTokens int
 	AfterTokens  int
 	Err          error
 }
 
-func runDevBatch(cmd *cobra.Command, args []string, allMode bool, filterStr string, copilotMode bool, modelID string, target AdherenceLevel, maxIter int, auto bool) error {
+func runDevBatch(cmd *cobra.Command, args []string, allMode bool, filterStr string, copilotMode bool, modelID string, target scoring.AdherenceLevel, maxIter int, auto bool) error {
 	wd, err := os.Getwd()
 	if err != nil {
 		return fmt.Errorf("getting working directory: %w", err)
@@ -205,11 +206,11 @@ func runDevBatch(cmd *cobra.Command, args []string, allMode bool, filterStr stri
 
 	// Apply adherence level filter if specified
 	if filterStr != "" {
-		filterLevel, parseErr := ParseAdherenceLevel(filterStr)
+		filterLevel, parseErr := scoring.ParseAdherenceLevel(filterStr)
 		if parseErr != nil {
 			return parseErr
 		}
-		scorer := &HeuristicScorer{}
+		scorer := &scoring.HeuristicScorer{}
 		var filtered []workspace.SkillInfo
 		for _, si := range skills {
 			sk, readErr := readSkillFile(si.SkillPath)
@@ -251,7 +252,7 @@ func runDevBatch(cmd *cobra.Command, args []string, allMode bool, filterStr stri
 			Out:           w,
 			Err:           cmd.ErrOrStderr(),
 			In:            cmd.InOrStdin(),
-			Scorer:        &HeuristicScorer{},
+			Scorer:        &scoring.HeuristicScorer{},
 		}
 
 		// Capture before state
@@ -317,7 +318,7 @@ func runDevLoop(cfg *devConfig) error {
 	// Initial score for before/after comparison
 	scorer := cfg.Scorer
 	if scorer == nil {
-		scorer = &HeuristicScorer{}
+		scorer = &scoring.HeuristicScorer{}
 	}
 
 	initialScore := scorer.Score(skill)
@@ -329,7 +330,7 @@ func runDevLoop(cfg *devConfig) error {
 		return nil
 	}
 
-	var currentScore *ScoreResult
+	var currentScore *scoring.ScoreResult
 	anyChanges := false
 
 	for iter := 1; iter <= cfg.MaxIterations; iter++ {
@@ -388,7 +389,7 @@ func runDevLoop(cfg *devConfig) error {
 	return nil
 }
 
-func improve(cfg *devConfig, skill *skill.Skill, score *ScoreResult) (bool, error) {
+func improve(cfg *devConfig, skill *skill.Skill, score *scoring.ScoreResult) (bool, error) {
 	for _, s := range collectFrontmatterSuggestions(skill, score) {
 		DisplayImprovement(cfg.Out, s.Section, s.Suggestion)
 		if !cfg.Auto && !confirmApply(cfg) {
@@ -420,7 +421,7 @@ type frontmatterSuggestion struct {
 	Suggestion string
 }
 
-func collectFrontmatterSuggestions(skill *skill.Skill, score *ScoreResult) []frontmatterSuggestion {
+func collectFrontmatterSuggestions(skill *skill.Skill, score *scoring.ScoreResult) []frontmatterSuggestion {
 	var suggestions []frontmatterSuggestion
 	if score.DescriptionLen < 150 {
 		suggestions = append(suggestions, frontmatterSuggestion{

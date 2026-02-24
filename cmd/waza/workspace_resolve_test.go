@@ -30,22 +30,21 @@ func TestLooksLikePath(t *testing.T) {
 	}
 }
 
-func TestResolveSkillsFromArgs_ExplicitPath(t *testing.T) {
-	// Explicit paths should return nil (caller handles directly)
-	skills, err := resolveSkillsFromArgs([]string{"eval.yaml"})
+func TestResolveWorkspace_ExplicitPath(t *testing.T) {
+	ctx, err := resolveWorkspace([]string{"eval.yaml"})
 	assert.NoError(t, err)
-	assert.Nil(t, skills)
+	assert.NotNil(t, ctx)
 
-	skills, err = resolveSkillsFromArgs([]string{"./my-skill"})
+	ctx, err = resolveWorkspace([]string{"./my-skill"})
 	assert.NoError(t, err)
-	assert.Nil(t, skills)
+	assert.NotNil(t, ctx)
 
-	skills, err = resolveSkillsFromArgs([]string{"."})
+	ctx, err = resolveWorkspace([]string{"."})
 	assert.NoError(t, err)
-	assert.Nil(t, skills)
+	assert.NotNil(t, ctx)
 }
 
-func TestResolveSkillsFromArgs_SingleSkillWorkspace(t *testing.T) {
+func TestResolveWorkspace_SingleSkillWorkspace(t *testing.T) {
 	dir := t.TempDir()
 	skillContent := `---
 name: test-skill
@@ -56,13 +55,13 @@ description: "A test skill."
 	require.NoError(t, os.WriteFile(filepath.Join(dir, "SKILL.md"), []byte(skillContent), 0o644))
 	t.Chdir(dir)
 
-	skills, err := resolveSkillsFromArgs(nil)
+	ctx, err := resolveWorkspace(nil)
 	require.NoError(t, err)
-	require.Len(t, skills, 1)
-	assert.Equal(t, "test-skill", skills[0].Name)
+	require.Len(t, ctx.Skills, 1)
+	assert.Equal(t, "test-skill", ctx.Skills[0].Name)
 }
 
-func TestResolveSkillsFromArgs_MultiSkillWorkspace(t *testing.T) {
+func TestResolveWorkspace_MultiSkillWorkspace(t *testing.T) {
 	dir := t.TempDir()
 	skillsDir := filepath.Join(dir, "skills")
 
@@ -74,16 +73,16 @@ func TestResolveSkillsFromArgs_MultiSkillWorkspace(t *testing.T) {
 	}
 	t.Chdir(dir)
 
-	skills, err := resolveSkillsFromArgs(nil)
+	ctx, err := resolveWorkspace(nil)
 	require.NoError(t, err)
-	require.Len(t, skills, 2)
+	require.Len(t, ctx.Skills, 2)
 
-	names := []string{skills[0].Name, skills[1].Name}
+	names := []string{ctx.Skills[0].Name, ctx.Skills[1].Name}
 	assert.Contains(t, names, "skill-a")
 	assert.Contains(t, names, "skill-b")
 }
 
-func TestResolveSkillsFromArgs_SkillName(t *testing.T) {
+func TestResolveWorkspace_SkillName(t *testing.T) {
 	dir := t.TempDir()
 	skillsDir := filepath.Join(dir, "skills")
 
@@ -95,17 +94,17 @@ func TestResolveSkillsFromArgs_SkillName(t *testing.T) {
 	}
 	t.Chdir(dir)
 
-	skills, err := resolveSkillsFromArgs([]string{"alpha"})
+	ctx, err := resolveWorkspace([]string{"alpha"})
 	require.NoError(t, err)
-	require.Len(t, skills, 1)
-	assert.Equal(t, "alpha", skills[0].Name)
+	require.Len(t, ctx.Skills, 1)
+	assert.Equal(t, "alpha", ctx.Skills[0].Name)
 }
 
-func TestResolveSkillsFromArgs_NoWorkspace(t *testing.T) {
+func TestResolveWorkspace_NoWorkspace(t *testing.T) {
 	dir := t.TempDir()
 	t.Chdir(dir)
 
-	_, err := resolveSkillsFromArgs(nil)
+	_, err := resolveWorkspace(nil)
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "no skills detected")
 }

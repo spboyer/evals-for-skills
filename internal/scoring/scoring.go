@@ -1,4 +1,4 @@
-package dev
+package scoring
 
 import (
 	"fmt"
@@ -18,11 +18,10 @@ const (
 	AdherenceMediumHigh AdherenceLevel = "Medium-High"
 	AdherenceHigh       AdherenceLevel = "High"
 
-	tokenSoftLimit = 500
-	tokenHardLimit = 5000
+	TokenSoftLimit = 500
+	TokenHardLimit = 5000
 )
 
-// adherenceRank maps levels to ordinals for comparison.
 var adherenceRank = map[AdherenceLevel]int{
 	AdherenceLow:        0,
 	AdherenceMedium:     1,
@@ -30,7 +29,6 @@ var adherenceRank = map[AdherenceLevel]int{
 	AdherenceHigh:       3,
 }
 
-// String returns the string representation of the adherence level.
 func (a AdherenceLevel) String() string {
 	return string(a)
 }
@@ -58,8 +56,8 @@ func ParseAdherenceLevel(s string) (AdherenceLevel, error) {
 
 // Issue represents a specific compliance problem found.
 type Issue struct {
-	Rule     string // rule identifier (e.g., "description-length")
-	Message  string // human-readable description
+	Rule     string
+	Message  string
 	Severity string // "error" or "warning"
 }
 
@@ -75,7 +73,6 @@ type ScoreResult struct {
 	AntiTriggerCount  int
 }
 
-// Trigger phrase patterns (case-insensitive).
 var triggerPatterns = []string{
 	"use for:",
 	"use this skill",
@@ -83,7 +80,6 @@ var triggerPatterns = []string{
 	"trigger phrases include",
 }
 
-// Anti-trigger phrase patterns (case-insensitive).
 var antiTriggerPatterns = []string{
 	"do not use for:",
 	"not for:",
@@ -91,7 +87,6 @@ var antiTriggerPatterns = []string{
 	"instead use",
 }
 
-// Routing clarity patterns (case-insensitive).
 var routingClarityPatterns = []string{
 	"invokes:",
 	"for single operations:",
@@ -105,11 +100,9 @@ type Scorer interface {
 	Score(*skill.Skill) *ScoreResult
 }
 
-// HeuristicScorer scores skills using pattern-matching heuristics
-// (trigger phrases, anti-triggers, routing clarity markers, etc.).
+// HeuristicScorer scores skills using pattern-matching heuristics.
 type HeuristicScorer struct{}
 
-// Score implements Scorer.
 func (HeuristicScorer) Score(sk *skill.Skill) *ScoreResult {
 	result := &ScoreResult{}
 
@@ -128,36 +121,26 @@ func (HeuristicScorer) Score(sk *skill.Skill) *ScoreResult {
 	trimmedDesc := strings.TrimSpace(desc)
 	result.DescriptionLen = utf8.RuneCountInString(trimmedDesc)
 
-	// Detect triggers
 	result.HasTriggers = containsAny(trimmedDesc, triggerPatterns)
 	result.TriggerCount = countPhrasesAfterPattern(trimmedDesc, "USE FOR:")
 
-	// Detect anti-triggers
 	result.HasAntiTriggers = containsAny(trimmedDesc, antiTriggerPatterns)
 	result.AntiTriggerCount = countPhrasesAfterPattern(trimmedDesc, "DO NOT USE FOR:")
 
-	// Detect routing clarity
 	result.HasRoutingClarity = containsAny(trimmedDesc, routingClarityPatterns)
 
-	// Validate name
 	validateName(name, result)
-
-	// Validate description length
 	validateDescriptionLength(result.DescriptionLen, result)
 
-	// Validate token budget
 	if sk.Tokens > 0 {
 		validateTokenBudget(sk.Tokens, result)
 	}
 
-	// Determine adherence level (algorithm from docs/sensei/scoring.md)
 	result.Level = computeLevel(result)
 
 	return result
 }
 
-// computeLevel applies the scoring algorithm. Description length and
-// triggers/anti-triggers/routing determine the AdherenceLevel.
 func computeLevel(r *ScoreResult) AdherenceLevel {
 	if r.DescriptionLen < 150 || !r.HasTriggers {
 		return AdherenceLow
@@ -171,7 +154,6 @@ func computeLevel(r *ScoreResult) AdherenceLevel {
 	return AdherenceHigh
 }
 
-// containsAny returns true if text contains any of the patterns (case-insensitive).
 func containsAny(text string, patterns []string) bool {
 	lower := strings.ToLower(text)
 	for _, p := range patterns {
@@ -182,7 +164,6 @@ func containsAny(text string, patterns []string) bool {
 	return false
 }
 
-// countPhrasesAfterPattern counts comma-delimited phrases after pat in text.
 func countPhrasesAfterPattern(text, pat string) int {
 	lower := strings.ToLower(text)
 	patLower := strings.ToLower(pat)
@@ -191,7 +172,6 @@ func countPhrasesAfterPattern(text, pat string) int {
 		return 0
 	}
 	after := text[idx+len(pat):]
-	// Only count until the next major section marker or end of text.
 	for _, stop := range []string{"DO NOT USE FOR:", "INVOKES:", "FOR SINGLE OPERATIONS:", "\n\n"} {
 		if si := strings.Index(strings.ToUpper(after), strings.ToUpper(stop)); si >= 0 {
 			after = after[:si]
@@ -211,7 +191,6 @@ func countPhrasesAfterPattern(text, pat string) int {
 	return count
 }
 
-// validateName checks name format rules and appends issues to result.
 func validateName(name string, r *ScoreResult) {
 	if name == "" {
 		r.Issues = append(r.Issues, Issue{
@@ -240,7 +219,6 @@ func validateName(name string, r *ScoreResult) {
 	}
 }
 
-// validateDescriptionLength appends issues for description length thresholds.
 func validateDescriptionLength(length int, r *ScoreResult) {
 	if length < 150 {
 		r.Issues = append(r.Issues, Issue{
@@ -257,18 +235,17 @@ func validateDescriptionLength(length int, r *ScoreResult) {
 	}
 }
 
-// validateTokenBudget checks SKILL.md token counts against soft/hard limits.
 func validateTokenBudget(tokenCount int, r *ScoreResult) {
-	if tokenCount > tokenHardLimit {
+	if tokenCount > TokenHardLimit {
 		r.Issues = append(r.Issues, Issue{
 			Rule:     "token-hard-limit",
-			Message:  fmt.Sprintf("SKILL.md is %d tokens (hard limit %d)", tokenCount, tokenHardLimit),
+			Message:  fmt.Sprintf("SKILL.md is %d tokens (hard limit %d)", tokenCount, TokenHardLimit),
 			Severity: "error",
 		})
-	} else if tokenCount > tokenSoftLimit {
+	} else if tokenCount > TokenSoftLimit {
 		r.Issues = append(r.Issues, Issue{
 			Rule:     "token-soft-limit",
-			Message:  fmt.Sprintf("SKILL.md is %d tokens (soft limit %d)", tokenCount, tokenSoftLimit),
+			Message:  fmt.Sprintf("SKILL.md is %d tokens (soft limit %d)", tokenCount, TokenSoftLimit),
 			Severity: "warning",
 		})
 	}

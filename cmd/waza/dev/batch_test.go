@@ -7,6 +7,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/spboyer/waza/internal/scoring"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -228,9 +229,9 @@ description: "Short"
 func TestDisplayBatchSummary(t *testing.T) {
 	var buf bytes.Buffer
 	results := []batchSkillResult{
-		{Name: "skill-a", BeforeLevel: AdherenceLow, AfterLevel: AdherenceMedium, BeforeTokens: 10, AfterTokens: 50},
-		{Name: "skill-b", BeforeLevel: AdherenceHigh, AfterLevel: AdherenceHigh, BeforeTokens: 100, AfterTokens: 100},
-		{Name: "skill-c", BeforeLevel: AdherenceLow, AfterLevel: AdherenceLow, Err: assert.AnError},
+		{Name: "skill-a", BeforeLevel: scoring.AdherenceLow, AfterLevel: scoring.AdherenceMedium, BeforeTokens: 10, AfterTokens: 50},
+		{Name: "skill-b", BeforeLevel: scoring.AdherenceHigh, AfterLevel: scoring.AdherenceHigh, BeforeTokens: 100, AfterTokens: 100},
+		{Name: "skill-c", BeforeLevel: scoring.AdherenceLow, AfterLevel: scoring.AdherenceLow, Err: assert.AnError},
 	}
 
 	DisplayBatchSummary(&buf, results)

@@ -1,4 +1,4 @@
-package internal
+package checks
 
 import (
 	"os"
@@ -39,7 +39,7 @@ func TestGlobToRegex(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.pattern, func(t *testing.T) {
-			re, err := GlobToRegex(tc.pattern)
+			re, err := globToRegex(tc.pattern)
 			require.NoError(t, err)
 			for _, m := range tc.match {
 				require.True(t, re.MatchString(m), "%q should match %q", tc.pattern, m)
@@ -53,7 +53,7 @@ func TestGlobToRegex(t *testing.T) {
 
 func TestGlobToRegex_PatternTooLong(t *testing.T) {
 	long := strings.Repeat("a", maxPatternLength+1)
-	_, err := GlobToRegex(long)
+	_, err := globToRegex(long)
 	require.ErrorContains(t, err, "pattern too long")
 }
 
@@ -63,71 +63,61 @@ func TestMatchesPattern(t *testing.T) {
 		pattern  string
 		want     bool
 	}{
-		// Exact filename (no wildcards, no slashes)
 		{"SKILL.md", "SKILL.md", true},
 		{"sub/SKILL.md", "SKILL.md", true},
 		{"README.md", "SKILL.md", false},
 
-		// Wildcard patterns
 		{"foo.md", "*.md", true},
 		{"sub/foo.md", "*.md", true},
 		{"foo.txt", "*.md", false},
 
-		// Globstar
 		{"references/sub/two.md", "references/**/*.md", true},
 		{"references/one.md", "references/**/*.md", false},
 		{"other/one.md", "references/**/*.md", false},
 
-		// Path with directory
 		{"docs/guide.md", "docs/*.md", true},
 		{"docs/sub/guide.md", "docs/*.md", false},
 
-		// Backslash normalization
 		{`docs\guide.md`, "docs/*.md", true},
 	}
 
 	for _, tc := range tests {
 		name := tc.filePath + " ~ " + tc.pattern
 		t.Run(name, func(t *testing.T) {
-			got := MatchesPattern(tc.filePath, tc.pattern)
+			got := matchesPattern(tc.filePath, tc.pattern)
 			require.Equal(t, tc.want, got)
 		})
 	}
 }
 
 func TestPatternSpecificity(t *testing.T) {
-	// Exact filenames should beat wildcards
 	require.Greater(t, patternSpecificity("SKILL.md"), patternSpecificity("*.md"))
-
-	// Single directory glob beats bare wildcard
 	require.Greater(t, patternSpecificity("docs/*.md"), patternSpecificity("*.md"))
-
-	// Deeper paths are more specific
 	require.Greater(t, patternSpecificity("a/b/*.md"), patternSpecificity("a/*.md"))
 }
 
-func TestLoadConfig_InvalidJSON(t *testing.T) {
+func TestLoadLimitsConfig_InvalidJSON(t *testing.T) {
 	dir := t.TempDir()
 	err := os.WriteFile(filepath.Join(dir, ".token-limits.json"), []byte(`{not json}`), 0644)
 	require.NoError(t, err)
 
-	_, err = LoadConfig(dir)
+	_, err = LoadLimitsConfig(dir)
 	require.ErrorContains(t, err, "error parsing limits")
 }
 
-func TestLoadConfig_MissingDefaults(t *testing.T) {
+func TestLoadLimitsConfig_MissingDefaults(t *testing.T) {
 	dir := t.TempDir()
 	err := os.WriteFile(filepath.Join(dir, ".token-limits.json"), []byte(`{"overrides":{"a.md":1}}`), 0644)
 	require.NoError(t, err)
 
-	_, err = LoadConfig(dir)
+	_, err = LoadLimitsConfig(dir)
 	require.ErrorContains(t, err, `missing or invalid "defaults"`)
 }
 
-func TestLoadConfig_NoFile(t *testing.T) {
+func TestLoadLimitsConfig_NoFile(t *testing.T) {
 	dir := t.TempDir()
 
-	cfg, err := LoadConfig(dir)
+	cfg, err := LoadLimitsConfig(dir)
 	require.NoError(t, err)
-	require.Equal(t, defaultLimits, cfg)
+	require.Equal(t, DefaultLimits, cfg)
 }

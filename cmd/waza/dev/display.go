@@ -5,6 +5,7 @@ import (
 	"io"
 	"strings"
 
+	"github.com/spboyer/waza/internal/scoring"
 	"github.com/spboyer/waza/internal/skill"
 )
 
@@ -28,7 +29,7 @@ func DisplayIterationHeader(w io.Writer, iteration, maxIterations int) {
 }
 
 // DisplayScore shows the current score with issues.
-func DisplayScore(w io.Writer, sk *skill.Skill, score *ScoreResult) {
+func DisplayScore(w io.Writer, sk *skill.Skill, score *scoring.ScoreResult) {
 	name := sk.Frontmatter.Name
 	fprintf(w, "Skill: %s\n", name)
 	fprintf(w, "Score: %s\n", score.Level)
@@ -68,7 +69,7 @@ func DisplaySpecResult(w io.Writer, r *SpecResult) {
 }
 
 // DisplayIssues lists all issues found.
-func DisplayIssues(w io.Writer, issues []Issue) {
+func DisplayIssues(w io.Writer, issues []scoring.Issue) {
 	fprintf(w, "Issues:\n")
 	for _, iss := range issues {
 		icon := "⚠️"
@@ -80,7 +81,7 @@ func DisplayIssues(w io.Writer, issues []Issue) {
 }
 
 // DisplaySummary shows before/after comparison box.
-func DisplaySummary(w io.Writer, skillName string, before, after *ScoreResult, beforeTokens, afterTokens int) {
+func DisplaySummary(w io.Writer, skillName string, before, after *scoring.ScoreResult, beforeTokens, afterTokens int) {
 	top := "╔" + strings.Repeat("═", boxWidth) + "╗"
 	mid := "╠" + strings.Repeat("═", boxWidth) + "╣"
 	bot := "╚" + strings.Repeat("═", boxWidth) + "╝"
@@ -96,12 +97,12 @@ func DisplaySummary(w io.Writer, skillName string, before, after *ScoreResult, b
 	fprintln(w, boxLine(fmt.Sprintf("Anti-triggers: %-16d Anti-triggers: %d", before.AntiTriggerCount, after.AntiTriggerCount)))
 	fprintln(w, boxLine(""))
 
-	tokenStatus := fmt.Sprintf("TOKEN STATUS: ✅ Under budget (%d < %d)", afterTokens, tokenSoftLimit)
-	if afterTokens > tokenSoftLimit {
-		tokenStatus = fmt.Sprintf("TOKEN STATUS: ⚠️ Over soft limit (%d > %d)", afterTokens, tokenSoftLimit)
+	tokenStatus := fmt.Sprintf("TOKEN STATUS: ✅ Under budget (%d < %d)", afterTokens, scoring.TokenSoftLimit)
+	if afterTokens > scoring.TokenSoftLimit {
+		tokenStatus = fmt.Sprintf("TOKEN STATUS: ⚠️ Over soft limit (%d > %d)", afterTokens, scoring.TokenSoftLimit)
 	}
-	if afterTokens > tokenHardLimit {
-		tokenStatus = fmt.Sprintf("TOKEN STATUS: ❌ Over hard limit (%d > %d)", afterTokens, tokenHardLimit)
+	if afterTokens > scoring.TokenHardLimit {
+		tokenStatus = fmt.Sprintf("TOKEN STATUS: ❌ Over hard limit (%d > %d)", afterTokens, scoring.TokenHardLimit)
 	}
 	fprintln(w, boxLine(tokenStatus))
 	fprintln(w, bot)
@@ -141,12 +142,12 @@ func DisplayImprovement(w io.Writer, section, suggestion string) {
 }
 
 // DisplayTargetReached shows success message.
-func DisplayTargetReached(w io.Writer, level AdherenceLevel) {
+func DisplayTargetReached(w io.Writer, level scoring.AdherenceLevel) {
 	fprintf(w, "\n✅ Target adherence level %s reached!\n", level)
 }
 
 // DisplayMaxIterations shows timeout message.
-func DisplayMaxIterations(w io.Writer, currentLevel AdherenceLevel) {
+func DisplayMaxIterations(w io.Writer, currentLevel scoring.AdherenceLevel) {
 	fprintf(w, "\n⏱️  Max iterations reached. Current level: %s\n", currentLevel)
 }
 

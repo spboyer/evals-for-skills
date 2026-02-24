@@ -7,14 +7,15 @@ import (
 	"github.com/spboyer/waza/internal/workspace"
 )
 
-// resolveSkillsFromArgs uses workspace detection to resolve skills from CLI args.
+// resolveWorkspace uses workspace detection to resolve skills from CLI args.
+// When a skill name is given, ctx.Skills is narrowed to that single skill.
 // Behavior:
-//   - Explicit path to a file (e.g. eval.yaml) → returns nil (caller uses path directly)
-//   - Skill name arg + workspace → returns that single skill
-//   - No args + single-skill workspace → returns that single skill
-//   - No args + multi-skill workspace → returns all skills
+//   - Explicit path to a file (e.g. eval.yaml) → returns context with all skills (caller uses path directly)
+//   - Skill name arg + workspace → returns context with that single skill
+//   - No args + single-skill workspace → returns context with that skill
+//   - No args + multi-skill workspace → returns context with all skills
 //   - No workspace detected → returns error
-func resolveSkillsFromArgs(args []string) ([]workspace.SkillInfo, error) {
+func resolveWorkspace(args []string) (*workspace.WorkspaceContext, error) {
 	wd, err := os.Getwd()
 	if err != nil {
 		return nil, fmt.Errorf("getting working directory: %w", err)
@@ -26,11 +27,9 @@ func resolveSkillsFromArgs(args []string) ([]workspace.SkillInfo, error) {
 
 	if len(args) > 0 {
 		arg := args[0]
-		// If arg looks like a file path (has extension or separator), treat as explicit path
 		if workspace.LooksLikePath(arg) {
-			return nil, nil // caller handles explicit path
+			return ctx, nil
 		}
-		// Treat as skill name
 		if ctx.Type == workspace.ContextNone {
 			return nil, fmt.Errorf("no workspace detected and %q is not a file path", arg)
 		}
@@ -38,13 +37,13 @@ func resolveSkillsFromArgs(args []string) ([]workspace.SkillInfo, error) {
 		if err != nil {
 			return nil, err
 		}
-		return []workspace.SkillInfo{*si}, nil
+		ctx.Skills = []workspace.SkillInfo{*si}
+		return ctx, nil
 	}
 
-	// No args — use workspace detection
 	switch ctx.Type {
 	case workspace.ContextSingleSkill, workspace.ContextMultiSkill:
-		return ctx.Skills, nil
+		return ctx, nil
 	default:
 		return nil, fmt.Errorf("no skills detected in workspace; provide a path or skill name")
 	}
