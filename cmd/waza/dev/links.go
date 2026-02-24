@@ -285,7 +285,7 @@ func checkSingleURL(rawURL string) (dead bool, reason string) {
 
 	resp, err := linkHTTPClient.Do(req)
 	if err == nil {
-		resp.Body.Close()
+		_ = resp.Body.Close()
 		if resp.StatusCode < 400 {
 			return false, ""
 		}
@@ -309,7 +309,7 @@ func checkSingleURLGet(rawURL string) (bool, string) {
 	if err != nil {
 		return true, err.Error()
 	}
-	resp.Body.Close()
+	_ = resp.Body.Close()
 	if resp.StatusCode >= 400 {
 		return true, fmt.Sprintf("HTTP %d", resp.StatusCode)
 	}
