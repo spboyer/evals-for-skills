@@ -1261,11 +1261,7 @@ func (r *TestRunner) buildSessionDigest(resp *execution.ExecutionResponse) model
 }
 
 func (r *TestRunner) buildTranscript(resp *execution.ExecutionResponse) []models.TranscriptEvent {
-	entries := make([]models.TranscriptEvent, 0, len(resp.Events))
-	for _, evt := range resp.Events {
-		entries = append(entries, models.TranscriptEvent{SessionEvent: evt})
-	}
-	return entries
+	return transcript.BuildFromSessionEvents(resp.Events)
 }
 
 func (r *TestRunner) computeTestStats(runs []models.RunResult) *models.TestStats {
