@@ -55,8 +55,8 @@ type TokenLimitsConfig struct {
 
 // TokensConfig holds token budget settings.
 type TokensConfig struct {
-	WarningThreshold int               `yaml:"warning_threshold,omitempty"`
-	FallbackLimit    int               `yaml:"fallback_limit,omitempty"`
+	WarningThreshold int                `yaml:"warning_threshold,omitempty"`
+	FallbackLimit    int                `yaml:"fallback_limit,omitempty"`
 	Limits           *TokenLimitsConfig `yaml:"limits,omitempty"`
 }
 
