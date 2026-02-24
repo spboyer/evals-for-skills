@@ -3,10 +3,39 @@
 package projectconfig
 
 import (
+	"errors"
+	"fmt"
 	"os"
 	"path/filepath"
 
 	"gopkg.in/yaml.v3"
+)
+
+// Default values for project configuration. These are the single source of
+// truth — New() references them and no other code should duplicate them.
+const (
+	DefaultSkillsDir  = "skills/"
+	DefaultEvalsDir   = "evals/"
+	DefaultResultsDir = "results/"
+
+	DefaultEngine  = "copilot-sdk"
+	DefaultModel   = "claude-sonnet-4.6"
+	DefaultTimeout = 300
+	DefaultWorkers = 4
+
+	DefaultCacheDir = ".waza-cache"
+
+	DefaultServerPort       = 3000
+	DefaultServerResultsDir = "."
+
+	DefaultDevModel         = "claude-sonnet-4-20250514"
+	DefaultDevTarget        = "medium-high"
+	DefaultDevMaxIterations = 5
+
+	DefaultTokenWarningThreshold = 2500
+	DefaultTokenFallbackLimit    = 2000
+
+	DefaultGraderProgramTimeout = 30
 )
 
 // PathsConfig holds directory paths for skills, evals, and results.
@@ -80,39 +109,39 @@ type ProjectConfig struct {
 func New() *ProjectConfig {
 	return &ProjectConfig{
 		Paths: PathsConfig{
-			Skills:  "skills/",
-			Evals:   "evals/",
-			Results: "results/",
+			Skills:  DefaultSkillsDir,
+			Evals:   DefaultEvalsDir,
+			Results: DefaultResultsDir,
 		},
 		Defaults: DefaultsConfig{
-			Engine:     "copilot-sdk",
-			Model:      "claude-sonnet-4.6",
+			Engine:     DefaultEngine,
+			Model:      DefaultModel,
 			JudgeModel: "",
-			Timeout:    300,
+			Timeout:    DefaultTimeout,
 			Parallel:   boolPtr(false),
-			Workers:    4,
+			Workers:    DefaultWorkers,
 			Verbose:    boolPtr(false),
 			SessionLog: boolPtr(false),
 		},
 		Cache: CacheConfig{
 			Enabled: boolPtr(false),
-			Dir:     ".waza-cache",
+			Dir:     DefaultCacheDir,
 		},
 		Server: ServerConfig{
-			Port:       3000,
-			ResultsDir: ".",
+			Port:       DefaultServerPort,
+			ResultsDir: DefaultServerResultsDir,
 		},
 		Dev: DevConfig{
-			Model:         "claude-sonnet-4-20250514",
-			Target:        "medium-high",
-			MaxIterations: 5,
+			Model:         DefaultDevModel,
+			Target:        DefaultDevTarget,
+			MaxIterations: DefaultDevMaxIterations,
 		},
 		Tokens: TokensConfig{
-			WarningThreshold: 2500,
-			FallbackLimit:    2000,
+			WarningThreshold: DefaultTokenWarningThreshold,
+			FallbackLimit:    DefaultTokenFallbackLimit,
 		},
 		Graders: GradersConfig{
-			ProgramTimeout: 30,
+			ProgramTimeout: DefaultGraderProgramTimeout,
 		},
 	}
 }
@@ -120,12 +149,16 @@ func New() *ProjectConfig {
 // Load finds .waza.yaml by walking up from startDir (max 10 levels),
 // unmarshals it, and fills in missing fields with defaults.
 // If no config file is found, returns defaults with a nil error.
+// Real I/O errors (e.g. permission denied) are returned to the caller.
 func Load(startDir string) (*ProjectConfig, error) {
 	cfg := New()
 
 	data, err := findConfigFile(startDir)
 	if err != nil {
-		return cfg, nil // no file found → return defaults
+		if errors.Is(err, os.ErrNotExist) {
+			return cfg, nil // no file found → return defaults
+		}
+		return nil, fmt.Errorf("loading .waza.yaml: %w", err)
 	}
 
 	var fileCfg ProjectConfig
@@ -139,12 +172,24 @@ func Load(startDir string) (*ProjectConfig, error) {
 }
 
 // findConfigFile walks up from dir looking for .waza.yaml (max 10 levels).
+// Returns os.ErrNotExist if no config file is found. Propagates real I/O
+// errors (e.g. permission denied) instead of silently swallowing them.
 func findConfigFile(dir string) ([]byte, error) {
+	// Convert to absolute path so filepath.Dir(".") walks correctly.
+	absDir, err := filepath.Abs(dir)
+	if err != nil {
+		return nil, fmt.Errorf("resolving path %q: %w", dir, err)
+	}
+	dir = absDir
+
 	for i := 0; i < 10; i++ {
 		p := filepath.Join(dir, ".waza.yaml")
 		data, err := os.ReadFile(p)
 		if err == nil {
 			return data, nil
+		}
+		if !errors.Is(err, os.ErrNotExist) {
+			return nil, fmt.Errorf("reading %q: %w", p, err)
 		}
 		parent := filepath.Dir(dir)
 		if parent == dir {

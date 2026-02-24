@@ -201,7 +201,7 @@ defaults:
 }
 
 func TestBoolPointerFields(t *testing.T) {
-	t.Run("nil when not set in YAML", func(t *testing.T) {
+	t.Run("defaults preserved when not set in YAML", func(t *testing.T) {
 		dir := t.TempDir()
 		writeFile(t, dir, ".waza.yaml", `
 defaults:
