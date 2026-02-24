@@ -3,7 +3,9 @@ package dev
 import (
 	"fmt"
 	"io/fs"
+	"net"
 	"net/http"
+	"net/url"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -199,6 +201,12 @@ func extractLinksFromSource(source []byte) []extractedLink {
 			links = append(links, extractedLink{target: string(v.Destination)})
 		case *ast.Image:
 			links = append(links, extractedLink{target: string(v.Destination)})
+		case *ast.AutoLink:
+			target := string(v.Label(source))
+			if len(v.Protocol) > 0 && !strings.HasPrefix(target, string(v.Protocol)) {
+				target = string(v.Protocol) + target
+			}
+			links = append(links, extractedLink{target: target})
 		}
 		return ast.WalkContinue, nil
 	})
@@ -229,7 +237,7 @@ func isWithinDir(path, dir string) bool {
 	if err != nil {
 		return false
 	}
-	return !strings.HasPrefix(rel, "..")
+	return rel != ".." && !strings.HasPrefix(rel, ".."+string(os.PathSeparator))
 }
 
 // checkExternalURLsDedup validates unique external URLs with a goroutine pool of 5.
@@ -275,8 +283,34 @@ func checkExternalURLsDedup(urls map[string][]string) []LinkIssue {
 	return issues
 }
 
+// skipSSRFCheck disables private-IP rejection for testing with httptest servers.
+var skipSSRFCheck bool
+
+// isPrivateIP returns true if the IP is loopback, private, or link-local.
+func isPrivateIP(ip net.IP) bool {
+	return ip.IsLoopback() || ip.IsPrivate() || ip.IsLinkLocalUnicast() || ip.IsLinkLocalMulticast()
+}
+
 // checkSingleURL tries HTTP HEAD then falls back to GET.
 func checkSingleURL(rawURL string) (dead bool, reason string) {
+	if !skipSSRFCheck {
+		// SSRF protection: reject URLs targeting private/loopback/link-local IPs.
+		parsed, err := url.Parse(rawURL)
+		if err != nil {
+			return true, err.Error()
+		}
+		host := parsed.Hostname()
+		ips, err := net.LookupHost(host)
+		if err != nil {
+			return true, fmt.Sprintf("DNS lookup failed: %v", err)
+		}
+		for _, ipStr := range ips {
+			if ip := net.ParseIP(ipStr); ip != nil && isPrivateIP(ip) {
+				return true, fmt.Sprintf("URL resolves to private/loopback address (%s)", ipStr)
+			}
+		}
+	}
+
 	req, err := http.NewRequest(http.MethodHead, rawURL, nil)
 	if err != nil {
 		return true, err.Error()

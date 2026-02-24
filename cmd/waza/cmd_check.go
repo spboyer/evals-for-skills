@@ -322,7 +322,8 @@ func displayReadinessReport(out interface{ Write([]byte) (int, error) }, report 
 			}
 		} else {
 			problems := len(report.linkResult.BrokenLinks) + len(report.linkResult.DirectoryLinks) +
-				len(report.linkResult.ScopeEscapes) + len(report.linkResult.DeadURLs)
+				len(report.linkResult.ScopeEscapes) + len(report.linkResult.DeadURLs) +
+				len(report.linkResult.OrphanedFiles)
 			fmt.Fprintf(w, "   ⚠️  %d link issue(s) found.\n", problems)
 		}
 		for _, bl := range report.linkResult.BrokenLinks {
@@ -476,8 +477,14 @@ func generateNextSteps(report *readinessReport) []string {
 		if len(report.linkResult.BrokenLinks) > 0 {
 			steps = append(steps, fmt.Sprintf("Fix %d broken link(s) — targets do not exist", len(report.linkResult.BrokenLinks)))
 		}
+		if len(report.linkResult.DirectoryLinks) > 0 {
+			steps = append(steps, fmt.Sprintf("Fix %d link(s) pointing to directories instead of files", len(report.linkResult.DirectoryLinks)))
+		}
 		if len(report.linkResult.ScopeEscapes) > 0 {
 			steps = append(steps, fmt.Sprintf("Fix %d link(s) that escape the skill directory", len(report.linkResult.ScopeEscapes)))
+		}
+		if len(report.linkResult.DeadURLs) > 0 {
+			steps = append(steps, fmt.Sprintf("Fix %d dead external URL(s)", len(report.linkResult.DeadURLs)))
 		}
 		if len(report.linkResult.OrphanedFiles) > 0 {
 			steps = append(steps, fmt.Sprintf("Link or remove %d orphaned file(s) in references/", len(report.linkResult.OrphanedFiles)))

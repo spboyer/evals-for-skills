@@ -255,14 +255,12 @@ type skillCheckParams struct {
 }
 
 type skillCheckResult struct {
-	SkillPath     string   `json:"skillPath"`
-	HasSkill      bool     `json:"hasSkill"`
-	HasEval       bool     `json:"hasEval"`
-	BrokenLinks   int      `json:"brokenLinks"`
-	OrphanedFiles int      `json:"orphanedFiles"`
-	DeadURLs      int      `json:"deadURLs"`
-	LinkIssues    []string `json:"linkIssues,omitempty"`
-	Message       string   `json:"message"`
+	SkillPath   string   `json:"skillPath"`
+	HasSkill    bool     `json:"hasSkill"`
+	HasEval     bool     `json:"hasEval"`
+	BrokenLinks int      `json:"brokenLinks"`
+	LinkIssues  []string `json:"linkIssues,omitempty"`
+	Message     string   `json:"message"`
 }
 
 func (s *Server) callSkillCheck(args json.RawMessage) (any, *jsonrpc.Error) {
@@ -332,7 +330,7 @@ func quickLinkCheck(skillDir string) (broken int, issues []string) {
 	matches := mdLinkPattern.FindAllSubmatch(data, -1)
 	for _, m := range matches {
 		target := string(m[1])
-		if strings.HasPrefix(target, "http") || strings.HasPrefix(target, "mailto:") ||
+		if strings.HasPrefix(target, "http://") || strings.HasPrefix(target, "https://") || strings.HasPrefix(target, "mailto:") ||
 			strings.HasPrefix(target, "mdc:") || strings.HasPrefix(target, "#") {
 			continue
 		}

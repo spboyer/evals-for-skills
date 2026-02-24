@@ -258,6 +258,9 @@ A simple skill with no references directory.
 // --- External URL Validation ---
 
 func TestLinkScorer_ValidExternalURL(t *testing.T) {
+	skipSSRFCheck = true
+	defer func() { skipSSRFCheck = false }()
+
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusOK)
 	}))
@@ -276,6 +279,9 @@ See [docs](%s/page) for more.
 }
 
 func TestLinkScorer_URL404(t *testing.T) {
+	skipSSRFCheck = true
+	defer func() { skipSSRFCheck = false }()
+
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusNotFound)
 	}))
@@ -295,6 +301,9 @@ See [broken](%s/missing) for more.
 }
 
 func TestLinkScorer_DuplicateURLsDeduped(t *testing.T) {
+	skipSSRFCheck = true
+	defer func() { skipSSRFCheck = false }()
+
 	callCount := 0
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		callCount++
