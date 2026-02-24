@@ -1845,3 +1845,147 @@ func TestWriteOutputDir_SanitizesPaths(t *testing.T) {
 	assert.FileExists(t, filepath.Join(explainerDir, "gpt-4o-latest.json"))
 	assert.FileExists(t, filepath.Join(reviewerDir, "claude-sonnet.json"))
 }
+
+// ---------------------------------------------------------------------------
+// .waza.yaml config defaults
+// ---------------------------------------------------------------------------
+
+func TestRunCommand_WazaYamlAppliesDefaults(t *testing.T) {
+	resetRunGlobals()
+
+	// Create a temp dir with .waza.yaml and a valid spec
+	dir := t.TempDir()
+
+	wazaYAML := `defaults:
+  parallel: true
+  workers: 12
+  judge_model: "gpt-4o-judge"
+  verbose: true
+  session_log: true
+cache:
+  enabled: true
+  dir: ".my-cache"
+`
+	require.NoError(t, os.WriteFile(filepath.Join(dir, ".waza.yaml"), []byte(wazaYAML), 0o644))
+
+	// Create a minimal spec in the same dir
+	taskDir := filepath.Join(dir, "tasks")
+	require.NoError(t, os.MkdirAll(taskDir, 0o755))
+	task := `id: cfg-task-001
+name: Config Test Task
+inputs:
+  prompt: "Hello"
+`
+	require.NoError(t, os.WriteFile(filepath.Join(taskDir, "task.yaml"), []byte(task), 0o644))
+
+	spec := `name: cfg-test
+skill: cfg-skill
+version: "1.0"
+config:
+  trials_per_task: 1
+  timeout_seconds: 10
+  executor: mock
+  model: test-model
+tasks:
+  - "tasks/*.yaml"
+`
+	specPath := filepath.Join(dir, "eval.yaml")
+	require.NoError(t, os.WriteFile(specPath, []byte(spec), 0o644))
+
+	// Change to dir so projectconfig.Load(".") finds .waza.yaml
+	origDir, err := os.Getwd()
+	require.NoError(t, err)
+	require.NoError(t, os.Chdir(dir))
+	t.Cleanup(func() { os.Chdir(origDir) })
+
+	cmd := newRunCommand()
+	cmd.SetArgs([]string{specPath})
+	cmd.SetOut(io.Discard)
+	cmd.SetErr(io.Discard)
+
+	err = cmd.Execute()
+	assert.NoError(t, err)
+
+	// After execution, the globals should have been set from .waza.yaml
+	assert.True(t, parallel, "parallel should be true from .waza.yaml")
+	assert.Equal(t, 12, workers, "workers should be 12 from .waza.yaml")
+	assert.True(t, enableCache, "cache should be enabled from .waza.yaml")
+	assert.Equal(t, ".my-cache", runCacheDir, "cache-dir should be .my-cache from .waza.yaml")
+	assert.Equal(t, "gpt-4o-judge", judgeModel, "judge-model should be set from .waza.yaml")
+	assert.True(t, verbose, "verbose should be true from .waza.yaml")
+	assert.True(t, sessionLog, "session-log should be true from .waza.yaml")
+}
+
+func TestRunCommand_CLIFlagsOverrideWazaYaml(t *testing.T) {
+	resetRunGlobals()
+
+	// Create a temp dir with .waza.yaml that sets various defaults
+	dir := t.TempDir()
+
+	wazaYAML := `defaults:
+  parallel: true
+  workers: 12
+  judge_model: "gpt-4o-judge"
+  verbose: true
+  session_log: true
+cache:
+  enabled: true
+  dir: ".my-cache"
+`
+	require.NoError(t, os.WriteFile(filepath.Join(dir, ".waza.yaml"), []byte(wazaYAML), 0o644))
+
+	// Create a minimal spec
+	taskDir := filepath.Join(dir, "tasks")
+	require.NoError(t, os.MkdirAll(taskDir, 0o755))
+	task := `id: cli-task-001
+name: CLI Override Task
+inputs:
+  prompt: "Hello"
+`
+	require.NoError(t, os.WriteFile(filepath.Join(taskDir, "task.yaml"), []byte(task), 0o644))
+
+	spec := `name: cli-test
+skill: cli-skill
+version: "1.0"
+config:
+  trials_per_task: 1
+  timeout_seconds: 10
+  executor: mock
+  model: test-model
+tasks:
+  - "tasks/*.yaml"
+`
+	specPath := filepath.Join(dir, "eval.yaml")
+	require.NoError(t, os.WriteFile(specPath, []byte(spec), 0o644))
+
+	// Change to dir so projectconfig.Load(".") finds .waza.yaml
+	origDir, err := os.Getwd()
+	require.NoError(t, err)
+	require.NoError(t, os.Chdir(dir))
+	t.Cleanup(func() { os.Chdir(origDir) })
+
+	cmd := newRunCommand()
+	// Explicitly set CLI flags that should override .waza.yaml
+	cmd.SetArgs([]string{
+		specPath,
+		"--workers", "2",
+		"--judge-model", "my-judge",
+		"--cache-dir", ".override-cache",
+	})
+	cmd.SetOut(io.Discard)
+	cmd.SetErr(io.Discard)
+
+	err = cmd.Execute()
+	assert.NoError(t, err)
+
+	// CLI flags should override .waza.yaml values
+	assert.Equal(t, 2, workers, "workers should be 2 from CLI flag, not 12 from config")
+	assert.Equal(t, "my-judge", judgeModel, "judge-model should be my-judge from CLI flag")
+	assert.Equal(t, ".override-cache", runCacheDir, "cache-dir should be .override-cache from CLI flag")
+
+	// Flags NOT set on CLI should still get .waza.yaml values
+	assert.True(t, parallel, "parallel should be true from .waza.yaml (not overridden)")
+	assert.True(t, enableCache, "cache should be enabled from .waza.yaml (not overridden)")
+	assert.True(t, verbose, "verbose should be true from .waza.yaml (not overridden)")
+	assert.True(t, sessionLog, "session-log should be true from .waza.yaml (not overridden)")
+}

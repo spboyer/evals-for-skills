@@ -16,6 +16,7 @@ import (
 	"github.com/spboyer/waza/internal/execution"
 	"github.com/spboyer/waza/internal/models"
 	"github.com/spboyer/waza/internal/orchestration"
+	"github.com/spboyer/waza/internal/projectconfig"
 	"github.com/spboyer/waza/internal/recommend"
 	"github.com/spboyer/waza/internal/reporting"
 	"github.com/spboyer/waza/internal/session"
@@ -106,6 +107,30 @@ You can also specify a skill name to run its eval:
 }
 
 func runCommandE(cmd *cobra.Command, args []string) error {
+	// Load .waza.yaml project config and apply defaults for unset flags
+	cfg, _ := projectconfig.Load(".") // ignore error — defaults are fine
+	if !cmd.Flags().Changed("parallel") && cfg.Defaults.Parallel != nil {
+		parallel = *cfg.Defaults.Parallel
+	}
+	if !cmd.Flags().Changed("workers") && cfg.Defaults.Workers != 0 {
+		workers = cfg.Defaults.Workers
+	}
+	if !cmd.Flags().Changed("cache") && cfg.Cache.Enabled != nil {
+		enableCache = *cfg.Cache.Enabled
+	}
+	if !cmd.Flags().Changed("cache-dir") && cfg.Cache.Dir != "" {
+		runCacheDir = cfg.Cache.Dir
+	}
+	if !cmd.Flags().Changed("judge-model") && cfg.Defaults.JudgeModel != "" {
+		judgeModel = cfg.Defaults.JudgeModel
+	}
+	if !cmd.Flags().Changed("verbose") && cfg.Defaults.Verbose != nil {
+		verbose = *cfg.Defaults.Verbose
+	}
+	if !cmd.Flags().Changed("session-log") && cfg.Defaults.SessionLog != nil {
+		sessionLog = *cfg.Defaults.SessionLog
+	}
+
 	// Validate mutual exclusion
 	if outputPath != "" && outputDir != "" {
 		return fmt.Errorf("--output and --output-dir are mutually exclusive")
