@@ -9,6 +9,7 @@ import (
 	"regexp"
 	"strings"
 
+	"github.com/spboyer/waza/internal/projectconfig"
 	"github.com/spboyer/waza/internal/tokens"
 	"github.com/spboyer/waza/internal/workspace"
 	"github.com/spf13/cobra"
@@ -45,10 +46,14 @@ type SkillProfile struct {
 	Warnings      []string `json:"warnings,omitempty"`
 }
 
-const (
-	tokenWarningThreshold = 2500
-	sectionWarningMinimum = 3
-)
+const sectionWarningMinimum = 3
+
+// tokenWarningThreshold returns the configured token warning threshold,
+// falling back to 2500 if not set in .waza.yaml.
+func tokenWarningThreshold() int {
+	cfg, _ := projectconfig.Load(".")
+	return cfg.Tokens.WarningThreshold
+}
 
 var numberedStepRe = regexp.MustCompile(`(?m)^\s*\d+\.\s+`)
 
@@ -71,8 +76,9 @@ func analyzeSkillProfile(content string, relPath string, counter tokens.Counter)
 	if steps == 0 {
 		warnings = append(warnings, "no workflow steps detected")
 	}
-	if toks > tokenWarningThreshold {
-		warnings = append(warnings, fmt.Sprintf("token count %d exceeds %d", toks, tokenWarningThreshold))
+	threshold := tokenWarningThreshold()
+	if toks > threshold {
+		warnings = append(warnings, fmt.Sprintf("token count %d exceeds %d", toks, threshold))
 	}
 	if sections < sectionWarningMinimum {
 		warnings = append(warnings, fmt.Sprintf("only %d sections (minimum recommended: %d)", sections, sectionWarningMinimum))
