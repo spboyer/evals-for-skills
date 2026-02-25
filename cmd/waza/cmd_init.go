@@ -223,41 +223,26 @@ func initCommandE(cmd *cobra.Command, args []string, noSkill bool) error {
 				}
 			}
 
-			// Paths prompts — pre-detect existing directories
-			detectedSkills := skillsPath
-			detectedEvals := evalsPath
-			detectedResults := resultsPath
-			if fi, err := os.Stat(filepath.Join(absDir, skillsPath)); err == nil && fi.IsDir() {
-				detectedSkills = skillsPath
-			}
-			if fi, err := os.Stat(filepath.Join(absDir, evalsPath)); err == nil && fi.IsDir() {
-				detectedEvals = evalsPath
-			}
-			if fi, err := os.Stat(filepath.Join(absDir, resultsPath)); err == nil && fi.IsDir() {
-				detectedResults = resultsPath
-			}
-
 			pathsForm := huh.NewForm(
 				huh.NewGroup(
 					huh.NewInput().
 						Title("Skills directory").
 						Description("Where skill definitions live").
-						Value(&detectedSkills),
+						Value(&skillsPath),
 					huh.NewInput().
 						Title("Evals directory").
 						Description("Where evaluation suites live").
-						Value(&detectedEvals),
+						Value(&evalsPath),
 					huh.NewInput().
 						Title("Results directory").
 						Description("Where evaluation results are saved").
-						Value(&detectedResults),
+						Value(&resultsPath),
 				),
 			).WithInput(cmd.InOrStdin()).WithOutput(out)
 
-			if err := pathsForm.Run(); err == nil {
-				skillsPath = detectedSkills
-				evalsPath = detectedEvals
-				resultsPath = detectedResults
+			if err := pathsForm.Run(); err != nil {
+				// keep current values on error
+				_ = err
 			}
 		}
 
