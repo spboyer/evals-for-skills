@@ -60,10 +60,10 @@ If no directory is specified, the current directory is used.`,
 
 // displayInventory scans the workspace and prints a structured inventory table.
 // Returns the discovered skill entries for downstream logic.
-func displayInventory(out io.Writer, absDir string) []skillEntry {
+func displayInventory(out io.Writer, absDir string, opts ...workspace.DetectOption) []skillEntry {
 	var inventory []skillEntry
 
-	wsCtx, wsErr := workspace.DetectContext(absDir)
+	wsCtx, wsErr := workspace.DetectContext(absDir, opts...)
 	if wsErr == nil && wsCtx != nil {
 		for _, si := range wsCtx.Skills {
 			evalPath, _ := workspace.FindEval(wsCtx, si.Name) //nolint:errcheck // missing eval is expected
@@ -129,22 +129,12 @@ func initCommandE(cmd *cobra.Command, args []string, noSkill bool) error {
 
 	fmt.Fprintf(out, "🔧 Initializing waza project: %s\n", projectName) //nolint:errcheck
 
-	// --- Phase 1: Discover & Display Inventory ---
-	inventory := displayInventory(out, absDir)
-
-	skillsMissingEvals := 0
-	for _, inv := range inventory {
-		if !inv.HasEval {
-			skillsMissingEvals++
-		}
-	}
-
 	wazaConfigPath := filepath.Join(absDir, ".waza.yaml")
 	_, wazaStatErr := os.Stat(wazaConfigPath)
 	needConfigPrompt := wazaStatErr != nil
 	needSkillPrompt := !noSkill
 
-	// --- Phase 2: Configuration (if .waza.yaml missing) ---
+	// --- Phase 1: Configuration (if .waza.yaml missing) ---
 	var engine, model string
 	var skillsPath, evalsPath, resultsPath string
 	var createSkill, scaffoldMissing bool
@@ -165,6 +155,9 @@ func initCommandE(cmd *cobra.Command, args []string, noSkill bool) error {
 			resultsPath = cfg.Paths.Results
 		}
 	}
+
+	var inventory []skillEntry
+	var skillsMissingEvals int
 
 	if isTTY {
 		// Engine selector (separate form)
@@ -258,6 +251,17 @@ func initCommandE(cmd *cobra.Command, args []string, noSkill bool) error {
 			}
 		}
 
+		// --- Phase 2: Discover & Display Inventory (using configured paths) ---
+		inventory = displayInventory(out, absDir,
+			workspace.WithSkillsDir(skillsPath),
+			workspace.WithEvalsDir(evalsPath))
+
+		for _, inv := range inventory {
+			if !inv.HasEval {
+				skillsMissingEvals++
+			}
+		}
+
 		// --- Phase 3: Fix Missing Evals (separate prompt) ---
 		if len(inventory) > 0 && skillsMissingEvals > 0 {
 			scaffoldMissing = true
@@ -276,9 +280,11 @@ func initCommandE(cmd *cobra.Command, args []string, noSkill bool) error {
 			}
 
 			if scaffoldMissing {
-				scaffoldMissingEvals(absDir, inventory, engine, model)
+				scaffoldMissingEvals(absDir, evalsPath, inventory, engine, model)
 				// Re-display inventory showing updated state
-				inventory = displayInventory(out, absDir)
+				inventory = displayInventory(out, absDir,
+					workspace.WithSkillsDir(skillsPath),
+					workspace.WithEvalsDir(evalsPath))
 				skillsMissingEvals = 0
 				for _, inv := range inventory {
 					if !inv.HasEval {
@@ -312,12 +318,25 @@ func initCommandE(cmd *cobra.Command, args []string, noSkill bool) error {
 	} else {
 		// Non-TTY: use defaults, skip forms
 		fmt.Fprintf(out, "\nUsing defaults: engine=%s, model=%s, scaffold missing evals=yes, create skill=no\n", engine, model) //nolint:errcheck
+
+		// Discover inventory using configured paths
+		inventory = displayInventory(out, absDir,
+			workspace.WithSkillsDir(skillsPath),
+			workspace.WithEvalsDir(evalsPath))
+
+		for _, inv := range inventory {
+			if !inv.HasEval {
+				skillsMissingEvals++
+			}
+		}
 		scaffoldMissing = skillsMissingEvals > 0
 
 		if scaffoldMissing {
-			scaffoldMissingEvals(absDir, inventory, engine, model)
+			scaffoldMissingEvals(absDir, evalsPath, inventory, engine, model)
 			// Re-display inventory after scaffolding
-			inventory = displayInventory(out, absDir)
+			inventory = displayInventory(out, absDir,
+				workspace.WithSkillsDir(skillsPath),
+				workspace.WithEvalsDir(evalsPath))
 			skillsMissingEvals = 0
 			for _, inv := range inventory {
 				if !inv.HasEval {
@@ -439,7 +458,9 @@ func initCommandE(cmd *cobra.Command, args []string, noSkill bool) error {
 		}
 
 		// Re-display final inventory after skill creation
-		displayInventory(out, absDir)
+		displayInventory(out, absDir,
+			workspace.WithSkillsDir(skillsPath),
+			workspace.WithEvalsDir(evalsPath))
 	}
 
 	// --- Phase 6: Next steps (first run only, TTY only) ---
@@ -451,13 +472,7 @@ func initCommandE(cmd *cobra.Command, args []string, noSkill bool) error {
 }
 
 // scaffoldMissingEvals creates eval suites for skills that lack them.
-func scaffoldMissingEvals(absDir string, inventory []skillEntry, engine, model string) {
-	// Load configured evals path
-	evalsDir := "evals"
-	if cfg, err := projectconfig.Load(absDir); err == nil {
-		evalsDir = cfg.Paths.Evals
-	}
-
+func scaffoldMissingEvals(absDir, evalsDir string, inventory []skillEntry, engine, model string) {
 	for _, inv := range inventory {
 		if inv.HasEval {
 			continue
