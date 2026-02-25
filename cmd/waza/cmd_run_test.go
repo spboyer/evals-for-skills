@@ -1896,7 +1896,7 @@ tasks:
 	origDir, err := os.Getwd()
 	require.NoError(t, err)
 	require.NoError(t, os.Chdir(dir))
-	t.Cleanup(func() { os.Chdir(origDir) })
+	t.Cleanup(func() { _ = os.Chdir(origDir) })
 
 	cmd := newRunCommand()
 	cmd.SetArgs([]string{specPath})
@@ -1962,7 +1962,7 @@ tasks:
 	origDir, err := os.Getwd()
 	require.NoError(t, err)
 	require.NoError(t, os.Chdir(dir))
-	t.Cleanup(func() { os.Chdir(origDir) })
+	t.Cleanup(func() { _ = os.Chdir(origDir) })
 
 	cmd := newRunCommand()
 	// Explicitly set CLI flags that should override .waza.yaml
