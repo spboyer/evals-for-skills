@@ -139,7 +139,6 @@ func runCheckForSkills(cmd *cobra.Command, wsCtx *workspace.WorkspaceContext) er
 func printCheckSummaryTable(w interface{ Write([]byte) (int, error) }, reports []*readinessReport) {
 	const maxNameWidth = 25
 	const minNameWidth = 10
-	const tableWidth = 80
 
 	// Compute dynamic column width from the longest skill name.
 	nameWidth := len("Skill")
@@ -168,10 +167,10 @@ func printCheckSummaryTable(w interface{ Write([]byte) (int, error) }, reports [
 	const colEval = 4
 	totalWidth := nameWidth + colCompliance + colTokens + colSpec + colLinks + colSchema + colEval + 12 // 12 = 6 gaps × 2 spaces
 
-	fmt.Fprintf(w, "\n")                                       //nolint:errcheck
-	fmt.Fprintf(w, "%s\n", strings.Repeat("═", totalWidth))    //nolint:errcheck
-	fmt.Fprintf(w, " CHECK SUMMARY\n")                         //nolint:errcheck
-	fmt.Fprintf(w, "%s\n\n", strings.Repeat("═", totalWidth))  //nolint:errcheck
+	fmt.Fprintf(w, "\n")                                      //nolint:errcheck
+	fmt.Fprintf(w, "%s\n", strings.Repeat("═", totalWidth))   //nolint:errcheck
+	fmt.Fprintf(w, " CHECK SUMMARY\n")                        //nolint:errcheck
+	fmt.Fprintf(w, "%s\n\n", strings.Repeat("═", totalWidth)) //nolint:errcheck
 
 	fmt.Fprintf(w, "%s  %s  %s  %s  %s  %s  %s\n", //nolint:errcheck
 		padRight("Skill", nameWidth),
