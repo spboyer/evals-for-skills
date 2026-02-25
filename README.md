@@ -300,10 +300,12 @@ When `--copilot` is set, iterative mode flags (`--target`, `--max-iterations`, `
 
 Check if a skill is ready for submission with a comprehensive readiness report.
 
-Performs three types of checks:
+Performs five types of checks:
 1. **Compliance scoring** — Validates frontmatter adherence (Low/Medium/Medium-High/High)
 2. **Token budget** — Checks if SKILL.md is within token limits (default: 500 tokens)
 3. **Evaluation suite** — Checks for the presence of eval.yaml
+4. **Spec compliance** — Validates the skill against the agentskills.io spec (frontmatter structure, required fields, naming rules, directory match, description length, compatibility, license, and version)
+5. **Advisory checks** — Detects quality and maintainability issues (reference module count, complexity classification, negative delta risk patterns, procedural content, and over-specificity)
 
 Provides a plain-language summary and actionable next steps to improve the skill.
 
@@ -322,6 +324,22 @@ Skill: code-explainer
 
 🧪 Evaluation Suite: Found
    ✅ eval.yaml detected. Run 'waza run eval.yaml' to test.
+
+📐 Spec Compliance (agentskills.io)
+   ✅ spec-frontmatter    Frontmatter structure valid with required fields
+   ✅ spec-allowed-fields All frontmatter fields are spec-allowed
+   ✅ spec-name           Name follows spec naming rules
+   ✅ spec-dir-match      Directory name matches skill name
+   ✅ spec-description    Description is valid
+   ✅ spec-license        License field present
+   ✅ spec-version        metadata.version present
+
+🔬 Advisory Checks
+   ✅ module-count        Found 2 reference modules (2-3 is optimal)
+   ✅ complexity          Complexity: detailed (350 tokens, 2 modules)
+   ✅ negative-delta-risk No negative delta risk patterns detected
+   ✅ procedural-content  Description contains procedural language
+   ✅ over-specificity    No over-specificity patterns detected
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 📈 Overall Readiness

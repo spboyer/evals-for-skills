@@ -50,21 +50,23 @@ You can also specify a skill name or path:
 }
 
 type readinessReport struct {
-	specResult      *dev.SpecResult
-	mcpResult       *dev.McpResult
-	linkResult      *dev.LinkResult
-	complianceScore *scoring.ScoreResult
-	complianceLevel scoring.AdherenceLevel
-	tokenCount      int
-	tokenLimit      int
-	tokenExceeded   bool
-	tokenWarning    bool
-	hasEval         bool
-	skillName       string
-	skillPath       string
-	evalPath        string              // resolved path to eval.yaml (empty if not found)
-	evalSchemaErrs  []string            // eval.yaml schema validation errors
-	taskSchemaErrs  map[string][]string // per-task-file schema errors (key = relative path)
+	specResult          *dev.SpecResult
+	mcpResult           *dev.McpResult
+	linkResult          *dev.LinkResult
+	complianceScore     *scoring.ScoreResult
+	complianceLevel     scoring.AdherenceLevel
+	tokenCount          int
+	tokenLimit          int
+	tokenExceeded       bool
+	tokenWarning        bool
+	hasEval             bool
+	skillName           string
+	skillPath           string
+	evalPath            string                // resolved path to eval.yaml (empty if not found)
+	evalSchemaErrs      []string              // eval.yaml schema validation errors
+	taskSchemaErrs      map[string][]string   // per-task-file schema errors (key = relative path)
+	scoreSpecChecks     []*checks.CheckResult // spec compliance checks from score-command
+	scoreAdvisoryChecks []*checks.CheckResult // advisory checks from score-command
 }
 
 func runCheck(cmd *cobra.Command, args []string) error {
@@ -348,6 +350,24 @@ func checkReadiness(skillDir string, wsCtx *workspace.WorkspaceContext) (*readin
 		}
 	}
 
+	// 7. Run score-command spec and advisory checks
+	var checkErrs []error
+	specResults, err := checks.RunChecks(checks.SpecCheckers(), sk)
+	if err != nil {
+		checkErrs = append(checkErrs, err)
+	}
+	report.scoreSpecChecks = specResults
+
+	advisoryResults, err := checks.RunChecks(checks.AdvisoryCheckers(), sk)
+	if err != nil {
+		checkErrs = append(checkErrs, err)
+	}
+	report.scoreAdvisoryChecks = advisoryResults
+
+	if len(checkErrs) > 0 {
+		return report, errors.Join(checkErrs...)
+	}
+
 	return report, nil
 }
 
@@ -559,17 +579,31 @@ func displayReadinessReport(out interface{ Write([]byte) (int, error) }, report 
 		}
 	}
 
+	// 5. Score-command spec compliance checks
+	dev.DisplayCheckResults(w, "Spec Compliance (agentskills.io)", report.scoreSpecChecks)
+
+	// 6. Score-command advisory checks
+	dev.DisplayCheckResults(w, "Advisory Checks", report.scoreAdvisoryChecks)
+
 	// Overall Readiness Assessment
 	fmt.Fprintf(w, "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n")
 	fmt.Fprintf(w, "📈 Overall Readiness\n")
 	fmt.Fprintf(w, "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n")
 
+	specChecksPassed := true
+	for _, c := range report.scoreSpecChecks {
+		if !c.Passed {
+			specChecksPassed = false
+			break
+		}
+	}
 	isReady := report.complianceLevel.AtLeast(scoring.AdherenceMediumHigh) &&
 		!report.tokenExceeded &&
 		(report.specResult == nil || report.specResult.Passed()) &&
 		(report.linkResult == nil || report.linkResult.Passed()) &&
 		len(report.evalSchemaErrs) == 0 &&
-		len(report.taskSchemaErrs) == 0
+		len(report.taskSchemaErrs) == 0 &&
+		specChecksPassed
 
 	if isReady {
 		fmt.Fprintf(w, "✅ Your skill is ready for submission!\n\n")

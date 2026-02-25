@@ -35,6 +35,25 @@ Issues:
 Spec Compliance: 5/8 passed
   ⚠️ [spec-license] Consider adding a 'license' field (e.g., MIT, Apache-2.0)
   ⚠️ [spec-version] Consider adding 'metadata.version' for versioning
+
+── Spec Compliance (agentskills.io) ──
+  ✅ spec-frontmatter: Frontmatter structure valid with required fields
+  ✅ spec-allowed-fields: All frontmatter fields are spec-allowed
+  ✅ spec-name: Name follows spec naming rules
+  ✅ spec-dir-match: Cannot validate (missing path or name)
+  ✅ spec-description: Description is valid
+  ✅ spec-compatibility: No compatibility field (optional)
+  ⚠️ spec-license: No license field found
+     📎 Best practice: include a license field (e.g., MIT, Apache-2.0)
+  ⚠️ spec-version: No metadata.version field found
+     📎 Best practice: include metadata.version for tracking and compatibility
+
+── Advisory Checks ──
+  ✅ module-count: Found 0 reference module(s)
+  ✅ complexity: Complexity: compact (14 tokens, 0 modules)
+  ✅ negative-delta-risk: No negative delta risk patterns detected
+  ⚠️ procedural-content: Description lacks procedural language (no action verbs or procedure keywords found)
+  ✅ over-specificity: No over-specificity patterns detected
 `
 	require.Equal(t, want, buf.String())
 }
@@ -66,6 +85,25 @@ MCP Integration: 1/4
   ⚠️ [mcp-tools-table] No MCP tools table found — add a Markdown table listing tools used
   ⚠️ [mcp-prerequisites] MCP prerequisites not documented — describe which MCP servers are needed
   ⚠️ [mcp-cli-fallback] No CLI fallback documented — describe behavior when MCP is unavailable
+
+── Spec Compliance (agentskills.io) ──
+  ✅ spec-frontmatter: Frontmatter structure valid with required fields
+  ✅ spec-allowed-fields: All frontmatter fields are spec-allowed
+  ✅ spec-name: Name follows spec naming rules
+  ✅ spec-dir-match: Cannot validate (missing path or name)
+  ✅ spec-description: Description is valid
+  ✅ spec-compatibility: No compatibility field (optional)
+  ⚠️ spec-license: No license field found
+     📎 Best practice: include a license field (e.g., MIT, Apache-2.0)
+  ⚠️ spec-version: No metadata.version field found
+     📎 Best practice: include metadata.version for tracking and compatibility
+
+── Advisory Checks ──
+  ✅ module-count: Found 0 reference module(s)
+  ✅ complexity: Complexity: compact (73 tokens, 0 modules)
+  ✅ negative-delta-risk: No negative delta risk patterns detected
+  ✅ procedural-content: Description contains procedural language
+  ✅ over-specificity: No over-specificity patterns detected
 `
 	require.Equal(t, want, buf.String())
 }
@@ -90,6 +128,25 @@ Anti-triggers: 1
 Spec Compliance: 5/8 passed
   ⚠️ [spec-license] Consider adding a 'license' field (e.g., MIT, Apache-2.0)
   ⚠️ [spec-version] Consider adding 'metadata.version' for versioning
+
+── Spec Compliance (agentskills.io) ──
+  ✅ spec-frontmatter: Frontmatter structure valid with required fields
+  ✅ spec-allowed-fields: All frontmatter fields are spec-allowed
+  ✅ spec-name: Name follows spec naming rules
+  ✅ spec-dir-match: Cannot validate (missing path or name)
+  ✅ spec-description: Description is valid
+  ✅ spec-compatibility: No compatibility field (optional)
+  ⚠️ spec-license: No license field found
+     📎 Best practice: include a license field (e.g., MIT, Apache-2.0)
+  ⚠️ spec-version: No metadata.version field found
+     📎 Best practice: include metadata.version for tracking and compatibility
+
+── Advisory Checks ──
+  ✅ module-count: Found 0 reference module(s)
+  ✅ complexity: Complexity: compact (57 tokens, 0 modules)
+  ✅ negative-delta-risk: No negative delta risk patterns detected
+  ✅ procedural-content: Description contains procedural language
+  ✅ over-specificity: No over-specificity patterns detected
 `
 	require.Equal(t, want, buf.String())
 }
