@@ -100,17 +100,24 @@ func displayInventory(out io.Writer, absDir string, opts ...workspace.DetectOpti
 		}
 	}
 
-	// Use tabwriter for consistent column alignment regardless of name length.
-	tw := tabwriter.NewWriter(out, 0, 0, 2, ' ', 0)
+	// Use tabwriter for alignment, then post-process to add emoji indicators.
+	// Tabwriter computes column widths with plain-text placeholders; emoji are
+	// swapped in after flush so ANSI/width issues don't affect alignment.
+	var buf bytes.Buffer
+	tw := tabwriter.NewWriter(&buf, 0, 0, 2, ' ', 0)
 	fmt.Fprintf(out, "\nSkills in this project:\n") //nolint:errcheck
 	for _, inv := range inventory {
 		if inv.HasEval {
-			fmt.Fprintf(tw, "  ✓\tSkill: %s\tEval: %s\n", inv.Name, inv.Name) //nolint:errcheck
+			fmt.Fprintf(tw, "  {ok}\tSkill: %s\tEval: %s\n", inv.Name, inv.Name) //nolint:errcheck
 		} else {
-			fmt.Fprintf(tw, "  ✗\tSkill: %s\tmissing eval\n", inv.Name) //nolint:errcheck
+			fmt.Fprintf(tw, "  {miss}\tSkill: %s\tmissing eval\n", inv.Name) //nolint:errcheck
 		}
 	}
-	tw.Flush()                                                                        //nolint:errcheck
+	tw.Flush() //nolint:errcheck
+	result := buf.String()
+	result = strings.ReplaceAll(result, "{ok}", "✅")
+	result = strings.ReplaceAll(result, "{miss}", "❌")
+	fmt.Fprint(out, result)                                                           //nolint:errcheck
 	fmt.Fprintf(out, "\n%d skills found, %d missing eval\n", len(inventory), missing) //nolint:errcheck
 
 	return inventory
@@ -505,7 +512,8 @@ func initCommandE(cmd *cobra.Command, args []string, noSkill bool, flagSkillsDir
 
 	fmt.Fprintf(out, "\nProject structure:\n\n") //nolint:errcheck
 
-	tw2 := tabwriter.NewWriter(out, 0, 0, 2, ' ', 0)
+	var buf2 bytes.Buffer
+	tw2 := tabwriter.NewWriter(&buf2, 0, 0, 2, ' ', 0)
 	created := 0
 	for _, item := range items {
 		var indicator string
@@ -542,20 +550,24 @@ func initCommandE(cmd *cobra.Command, args []string, noSkill bool, flagSkillsDir
 		}
 
 		if existed {
-			indicator = "✓"
+			indicator = "{exist}"
 		} else {
-			indicator = "+"
+			indicator = "{new}"
 			created++
 		}
 
 		fmt.Fprintf(tw2, "  %s\t%s\t%s\n", indicator, relPath, item.label) //nolint:errcheck
 	}
 	tw2.Flush() //nolint:errcheck
+	result2 := buf2.String()
+	result2 = strings.ReplaceAll(result2, "{exist}", "✅")
+	result2 = strings.ReplaceAll(result2, "{new}", "➕")
+	fmt.Fprint(out, result2) //nolint:errcheck
 
 	// --- Phase 5b: Summary ---
 	fmt.Fprintln(out) //nolint:errcheck
 	if created == 0 {
-		fmt.Fprintf(out, "✓ Project up to date.\n") //nolint:errcheck
+		fmt.Fprintf(out, "✅ Project up to date.\n") //nolint:errcheck
 	} else if created == len(items) {
 		fmt.Fprintf(out, "✅ Project created — %d items set up.\n", created) //nolint:errcheck
 	} else {
