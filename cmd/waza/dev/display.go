@@ -106,11 +106,11 @@ func DisplaySummary(w io.Writer, skillName string, before, after *scoring.ScoreR
 	fprintln(w, boxLine(""))
 
 	tokenStatus := fmt.Sprintf("TOKEN STATUS: ✅ Under budget (%d < %d)", afterTokens, softLimit)
-	if afterTokens > softLimit {
-		tokenStatus = fmt.Sprintf("TOKEN STATUS: ⚠️ Over soft limit (%d > %d)", afterTokens, softLimit)
+	if afterTokens >= softLimit {
+		tokenStatus = fmt.Sprintf("TOKEN STATUS: ⚠️ Over soft limit (%d >= %d)", afterTokens, softLimit)
 	}
-	if afterTokens > hardLimit {
-		tokenStatus = fmt.Sprintf("TOKEN STATUS: ❌ Over hard limit (%d > %d)", afterTokens, hardLimit)
+	if afterTokens >= hardLimit {
+		tokenStatus = fmt.Sprintf("TOKEN STATUS: ❌ Over hard limit (%d >= %d)", afterTokens, hardLimit)
 	}
 	fprintln(w, boxLine(tokenStatus))
 	fprintln(w, bot)

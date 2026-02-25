@@ -17,7 +17,10 @@ import (
 // 3. built-in DefaultLimits
 func resolveLimitsConfig(rootDir string) (checks.TokenLimitsConfig, error) {
 	cfg, err := projectconfig.Load(rootDir)
-	if err == nil && cfg.Tokens.Limits != nil && cfg.Tokens.Limits.Defaults != nil {
+	if err != nil {
+		return checks.TokenLimitsConfig{}, fmt.Errorf("loading project config: %w", err)
+	}
+	if cfg.Tokens.Limits != nil && cfg.Tokens.Limits.Defaults != nil {
 		return checks.TokenLimitsConfig{
 			Defaults:  cfg.Tokens.Limits.Defaults,
 			Overrides: cfg.Tokens.Limits.Overrides,

@@ -279,7 +279,7 @@ func TestDisplaySummary_TokenStatus_OverSoftLimit(t *testing.T) {
 ║  Triggers: 0                     Triggers: 0                     ║
 ║  Anti-triggers: 0                Anti-triggers: 0                ║
 ║                                                                  ║
-║  TOKEN STATUS: ⚠️ Over soft limit (600 > 500)                    ║
+║  TOKEN STATUS: ⚠️ Over soft limit (600 >= 500)                   ║
 ╚══════════════════════════════════════════════════════════════════╝
 `
 	require.Equal(t, want, buf.String())
@@ -302,7 +302,7 @@ func TestDisplaySummary_TokenStatus_OverHardLimit(t *testing.T) {
 ║  Triggers: 0                     Triggers: 0                     ║
 ║  Anti-triggers: 0                Anti-triggers: 0                ║
 ║                                                                  ║
-║  TOKEN STATUS: ❌ Over hard limit (6000 > 5000)                   ║
+║  TOKEN STATUS: ❌ Over hard limit (6000 >= 5000)                  ║
 ╚══════════════════════════════════════════════════════════════════╝
 `
 	require.Equal(t, want, buf.String())

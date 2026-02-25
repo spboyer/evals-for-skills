@@ -37,7 +37,10 @@ type devConfig struct {
 func runDev(cmd *cobra.Command, args []string) error {
 	// Load .waza.yaml defaults for dev flags.
 	pcfg, err := projectconfig.Load(".")
-	if err != nil || pcfg == nil {
+	if err != nil {
+		fmt.Fprintf(cmd.ErrOrStderr(), "warning: failed to load .waza.yaml: %v; using defaults\n", err)
+	}
+	if pcfg == nil {
 		pcfg = projectconfig.New()
 	}
 
@@ -175,8 +178,9 @@ func runDev(cmd *cobra.Command, args []string) error {
 		Out:            cmd.OutOrStdout(),
 		Err:            cmd.ErrOrStderr(),
 		In:             cmd.InOrStdin(),
-		Scorer:         &scoring.HeuristicScorer{TokenSoftLimit: pcfg.Tokens.WarningThreshold},
+		Scorer:         &scoring.HeuristicScorer{TokenSoftLimit: pcfg.Tokens.WarningThreshold, TokenLimit: pcfg.Tokens.FallbackLimit},
 		TokenSoftLimit: pcfg.Tokens.WarningThreshold,
+		TokenHardLimit: pcfg.Tokens.FallbackLimit,
 	}
 
 	if cfg.Copilot {
@@ -198,7 +202,10 @@ type batchSkillResult struct {
 
 func runDevBatch(cmd *cobra.Command, args []string, allMode bool, filterStr string, copilotMode bool, modelID string, target scoring.AdherenceLevel, maxIter int, auto bool) error {
 	pcfg, err := projectconfig.Load(".")
-	if err != nil || pcfg == nil {
+	if err != nil {
+		fmt.Fprintf(cmd.ErrOrStderr(), "warning: failed to load .waza.yaml: %v; using defaults\n", err)
+	}
+	if pcfg == nil {
 		pcfg = projectconfig.New()
 	}
 
@@ -280,8 +287,9 @@ func runDevBatch(cmd *cobra.Command, args []string, allMode bool, filterStr stri
 			Out:            w,
 			Err:            cmd.ErrOrStderr(),
 			In:             cmd.InOrStdin(),
-			Scorer:         &scoring.HeuristicScorer{TokenSoftLimit: pcfg.Tokens.WarningThreshold},
+			Scorer:         &scoring.HeuristicScorer{TokenSoftLimit: pcfg.Tokens.WarningThreshold, TokenLimit: pcfg.Tokens.FallbackLimit},
 			TokenSoftLimit: pcfg.Tokens.WarningThreshold,
+			TokenHardLimit: pcfg.Tokens.FallbackLimit,
 		}
 
 		// Capture before state
