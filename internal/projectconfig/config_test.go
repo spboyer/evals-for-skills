@@ -39,7 +39,7 @@ func TestNew_ReturnsAllDefaults(t *testing.T) {
 
 	// Tokens
 	assertEqualInt(t, "Tokens.WarningThreshold", 500, cfg.Tokens.WarningThreshold)
-	assertEqualInt(t, "Tokens.FallbackLimit", 1000, cfg.Tokens.FallbackLimit)
+	assertEqualInt(t, "Tokens.FallbackLimit", 2000, cfg.Tokens.FallbackLimit)
 	if cfg.Tokens.Limits != nil {
 		t.Error("Tokens.Limits should be nil by default")
 	}

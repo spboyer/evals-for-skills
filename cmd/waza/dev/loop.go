@@ -19,17 +19,19 @@ import (
 )
 
 type devConfig struct {
-	SkillDir      string
-	ModelID       string
-	Copilot       bool
-	Context       context.Context
-	Target        scoring.AdherenceLevel
-	MaxIterations int
-	Auto          bool
-	Out           io.Writer
-	Err           io.Writer
-	In            io.Reader
-	Scorer        scoring.Scorer
+	SkillDir       string
+	ModelID        string
+	Copilot        bool
+	Context        context.Context
+	Target         scoring.AdherenceLevel
+	MaxIterations  int
+	Auto           bool
+	Out            io.Writer
+	Err            io.Writer
+	In             io.Reader
+	Scorer         scoring.Scorer
+	TokenSoftLimit int // 0 means use scoring.TokenSoftLimit
+	TokenHardLimit int // 0 means use scoring.TokenHardLimit
 }
 
 func runDev(cmd *cobra.Command, args []string) error {
@@ -163,17 +165,18 @@ func runDev(cmd *cobra.Command, args []string) error {
 	}
 
 	cfg := &devConfig{
-		SkillDir:      skillDir,
-		ModelID:       modelID,
-		Copilot:       copilotMode,
-		Context:       cmd.Context(),
-		Target:        target,
-		MaxIterations: maxIter,
-		Auto:          auto,
-		Out:           cmd.OutOrStdout(),
-		Err:           cmd.ErrOrStderr(),
-		In:            cmd.InOrStdin(),
-		Scorer:        &scoring.HeuristicScorer{},
+		SkillDir:       skillDir,
+		ModelID:        modelID,
+		Copilot:        copilotMode,
+		Context:        cmd.Context(),
+		Target:         target,
+		MaxIterations:  maxIter,
+		Auto:           auto,
+		Out:            cmd.OutOrStdout(),
+		Err:            cmd.ErrOrStderr(),
+		In:             cmd.InOrStdin(),
+		Scorer:         &scoring.HeuristicScorer{TokenSoftLimit: pcfg.Tokens.WarningThreshold},
+		TokenSoftLimit: pcfg.Tokens.WarningThreshold,
 	}
 
 	if cfg.Copilot {
@@ -194,6 +197,11 @@ type batchSkillResult struct {
 }
 
 func runDevBatch(cmd *cobra.Command, args []string, allMode bool, filterStr string, copilotMode bool, modelID string, target scoring.AdherenceLevel, maxIter int, auto bool) error {
+	pcfg, err := projectconfig.Load(".")
+	if err != nil || pcfg == nil {
+		pcfg = projectconfig.New()
+	}
+
 	wd, err := os.Getwd()
 	if err != nil {
 		return fmt.Errorf("getting working directory: %w", err)
@@ -230,7 +238,7 @@ func runDevBatch(cmd *cobra.Command, args []string, allMode bool, filterStr stri
 		if parseErr != nil {
 			return parseErr
 		}
-		scorer := &scoring.HeuristicScorer{}
+		scorer := &scoring.HeuristicScorer{TokenSoftLimit: pcfg.Tokens.WarningThreshold}
 		var filtered []workspace.SkillInfo
 		for _, si := range skills {
 			sk, readErr := readSkillFile(si.SkillPath)
@@ -262,17 +270,18 @@ func runDevBatch(cmd *cobra.Command, args []string, allMode bool, filterStr stri
 		fprintf(w, "─── [%d/%d] %s ───\n", i+1, len(skills), si.Name)
 
 		cfg := &devConfig{
-			SkillDir:      si.Dir,
-			ModelID:       modelID,
-			Copilot:       copilotMode,
-			Context:       cmd.Context(),
-			Target:        target,
-			MaxIterations: maxIter,
-			Auto:          auto,
-			Out:           w,
-			Err:           cmd.ErrOrStderr(),
-			In:            cmd.InOrStdin(),
-			Scorer:        &scoring.HeuristicScorer{},
+			SkillDir:       si.Dir,
+			ModelID:        modelID,
+			Copilot:        copilotMode,
+			Context:        cmd.Context(),
+			Target:         target,
+			MaxIterations:  maxIter,
+			Auto:           auto,
+			Out:            w,
+			Err:            cmd.ErrOrStderr(),
+			In:             cmd.InOrStdin(),
+			Scorer:         &scoring.HeuristicScorer{TokenSoftLimit: pcfg.Tokens.WarningThreshold},
+			TokenSoftLimit: pcfg.Tokens.WarningThreshold,
 		}
 
 		// Capture before state
@@ -403,7 +412,7 @@ func runDevLoop(cfg *devConfig) error {
 		if currentScore == nil {
 			currentScore = initialScore
 		}
-		DisplaySummary(cfg.Out, skill.Frontmatter.Name, initialScore, currentScore, initialTokens, skill.Tokens)
+		DisplaySummary(cfg.Out, skill.Frontmatter.Name, initialScore, currentScore, initialTokens, skill.Tokens, cfg.TokenSoftLimit, cfg.TokenHardLimit)
 	}
 
 	return nil

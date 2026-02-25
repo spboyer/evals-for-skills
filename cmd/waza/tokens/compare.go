@@ -120,7 +120,7 @@ func runCompare(cmd *cobra.Command, args []string) error {
 
 	// When --strict, load token limits and mark files that exceed their budget
 	if strict {
-		cfg, cfgErr := checks.LoadLimitsConfig(rootDir)
+		cfg, cfgErr := resolveLimitsConfig(rootDir)
 		if cfgErr != nil {
 			return cfgErr
 		}

@@ -102,8 +102,13 @@ func runCheck(cmd *cobra.Command, args []string) error {
 		paths = args
 	}
 
+	limCfg, cfgErr := resolveLimitsConfig(rootDir)
+	if cfgErr != nil {
+		return cfgErr
+	}
 	checker := &checks.TokenLimitsChecker{
-		Paths: paths,
+		Config: limCfg,
+		Paths:  paths,
 	}
 	limitsData, err := checker.Limits(skill.Skill{Path: filepath.Join(rootDir, "SKILL.md")})
 	if err != nil {

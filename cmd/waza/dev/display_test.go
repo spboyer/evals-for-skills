@@ -198,7 +198,7 @@ func TestDisplaySummary_BoxFormat(t *testing.T) {
 	}
 
 	var buf bytes.Buffer
-	DisplaySummary(&buf, "my-skill", before, after, 142, 385)
+	DisplaySummary(&buf, "my-skill", before, after, 142, 385, 0, 0)
 
 	want := `╔══════════════════════════════════════════════════════════════════╗
 ║  SENSEI SUMMARY: my-skill                                        ║
@@ -221,7 +221,7 @@ func TestDisplaySummary_ContainsBoxCharacters(t *testing.T) {
 	after := &scoring.ScoreResult{Level: scoring.AdherenceMedium}
 
 	var buf bytes.Buffer
-	DisplaySummary(&buf, "box-test", before, after, 100, 200)
+	DisplaySummary(&buf, "box-test", before, after, 100, 200, 0, 0)
 
 	want := `╔══════════════════════════════════════════════════════════════════╗
 ║  SENSEI SUMMARY: box-test                                        ║
@@ -244,7 +244,7 @@ func TestDisplaySummary_TokenStatus_UnderBudget(t *testing.T) {
 	after := &scoring.ScoreResult{Level: scoring.AdherenceMediumHigh}
 
 	var buf bytes.Buffer
-	DisplaySummary(&buf, "token-test", before, after, 100, 385)
+	DisplaySummary(&buf, "token-test", before, after, 100, 385, 0, 0)
 
 	want := `╔══════════════════════════════════════════════════════════════════╗
 ║  SENSEI SUMMARY: token-test                                      ║
@@ -267,7 +267,7 @@ func TestDisplaySummary_TokenStatus_OverSoftLimit(t *testing.T) {
 	after := &scoring.ScoreResult{Level: scoring.AdherenceMediumHigh}
 
 	var buf bytes.Buffer
-	DisplaySummary(&buf, "token-test", before, after, 100, 600)
+	DisplaySummary(&buf, "token-test", before, after, 100, 600, 0, 0)
 
 	want := `╔══════════════════════════════════════════════════════════════════╗
 ║  SENSEI SUMMARY: token-test                                      ║
@@ -290,7 +290,7 @@ func TestDisplaySummary_TokenStatus_OverHardLimit(t *testing.T) {
 	after := &scoring.ScoreResult{Level: scoring.AdherenceMediumHigh}
 
 	var buf bytes.Buffer
-	DisplaySummary(&buf, "token-test", before, after, 100, 6000)
+	DisplaySummary(&buf, "token-test", before, after, 100, 6000, 0, 0)
 
 	want := `╔══════════════════════════════════════════════════════════════════╗
 ║  SENSEI SUMMARY: token-test                                      ║
@@ -313,7 +313,7 @@ func TestDisplaySummary_ShowsBEFOREandAFTER(t *testing.T) {
 	after := &scoring.ScoreResult{Level: scoring.AdherenceHigh, TriggerCount: 7, AntiTriggerCount: 2}
 
 	var buf bytes.Buffer
-	DisplaySummary(&buf, "summary-test", before, after, 50, 400)
+	DisplaySummary(&buf, "summary-test", before, after, 50, 400, 0, 0)
 
 	want := `╔══════════════════════════════════════════════════════════════════╗
 ║  SENSEI SUMMARY: summary-test                                    ║

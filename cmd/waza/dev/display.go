@@ -80,7 +80,16 @@ func DisplayIssues(w io.Writer, issues []scoring.Issue) {
 }
 
 // DisplaySummary shows before/after comparison box.
-func DisplaySummary(w io.Writer, skillName string, before, after *scoring.ScoreResult, beforeTokens, afterTokens int) {
+// softLimit and hardLimit are the token budget thresholds; pass 0 to use
+// the package-level defaults from scoring.TokenSoftLimit / TokenHardLimit.
+func DisplaySummary(w io.Writer, skillName string, before, after *scoring.ScoreResult, beforeTokens, afterTokens int, softLimit, hardLimit int) {
+	if softLimit <= 0 {
+		softLimit = scoring.TokenSoftLimit
+	}
+	if hardLimit <= 0 {
+		hardLimit = scoring.TokenHardLimit
+	}
+
 	top := "╔" + strings.Repeat("═", boxWidth) + "╗"
 	mid := "╠" + strings.Repeat("═", boxWidth) + "╣"
 	bot := "╚" + strings.Repeat("═", boxWidth) + "╝"
@@ -96,12 +105,12 @@ func DisplaySummary(w io.Writer, skillName string, before, after *scoring.ScoreR
 	fprintln(w, boxLine(fmt.Sprintf("Anti-triggers: %-16d Anti-triggers: %d", before.AntiTriggerCount, after.AntiTriggerCount)))
 	fprintln(w, boxLine(""))
 
-	tokenStatus := fmt.Sprintf("TOKEN STATUS: ✅ Under budget (%d < %d)", afterTokens, scoring.TokenSoftLimit)
-	if afterTokens > scoring.TokenSoftLimit {
-		tokenStatus = fmt.Sprintf("TOKEN STATUS: ⚠️ Over soft limit (%d > %d)", afterTokens, scoring.TokenSoftLimit)
+	tokenStatus := fmt.Sprintf("TOKEN STATUS: ✅ Under budget (%d < %d)", afterTokens, softLimit)
+	if afterTokens > softLimit {
+		tokenStatus = fmt.Sprintf("TOKEN STATUS: ⚠️ Over soft limit (%d > %d)", afterTokens, softLimit)
 	}
-	if afterTokens > scoring.TokenHardLimit {
-		tokenStatus = fmt.Sprintf("TOKEN STATUS: ❌ Over hard limit (%d > %d)", afterTokens, scoring.TokenHardLimit)
+	if afterTokens > hardLimit {
+		tokenStatus = fmt.Sprintf("TOKEN STATUS: ❌ Over hard limit (%d > %d)", afterTokens, hardLimit)
 	}
 	fprintln(w, boxLine(tokenStatus))
 	fprintln(w, bot)

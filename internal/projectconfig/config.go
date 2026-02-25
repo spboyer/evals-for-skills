@@ -33,7 +33,7 @@ const (
 	DefaultDevMaxIterations = 5
 
 	DefaultTokenWarningThreshold = 500
-	DefaultTokenFallbackLimit    = 1000
+	DefaultTokenFallbackLimit    = 2000
 
 	DefaultGraderProgramTimeout = 30
 )

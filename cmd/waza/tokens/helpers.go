@@ -6,7 +6,25 @@ import (
 	"path/filepath"
 	"strings"
 	"time"
+
+	"github.com/spboyer/waza/internal/checks"
+	"github.com/spboyer/waza/internal/projectconfig"
 )
+
+// resolveLimitsConfig loads token limits config with proper precedence:
+// 1. .waza.yaml tokens.limits section
+// 2. .token-limits.json file
+// 3. built-in DefaultLimits
+func resolveLimitsConfig(rootDir string) (checks.TokenLimitsConfig, error) {
+	cfg, err := projectconfig.Load(rootDir)
+	if err == nil && cfg.Tokens.Limits != nil && cfg.Tokens.Limits.Defaults != nil {
+		return checks.TokenLimitsConfig{
+			Defaults:  cfg.Tokens.Limits.Defaults,
+			Overrides: cfg.Tokens.Limits.Overrides,
+		}, nil
+	}
+	return checks.LoadLimitsConfig(rootDir)
+}
 
 // FileResult holds token count results for a single file.
 type FileResult struct {
