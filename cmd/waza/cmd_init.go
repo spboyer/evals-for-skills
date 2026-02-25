@@ -164,18 +164,18 @@ func detectPaths(root string) detectedPaths {
 
 		// Detect skills: SKILL.md → grandparent is the skills root
 		if dp.SkillsDir == "" && fileName == "SKILL.md" {
-			skillDir := filepath.Dir(path)      // e.g., /root/plugin/skills/my-skill
-			skillsRoot := filepath.Dir(skillDir) // e.g., /root/plugin/skills
-			if rel, relErr := filepath.Rel(absRoot, skillsRoot); relErr == nil && rel != "." {
+			skillDir := filepath.Dir(path)
+			skillsRoot := filepath.Dir(skillDir)
+			if rel, relErr := filepath.Rel(absRoot, skillsRoot); relErr == nil && rel != "." && !strings.HasPrefix(rel, "..") {
 				dp.SkillsDir = filepath.ToSlash(rel) + "/"
 			}
 		}
 
 		// Detect evals: eval.yaml → grandparent is the evals root
 		if dp.EvalsDir == "" && (fileName == "eval.yaml" || fileName == "eval.yml") {
-			evalDir := filepath.Dir(path)      // e.g., /root/tests/evals/my-skill
-			evalsRoot := filepath.Dir(evalDir) // e.g., /root/tests/evals
-			if rel, relErr := filepath.Rel(absRoot, evalsRoot); relErr == nil && rel != "." {
+			evalDir := filepath.Dir(path)
+			evalsRoot := filepath.Dir(evalDir)
+			if rel, relErr := filepath.Rel(absRoot, evalsRoot); relErr == nil && rel != "." && !strings.HasPrefix(rel, "..") {
 				dp.EvalsDir = filepath.ToSlash(rel) + "/"
 			}
 		}
@@ -243,15 +243,25 @@ func initCommandE(cmd *cobra.Command, args []string, noSkill bool, flagSkillsDir
 	}
 
 	// --- Path resolution: CLI flags > detected paths > config defaults ---
-	detected := detectPaths(absDir)
-	if detected.SkillsDir != "" && skillsPath == projectconfig.DefaultSkillsDir {
-		skillsPath = detected.SkillsDir
-	}
-	if detected.EvalsDir != "" && evalsPath == projectconfig.DefaultEvalsDir {
-		evalsPath = detected.EvalsDir
-	}
-	if detected.ResultsDir != "" && resultsPath == projectconfig.DefaultResultsDir {
-		resultsPath = detected.ResultsDir
+	// Only run detection when at least one path is still using its default
+	// value and no corresponding CLI flag has been provided.
+	needDetection := needConfigPrompt ||
+		(skillsPath == projectconfig.DefaultSkillsDir && flagSkillsDir == "") ||
+		(evalsPath == projectconfig.DefaultEvalsDir && flagEvalsDir == "") ||
+		(resultsPath == projectconfig.DefaultResultsDir && flagResultsDir == "")
+
+	var detected detectedPaths
+	if needDetection {
+		detected = detectPaths(absDir)
+		if detected.SkillsDir != "" && skillsPath == projectconfig.DefaultSkillsDir {
+			skillsPath = detected.SkillsDir
+		}
+		if detected.EvalsDir != "" && evalsPath == projectconfig.DefaultEvalsDir {
+			evalsPath = detected.EvalsDir
+		}
+		if detected.ResultsDir != "" && resultsPath == projectconfig.DefaultResultsDir {
+			resultsPath = detected.ResultsDir
+		}
 	}
 
 	// CLI flags take highest priority
@@ -276,6 +286,17 @@ func initCommandE(cmd *cobra.Command, args []string, noSkill bool, flagSkillsDir
 		}
 		if detected.ResultsDir != "" {
 			fmt.Fprintf(out, "   Results: %s\n", detected.ResultsDir) //nolint:errcheck
+		}
+	}
+
+	// Validate resolved paths are safe (applies to all code paths: flags, detection, defaults)
+	for _, p := range []string{skillsPath, evalsPath, resultsPath} {
+		cleaned := filepath.Clean(p)
+		if filepath.IsAbs(cleaned) || strings.HasPrefix(cleaned, "..") {
+			return fmt.Errorf("path %q must be relative and within the project directory", p)
+		}
+		if strings.ContainsAny(p, ":#") {
+			return fmt.Errorf("path %q contains invalid characters", p)
 		}
 	}
 
@@ -360,17 +381,6 @@ func initCommandE(cmd *cobra.Command, args []string, noSkill bool, flagSkillsDir
 			if err := pathsForm.Run(); err != nil {
 				// keep current values on error
 				_ = err
-			}
-
-			// Validate paths are safe (no absolute paths or traversal)
-			for _, p := range []string{skillsPath, evalsPath, resultsPath} {
-				cleaned := filepath.Clean(p)
-				if filepath.IsAbs(cleaned) || strings.HasPrefix(cleaned, "..") {
-					return fmt.Errorf("path %q must be relative and within the project directory", p)
-				}
-				if strings.ContainsAny(p, ":#") {
-					return fmt.Errorf("path %q contains invalid characters", p)
-				}
 			}
 		}
 

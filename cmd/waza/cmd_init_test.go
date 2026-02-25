@@ -466,10 +466,7 @@ func TestDetectPaths_SkillsAtNonStandardPath(t *testing.T) {
 	require.NoError(t, os.WriteFile(filepath.Join(skillDir, "SKILL.md"), []byte("# Skill\n"), 0o644))
 
 	dp := detectPaths(dir)
-	// detectPaths returns forward-slash paths to match config convention
-	assert.Contains(t, dp.SkillsDir, "plugin")
-	assert.Contains(t, dp.SkillsDir, "skills")
-	assert.True(t, strings.HasSuffix(dp.SkillsDir, "/"))
+	assert.Equal(t, "plugin/skills/", dp.SkillsDir)
 }
 
 func TestDetectPaths_EvalsAtNonStandardPath(t *testing.T) {
@@ -481,9 +478,7 @@ func TestDetectPaths_EvalsAtNonStandardPath(t *testing.T) {
 	require.NoError(t, os.WriteFile(filepath.Join(evalDir, "eval.yaml"), []byte("name: test\n"), 0o644))
 
 	dp := detectPaths(dir)
-	assert.Contains(t, dp.EvalsDir, "tests")
-	assert.Contains(t, dp.EvalsDir, "evals")
-	assert.True(t, strings.HasSuffix(dp.EvalsDir, "/"))
+	assert.Equal(t, "tests/evals/", dp.EvalsDir)
 }
 
 func TestDetectPaths_ResultsDetected(t *testing.T) {
@@ -517,6 +512,20 @@ func TestDetectPaths_NothingFound(t *testing.T) {
 	assert.Empty(t, dp.SkillsDir)
 	assert.Empty(t, dp.EvalsDir)
 	assert.Empty(t, dp.ResultsDir)
+}
+
+func TestDetectPaths_RejectsPathTraversal(t *testing.T) {
+	dir := t.TempDir()
+
+	// Create a SKILL.md directly in a subdirectory (no grandchild)
+	// This means grandparent would be the parent of dir itself → ".."
+	skillDir := filepath.Join(dir, "my-skill")
+	require.NoError(t, os.MkdirAll(skillDir, 0o755))
+	require.NoError(t, os.WriteFile(filepath.Join(skillDir, "SKILL.md"), []byte("# Skill\n"), 0o644))
+
+	dp := detectPaths(dir)
+	// Should NOT detect — the grandparent would be outside the project root
+	assert.Empty(t, dp.SkillsDir)
 }
 
 func TestDetectPaths_SkipsHiddenDirs(t *testing.T) {
