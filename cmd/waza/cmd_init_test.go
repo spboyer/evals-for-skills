@@ -528,6 +528,32 @@ func TestDetectPaths_RejectsPathTraversal(t *testing.T) {
 	assert.Empty(t, dp.SkillsDir)
 }
 
+func TestDetectPaths_RejectsNonEvalDirectory(t *testing.T) {
+	dir := t.TempDir()
+
+	// eval.yaml inside tests/azure-prepare/ should NOT be detected as evals root
+	// because "tests" does not contain "eval" in its name
+	testDir := filepath.Join(dir, "tests", "azure-prepare")
+	require.NoError(t, os.MkdirAll(testDir, 0o755))
+	require.NoError(t, os.WriteFile(filepath.Join(testDir, "eval.yaml"), []byte("name: test\n"), 0o644))
+
+	dp := detectPaths(dir)
+	assert.Empty(t, dp.EvalsDir, "tests/ should not be detected as evals root")
+}
+
+func TestDetectPaths_RejectsNonSkillDirectory(t *testing.T) {
+	dir := t.TempDir()
+
+	// SKILL.md inside docs/my-guide/ should NOT be detected as skills root
+	// because "docs" does not contain "skill" in its name
+	docsDir := filepath.Join(dir, "docs", "my-guide")
+	require.NoError(t, os.MkdirAll(docsDir, 0o755))
+	require.NoError(t, os.WriteFile(filepath.Join(docsDir, "SKILL.md"), []byte("# Guide\n"), 0o644))
+
+	dp := detectPaths(dir)
+	assert.Empty(t, dp.SkillsDir, "docs/ should not be detected as skills root")
+}
+
 func TestDetectPaths_SkipsHiddenDirs(t *testing.T) {
 	dir := t.TempDir()
 

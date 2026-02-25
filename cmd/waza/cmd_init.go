@@ -162,21 +162,29 @@ func detectPaths(root string) detectedPaths {
 
 		fileName := d.Name()
 
-		// Detect skills: SKILL.md → grandparent is the skills root
+		// Detect skills: SKILL.md → grandparent is the skills root.
+		// Only accept if the grandparent directory name suggests a skills folder.
 		if dp.SkillsDir == "" && fileName == "SKILL.md" {
 			skillDir := filepath.Dir(path)
 			skillsRoot := filepath.Dir(skillDir)
-			if rel, relErr := filepath.Rel(absRoot, skillsRoot); relErr == nil && rel != "." && !strings.HasPrefix(rel, "..") {
-				dp.SkillsDir = filepath.ToSlash(rel) + "/"
+			rootName := strings.ToLower(filepath.Base(skillsRoot))
+			if strings.Contains(rootName, "skill") {
+				if rel, relErr := filepath.Rel(absRoot, skillsRoot); relErr == nil && rel != "." && !strings.HasPrefix(rel, "..") {
+					dp.SkillsDir = filepath.ToSlash(rel) + "/"
+				}
 			}
 		}
 
-		// Detect evals: eval.yaml → grandparent is the evals root
+		// Detect evals: eval.yaml → grandparent is the evals root.
+		// Only accept if the grandparent directory name suggests an evals folder.
 		if dp.EvalsDir == "" && (fileName == "eval.yaml" || fileName == "eval.yml") {
 			evalDir := filepath.Dir(path)
 			evalsRoot := filepath.Dir(evalDir)
-			if rel, relErr := filepath.Rel(absRoot, evalsRoot); relErr == nil && rel != "." && !strings.HasPrefix(rel, "..") {
-				dp.EvalsDir = filepath.ToSlash(rel) + "/"
+			rootName := strings.ToLower(filepath.Base(evalsRoot))
+			if strings.Contains(rootName, "eval") {
+				if rel, relErr := filepath.Rel(absRoot, evalsRoot); relErr == nil && rel != "." && !strings.HasPrefix(rel, "..") {
+					dp.EvalsDir = filepath.ToSlash(rel) + "/"
+				}
 			}
 		}
 
