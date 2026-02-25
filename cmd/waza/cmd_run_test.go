@@ -1859,9 +1859,9 @@ func TestRunCommand_WazaYamlAppliesDefaults(t *testing.T) {
 	wazaYAML := `defaults:
   parallel: true
   workers: 12
-  judge_model: "gpt-4o-judge"
+  judgeModel: "gpt-4o-judge"
   verbose: true
-  session_log: true
+  sessionLog: true
 cache:
   enabled: true
   dir: ".my-cache"
@@ -1925,9 +1925,9 @@ func TestRunCommand_CLIFlagsOverrideWazaYaml(t *testing.T) {
 	wazaYAML := `defaults:
   parallel: true
   workers: 12
-  judge_model: "gpt-4o-judge"
+  judgeModel: "gpt-4o-judge"
   verbose: true
-  session_log: true
+  sessionLog: true
 cache:
   enabled: true
   dir: ".my-cache"

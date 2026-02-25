@@ -255,11 +255,11 @@ func TestInitCommand_WazaYAMLContent(t *testing.T) {
 	assert.Contains(t, content, "skills: skills/")
 	assert.Contains(t, content, "evals: evals/")
 	assert.Contains(t, content, "results: results/")
-	// Verify commented-out advanced sections
-	assert.Contains(t, content, "# cache:")
-	assert.Contains(t, content, "# server:")
-	assert.Contains(t, content, "# tokens:")
-	assert.Contains(t, content, "# graders:")
+	// Verify all config sections are marshalled (no longer commented out)
+	assert.Contains(t, content, "cache:")
+	assert.Contains(t, content, "server:")
+	assert.Contains(t, content, "tokens:")
+	assert.Contains(t, content, "graders:")
 }
 
 func TestInitCommand_InventoryDiscoversSkills(t *testing.T) {
@@ -447,11 +447,11 @@ func TestGenerateWazaConfig(t *testing.T) {
 	assert.Contains(t, content, "results: output/")
 	assert.Contains(t, content, "engine: mock")
 	assert.Contains(t, content, "model: gpt-5")
-	assert.Contains(t, content, "# cache:")
-	assert.Contains(t, content, "# server:")
-	assert.Contains(t, content, "# dev:")
-	assert.Contains(t, content, "# tokens:")
-	assert.Contains(t, content, "# graders:")
+	assert.Contains(t, content, "cache:")
+	assert.Contains(t, content, "server:")
+	assert.Contains(t, content, "dev:")
+	assert.Contains(t, content, "tokens:")
+	assert.Contains(t, content, "graders:")
 	assert.Contains(t, content, "$schema")
 }
 

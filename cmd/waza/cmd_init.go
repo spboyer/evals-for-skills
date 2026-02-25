@@ -727,26 +727,20 @@ func initReadme(projectName string) string {
 `, projectName)
 }
 
-// generateWazaConfig produces the expanded .waza.yaml content with all config sections.
-// Active values (paths, defaults) are YAML-marshaled for safety; commented-out
-// sections showing available options are appended as a string template.
+// generateWazaConfig produces the .waza.yaml content by marshalling a ProjectConfig struct.
+// Only non-zero fields appear in the output (omitempty). No hand-coded comments.
 func generateWazaConfig(engine, model, skillsPath, evalsPath, resultsPath string) string {
-	cfg := projectconfig.ProjectConfig{
-		Paths: projectconfig.PathsConfig{
-			Skills:  skillsPath,
-			Evals:   evalsPath,
-			Results: resultsPath,
-		},
-		Defaults: projectconfig.DefaultsConfig{
-			Engine: engine,
-			Model:  model,
-		},
-	}
+	cfg := projectconfig.New()
+	cfg.Paths.Skills = skillsPath
+	cfg.Paths.Evals = evalsPath
+	cfg.Paths.Results = resultsPath
+	cfg.Defaults.Engine = engine
+	cfg.Defaults.Model = model
 
 	var buf bytes.Buffer
 	enc := yaml.NewEncoder(&buf)
 	enc.SetIndent(2)
-	if err := enc.Encode(&cfg); err != nil {
+	if err := enc.Encode(cfg); err != nil {
 		return fmt.Sprintf("defaults:\n  engine: %s\n  model: %s\n", engine, model)
 	}
 	_ = enc.Close()
@@ -754,20 +748,6 @@ func generateWazaConfig(engine, model, skillsPath, evalsPath, resultsPath string
 	var sb strings.Builder
 	sb.WriteString("# yaml-language-server: $schema=https://raw.githubusercontent.com/spboyer/waza/main/schemas/config.schema.json\n\n")
 	sb.Write(buf.Bytes())
-	sb.WriteString("  # judge_model: \"\"\n")
-	sb.WriteString("  # timeout: 300\n")
-	sb.WriteString("  # parallel: false\n")
-	sb.WriteString("  # workers: 4\n")
-	sb.WriteString("  # verbose: false\n")
-	sb.WriteString("  # session_log: false\n")
-	sb.WriteString("\n# cache:\n#   enabled: false\n#   dir: .waza-cache\n")
-	sb.WriteString("\n# server:\n#   port: 3000\n#   results_dir: .\n")
-	sb.WriteString("\n# dev:\n#   model: claude-sonnet-4-20250514\n#   target: medium-high\n#   max_iterations: 5\n")
-	sb.WriteString("\n# tokens:\n#   warning_threshold: 2500\n#   fallback_limit: 2000\n#   limits:\n")
-	sb.WriteString("#     defaults:\n#       \"SKILL.md\": 500\n#       \"references/**/*.md\": 1000\n")
-	sb.WriteString("#       \"docs/**/*.md\": 1500\n#       \"*.md\": 2000\n")
-	sb.WriteString("#     overrides:\n#       \"README.md\": 3000\n#       \"CONTRIBUTING.md\": 2500\n")
-	sb.WriteString("\n# graders:\n#   program_timeout: 30\n")
 
 	return sb.String()
 }

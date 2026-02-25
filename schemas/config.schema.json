@@ -43,7 +43,7 @@
           "examples": ["claude-sonnet-4.6", "gpt-4o", "claude-sonnet-4"],
           "default": "claude-sonnet-4.6"
         },
-        "judge_model": {
+        "judgeModel": {
           "type": "string",
           "description": "Model used for LLM-as-judge grading. If omitted, uses the same model as the evaluation.",
           "examples": ["claude-sonnet-4.6", "gpt-4o"]
@@ -70,7 +70,7 @@
           "description": "Enable verbose output during evaluation runs.",
           "default": false
         },
-        "session_log": {
+        "sessionLog": {
           "type": "boolean",
           "description": "Write per-task session logs alongside results.",
           "default": false
@@ -105,7 +105,7 @@
           "default": 3000,
           "minimum": 1
         },
-        "results_dir": {
+        "resultsDir": {
           "type": "string",
           "description": "Directory to scan for result JSON files.",
           "default": "."
@@ -128,7 +128,7 @@
           "description": "Target quality level for the dev loop (e.g., 'medium-high', 'high').",
           "default": "medium-high"
         },
-        "max_iterations": {
+        "maxIterations": {
           "type": "integer",
           "description": "Maximum number of dev loop iterations before stopping.",
           "default": 5,
@@ -141,13 +141,13 @@
       "type": "object",
       "description": "Token budget and threshold settings for skill analysis.",
       "properties": {
-        "warning_threshold": {
+        "warningThreshold": {
           "type": "integer",
           "description": "Token count above which a warning is emitted for a skill file.",
           "default": 2500,
           "minimum": 0
         },
-        "fallback_limit": {
+        "fallbackLimit": {
           "type": "integer",
           "description": "Token limit used when no specific limit matches a file.",
           "default": 2000,
@@ -183,7 +183,7 @@
       "type": "object",
       "description": "Settings for grader execution.",
       "properties": {
-        "program_timeout": {
+        "programTimeout": {
           "type": "integer",
           "description": "Maximum time in seconds for a program grader to execute.",
           "default": 30,
