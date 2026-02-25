@@ -32,11 +32,7 @@ Anti-triggers: 0
 Issues:
   ❌ Description is 17 chars (need 150+)
 
-Spec Compliance: 5/8 passed
-  ⚠️ [spec-license] Consider adding a 'license' field (e.g., MIT, Apache-2.0)
-  ⚠️ [spec-version] Consider adding 'metadata.version' for versioning
-
-── Spec Compliance (agentskills.io) ──
+── Spec Compliance ──
   ✅ spec-frontmatter: Frontmatter structure valid with required fields
   ✅ spec-allowed-fields: All frontmatter fields are spec-allowed
   ✅ spec-name: Name follows spec naming rules
@@ -77,16 +73,7 @@ Description: 248 chars
 Triggers: 2
 Anti-triggers: 1
 
-Spec Compliance: 5/8 passed
-  ⚠️ [spec-license] Consider adding a 'license' field (e.g., MIT, Apache-2.0)
-  ⚠️ [spec-version] Consider adding 'metadata.version' for versioning
-
-MCP Integration: 1/4
-  ⚠️ [mcp-tools-table] No MCP tools table found — add a Markdown table listing tools used
-  ⚠️ [mcp-prerequisites] MCP prerequisites not documented — describe which MCP servers are needed
-  ⚠️ [mcp-cli-fallback] No CLI fallback documented — describe behavior when MCP is unavailable
-
-── Spec Compliance (agentskills.io) ──
+── Spec Compliance ──
   ✅ spec-frontmatter: Frontmatter structure valid with required fields
   ✅ spec-allowed-fields: All frontmatter fields are spec-allowed
   ✅ spec-name: Name follows spec naming rules
@@ -97,6 +84,11 @@ MCP Integration: 1/4
      📎 Best practice: include a license field (e.g., MIT, Apache-2.0)
   ⚠️ spec-version: No metadata.version field found
      📎 Best practice: include metadata.version for tracking and compatibility
+
+MCP Integration: 1/4
+  ⚠️ [mcp-tools-table] No MCP tools table found — add a Markdown table listing tools used
+  ⚠️ [mcp-prerequisites] MCP prerequisites not documented — describe which MCP servers are needed
+  ⚠️ [mcp-cli-fallback] No CLI fallback documented — describe behavior when MCP is unavailable
 
 ── Advisory Checks ──
   ✅ module-count: Found 0 reference module(s)
@@ -125,11 +117,7 @@ Description: 184 chars
 Triggers: 3
 Anti-triggers: 1
 
-Spec Compliance: 5/8 passed
-  ⚠️ [spec-license] Consider adding a 'license' field (e.g., MIT, Apache-2.0)
-  ⚠️ [spec-version] Consider adding 'metadata.version' for versioning
-
-── Spec Compliance (agentskills.io) ──
+── Spec Compliance ──
   ✅ spec-frontmatter: Frontmatter structure valid with required fields
   ✅ spec-allowed-fields: All frontmatter fields are spec-allowed
   ✅ spec-name: Name follows spec naming rules

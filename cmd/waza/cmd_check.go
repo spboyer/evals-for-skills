@@ -50,7 +50,6 @@ You can also specify a skill name or path:
 }
 
 type readinessReport struct {
-	specResult          *dev.SpecResult
 	mcpResult           *dev.McpResult
 	linkResult          *dev.LinkResult
 	complianceScore     *scoring.ScoreResult
@@ -199,8 +198,11 @@ func printCheckSummaryTable(w interface{ Write([]byte) (int, error) }, reports [
 			tokenStatus = "⚠️ "
 		}
 		specStatus := "✅"
-		if r.specResult != nil && !r.specResult.Passed() {
-			specStatus = "❌"
+		for _, c := range r.scoreSpecChecks {
+			if !c.Passed {
+				specStatus = "❌"
+				break
+			}
 		}
 		schemaStatus := "✅"
 		if len(r.evalSchemaErrs) > 0 || len(r.taskSchemaErrs) > 0 {
@@ -283,11 +285,7 @@ func checkReadiness(skillDir string, wsCtx *workspace.WorkspaceContext) (*readin
 	report.complianceScore = complianceData.Score
 	report.complianceLevel = complianceData.Level
 
-	// 3b. Run spec compliance checks
-	specScorer := &dev.SpecScorer{}
-	report.specResult = specScorer.Score(&sk)
-
-	// 3c. Run MCP integration checks
+	// 3b. Run MCP integration checks
 	mcpScorer := &dev.McpScorer{}
 	report.mcpResult = mcpScorer.Score(&sk)
 
@@ -447,20 +445,23 @@ func displayReadinessReport(out interface{ Write([]byte) (int, error) }, report 
 	fmt.Fprintf(w, "\n")
 
 	// 1b. Spec Compliance
-	if report.specResult != nil {
-		fmt.Fprintf(w, "📐 Spec Compliance: %d/%d checks passed\n", report.specResult.Pass, report.specResult.Total)
-		if report.specResult.Passed() {
-			fmt.Fprintf(w, "   ✅  Meets agentskills.io specification.\n")
+	if len(report.scoreSpecChecks) > 0 {
+		pass := 0
+		for _, c := range report.scoreSpecChecks {
+			if c.Passed {
+				pass++
+			}
+		}
+		total := len(report.scoreSpecChecks)
+		fmt.Fprintf(w, "📐 Spec Compliance: %d/%d checks passed\n", pass, total)
+		if pass == total {
+			fmt.Fprintf(w, "   ✅ Meets agentskills.io specification.\n")
 		} else {
 			fmt.Fprintf(w, "   ❌  Does not fully meet agentskills.io specification.\n")
 		}
-		if len(report.specResult.Issues) > 0 {
-			for _, issue := range report.specResult.Issues {
-				emoji := "⚠️"
-				if issue.Severity == "error" {
-					emoji = "❌"
-				}
-				fmt.Fprintf(w, "   %s  [%s] %s\n", emoji, issue.Rule, issue.Message)
+		for _, c := range report.scoreSpecChecks {
+			if !c.Passed {
+				fmt.Fprintf(w, "   ❌ [%s] %s\n", c.Name, c.Summary)
 			}
 		}
 		fmt.Fprintf(w, "\n")
@@ -599,7 +600,6 @@ func displayReadinessReport(out interface{ Write([]byte) (int, error) }, report 
 	}
 	isReady := report.complianceLevel.AtLeast(scoring.AdherenceMediumHigh) &&
 		!report.tokenExceeded &&
-		(report.specResult == nil || report.specResult.Passed()) &&
 		(report.linkResult == nil || report.linkResult.Passed()) &&
 		len(report.evalSchemaErrs) == 0 &&
 		len(report.taskSchemaErrs) == 0 &&
@@ -654,11 +654,9 @@ func generateNextSteps(report *readinessReport) []string {
 	}
 
 	// Spec compliance issues (between compliance and token checks)
-	if report.specResult != nil && !report.specResult.Passed() {
-		for _, iss := range report.specResult.Issues {
-			if iss.Severity == "error" {
-				steps = append(steps, fmt.Sprintf("Fix spec violation [%s]: %s", iss.Rule, iss.Message))
-			}
+	for _, c := range report.scoreSpecChecks {
+		if !c.Passed {
+			steps = append(steps, fmt.Sprintf("Fix spec violation [%s]: %s", c.Name, c.Summary))
 		}
 	}
 

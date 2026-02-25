@@ -45,8 +45,11 @@ func DisplayScore(w io.Writer, sk *skill.Skill, score *scoring.ScoreResult) {
 	}
 
 	// Run and display spec compliance
-	specResult := (SpecScorer{}).Score(sk)
-	DisplaySpecResult(w, specResult)
+	if specResults, err := checks.RunChecks(checks.SpecCheckers(), *sk); err == nil {
+		DisplayCheckResults(w, "Spec Compliance", specResults)
+	} else {
+		fprintf(w, "\nError running spec compliance checks: %s\n", err.Error())
+	}
 
 	// Run and display MCP integration checks
 	mcpResult := (McpScorer{}).Score(sk)
@@ -56,19 +59,11 @@ func DisplayScore(w io.Writer, sk *skill.Skill, score *scoring.ScoreResult) {
 	advisoryResult := (AdvisoryScorer{}).Score(sk)
 	DisplayAdvisory(w, advisoryResult)
 
-	// Run and display score-command checks
-	DisplayScoreChecks(w, *sk)
-}
-
-// DisplaySpecResult shows agentskills.io spec compliance results.
-func DisplaySpecResult(w io.Writer, r *SpecResult) {
-	fprintf(w, "\nSpec Compliance: %d/%d passed\n", r.Pass, r.Total)
-	for _, iss := range r.Issues {
-		icon := "⚠️"
-		if iss.Severity == "error" {
-			icon = "❌"
-		}
-		fprintf(w, "  %s [%s] %s\n", icon, iss.Rule, iss.Message)
+	// Run and display advisory checks
+	if advisoryResults, err := checks.RunChecks(checks.AdvisoryCheckers(), *sk); err == nil {
+		DisplayCheckResults(w, "Advisory Checks", advisoryResults)
+	} else {
+		fprintf(w, "\nError running advisory checks: %s\n", err.Error())
 	}
 }
 
@@ -170,20 +165,6 @@ func DisplayAdvisory(w io.Writer, r *AdvisoryResult) {
 			icon = "ℹ️"
 		}
 		fprintf(w, "  %s [%s] %s\n", icon, a.Check, a.Message)
-	}
-}
-
-// DisplayScoreChecks runs and displays score-command spec/advisory checks.
-func DisplayScoreChecks(w io.Writer, sk skill.Skill) {
-	if results, err := checks.RunChecks(checks.SpecCheckers(), sk); err == nil {
-		DisplayCheckResults(w, "Spec Compliance (agentskills.io)", results)
-	} else {
-		fprintf(w, "\nError running spec compliance checks: %s\n", err.Error())
-	}
-	if results, err := checks.RunChecks(checks.AdvisoryCheckers(), sk); err == nil {
-		DisplayCheckResults(w, "Advisory Checks", results)
-	} else {
-		fprintf(w, "\nError running advisory checks: %s\n", err.Error())
 	}
 }
 
