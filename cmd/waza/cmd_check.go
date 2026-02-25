@@ -6,6 +6,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"text/tabwriter"
 	"unicode/utf8"
 
 	"github.com/spboyer/waza/cmd/waza/dev"
@@ -136,6 +137,7 @@ func runCheckForSkills(cmd *cobra.Command, wsCtx *workspace.WorkspaceContext) er
 func printCheckSummaryTable(w interface{ Write([]byte) (int, error) }, reports []*readinessReport) {
 	const maxNameWidth = 25
 	const minNameWidth = 10
+	const tableWidth = 80
 
 	// Compute dynamic column width from the longest skill name.
 	nameWidth := len("Skill")
@@ -155,16 +157,14 @@ func printCheckSummaryTable(w interface{ Write([]byte) (int, error) }, reports [
 		nameWidth = minNameWidth
 	}
 
-	// col widths: nameWidth + 1 + 15 + 1 + 12 + 1 + 8 + 1 + 8 + 1 + 8 + 1 + 4
-	tableWidth := nameWidth + 1 + 15 + 1 + 12 + 1 + 8 + 1 + 8 + 1 + 8 + 1 + 4
-
 	fmt.Fprintf(w, "\n")                                      //nolint:errcheck
 	fmt.Fprintf(w, "%s\n", strings.Repeat("═", tableWidth))   //nolint:errcheck
 	fmt.Fprintf(w, " CHECK SUMMARY\n")                        //nolint:errcheck
 	fmt.Fprintf(w, "%s\n\n", strings.Repeat("═", tableWidth)) //nolint:errcheck
-	fmt.Fprintf(w, "%-*s %-15s %-13s %-8s %-8s %-8s %s\n",    //nolint:errcheck
-		nameWidth, "Skill", "Compliance", "Tokens", "Spec", "Links", "Schema", "Eval")
-	fmt.Fprintf(w, "%s\n", strings.Repeat("─", tableWidth)) //nolint:errcheck
+
+	tw := tabwriter.NewWriter(w, 0, 0, 2, ' ', 0)
+	fmt.Fprintln(tw, "Skill\tCompliance\tTokens\tSpec\tLinks\tSchema\tEval") //nolint:errcheck
+	fmt.Fprintf(w, "%s\n", strings.Repeat("─", tableWidth))                  //nolint:errcheck
 
 	for _, r := range reports {
 		name := r.skillName
@@ -198,9 +198,10 @@ func printCheckSummaryTable(w interface{ Write([]byte) (int, error) }, reports [
 			evalStatus = "⚠️"
 		}
 		tokenStr := fmt.Sprintf("%s %d/%d", tokenStatus, r.tokenCount, r.tokenLimit)
-		fmt.Fprintf(w, "%-*s %-15s %-13s %-8s %-8s %-8s %s\n", //nolint:errcheck
-			nameWidth, name, r.complianceLevel, tokenStr, specStatus, linkStatus, schemaStatus, evalStatus)
+		fmt.Fprintf(tw, "%s\t%s\t%s\t%s\t%s\t%s\t%s\n", //nolint:errcheck
+			name, r.complianceLevel, tokenStr, specStatus, linkStatus, schemaStatus, evalStatus)
 	}
+	tw.Flush()           //nolint:errcheck
 	fmt.Fprintf(w, "\n") //nolint:errcheck
 }
 
