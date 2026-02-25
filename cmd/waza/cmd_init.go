@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"fmt"
 	"io"
 	"os"
@@ -11,6 +12,7 @@ import (
 	"github.com/charmbracelet/lipgloss"
 	"github.com/spf13/cobra"
 	"golang.org/x/term"
+	"gopkg.in/yaml.v3"
 
 	"github.com/spboyer/waza/internal/projectconfig"
 	"github.com/spboyer/waza/internal/scaffold"
@@ -138,11 +140,11 @@ func initCommandE(cmd *cobra.Command, args []string, noSkill bool) error {
 	var engine, model string
 	var skillsPath, evalsPath, resultsPath string
 	var createSkill, scaffoldMissing bool
-	engine = "copilot-sdk"
-	model = "claude-sonnet-4.6"
-	skillsPath = "skills/"
-	evalsPath = "evals/"
-	resultsPath = "results/"
+	engine = projectconfig.DefaultEngine
+	model = projectconfig.DefaultModel
+	skillsPath = projectconfig.DefaultSkillsDir
+	evalsPath = projectconfig.DefaultEvalsDir
+	resultsPath = projectconfig.DefaultResultsDir
 
 	// If .waza.yaml exists, read engine/model from it so scaffolded evals
 	// match the project's actual config instead of hardcoded defaults.
@@ -178,7 +180,7 @@ func initCommandE(cmd *cobra.Command, args []string, noSkill bool) error {
 			).WithInput(cmd.InOrStdin()).WithOutput(out)
 
 			if err := engineForm.Run(); err != nil {
-				engine = "copilot-sdk"
+				engine = projectconfig.DefaultEngine
 			}
 
 			// Model selector (hidden when engine ≠ copilot-sdk)
@@ -213,7 +215,7 @@ func initCommandE(cmd *cobra.Command, args []string, noSkill bool) error {
 				).WithInput(cmd.InOrStdin()).WithOutput(out)
 
 				if err := modelForm.Run(); err != nil {
-					model = "claude-sonnet-4.6"
+					model = projectconfig.DefaultModel
 				}
 			}
 
@@ -595,53 +597,46 @@ func initReadme(projectName string) string {
 }
 
 // generateWazaConfig produces the expanded .waza.yaml content with all config sections.
+// Active values (paths, defaults) are YAML-marshaled for safety; commented-out
+// sections showing available options are appended as a string template.
 func generateWazaConfig(engine, model, skillsPath, evalsPath, resultsPath string) string {
-	return fmt.Sprintf(`# yaml-language-server: $schema=https://raw.githubusercontent.com/spboyer/waza/main/schemas/config.schema.json
+	cfg := projectconfig.ProjectConfig{
+		Paths: projectconfig.PathsConfig{
+			Skills:  skillsPath,
+			Evals:   evalsPath,
+			Results: resultsPath,
+		},
+		Defaults: projectconfig.DefaultsConfig{
+			Engine: engine,
+			Model:  model,
+		},
+	}
 
-# Project structure
-paths:
-  skills: %s
-  evals: %s
-  results: %s
+	var buf bytes.Buffer
+	enc := yaml.NewEncoder(&buf)
+	enc.SetIndent(2)
+	if err := enc.Encode(&cfg); err != nil {
+		return fmt.Sprintf("defaults:\n  engine: %s\n  model: %s\n", engine, model)
+	}
+	enc.Close()
 
-# Execution defaults
-defaults:
-  engine: %s
-  model: %s
-  # judge_model: ""
-  # timeout: 300
-  # parallel: false
-  # workers: 4
-  # verbose: false
-  # session_log: false
+	var sb strings.Builder
+	sb.WriteString("# yaml-language-server: $schema=https://raw.githubusercontent.com/spboyer/waza/main/schemas/config.schema.json\n\n")
+	sb.Write(buf.Bytes())
+	sb.WriteString("  # judge_model: \"\"\n")
+	sb.WriteString("  # timeout: 300\n")
+	sb.WriteString("  # parallel: false\n")
+	sb.WriteString("  # workers: 4\n")
+	sb.WriteString("  # verbose: false\n")
+	sb.WriteString("  # session_log: false\n")
+	sb.WriteString("\n# cache:\n#   enabled: false\n#   dir: .waza-cache\n")
+	sb.WriteString("\n# server:\n#   port: 3000\n#   results_dir: .\n")
+	sb.WriteString("\n# dev:\n#   model: claude-sonnet-4-20250514\n#   target: medium-high\n#   max_iterations: 5\n")
+	sb.WriteString("\n# tokens:\n#   warning_threshold: 2500\n#   fallback_limit: 2000\n#   limits:\n")
+	sb.WriteString("#     defaults:\n#       \"SKILL.md\": 500\n#       \"references/**/*.md\": 1000\n")
+	sb.WriteString("#       \"docs/**/*.md\": 1500\n#       \"*.md\": 2000\n")
+	sb.WriteString("#     overrides:\n#       \"README.md\": 3000\n#       \"CONTRIBUTING.md\": 2500\n")
+	sb.WriteString("\n# graders:\n#   program_timeout: 30\n")
 
-# cache:
-#   enabled: false
-#   dir: .waza-cache
-
-# server:
-#   port: 3000
-#   results_dir: .
-
-# dev:
-#   model: claude-sonnet-4-20250514
-#   target: medium-high
-#   max_iterations: 5
-
-# tokens:
-#   warning_threshold: 2500
-#   fallback_limit: 2000
-#   limits:
-#     defaults:
-#       "SKILL.md": 500
-#       "references/**/*.md": 1000
-#       "docs/**/*.md": 1500
-#       "*.md": 2000
-#     overrides:
-#       "README.md": 3000
-#       "CONTRIBUTING.md": 2500
-
-# graders:
-#   program_timeout: 30
-`, skillsPath, evalsPath, resultsPath, engine, model)
+	return sb.String()
 }
