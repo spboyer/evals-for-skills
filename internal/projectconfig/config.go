@@ -163,7 +163,7 @@ func Load(startDir string) (*ProjectConfig, error) {
 
 	var fileCfg ProjectConfig
 	if err := yaml.Unmarshal(data, &fileCfg); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("parsing .waza.yaml: %w", err)
 	}
 
 	// Merge file values onto defaults.
