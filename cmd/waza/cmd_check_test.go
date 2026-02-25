@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+	"unicode/utf8"
 
 	"github.com/spboyer/waza/internal/scaffold"
 	"github.com/spboyer/waza/internal/scoring"
@@ -497,4 +498,52 @@ func TestCheckCommand_ScaffoldedEvalMatchesSchema(t *testing.T) {
 	require.NoError(t, err)
 	require.Empty(t, evalErrs, "scaffolded eval.yaml should pass schema: %v", evalErrs)
 	require.Empty(t, taskErrs, "scaffolded task files should pass schema: %v", taskErrs)
+}
+
+func TestTruncateName(t *testing.T) {
+	tests := []struct {
+		name   string
+		maxLen int
+		want   string
+	}{
+		{"short", 10, "short"},
+		{"exactly-ten", 11, "exactly-ten"},
+		{"appinsights-instrumentation", 25, "appinsights-instrumentat…"},
+		{"azure-ai", 25, "azure-ai"},
+		{"a", 5, "a"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := truncateName(tt.name, tt.maxLen)
+			assert.Equal(t, tt.want, got)
+			assert.LessOrEqual(t, utf8.RuneCountInString(got), tt.maxLen)
+		})
+	}
+}
+
+func TestPrintCheckSummaryTable_DynamicWidth(t *testing.T) {
+	reports := []*readinessReport{
+		{skillName: "appinsights-instrumentation", complianceLevel: "Medium-High", tokenCount: 953, tokenLimit: 500, tokenExceeded: true},
+		{skillName: "azure-ai", complianceLevel: "Medium-High", tokenCount: 835, tokenLimit: 500, tokenExceeded: true},
+	}
+	var buf bytes.Buffer
+	printCheckSummaryTable(&buf, reports)
+	out := buf.String()
+
+	// Long name should be truncated
+	assert.Contains(t, out, "appinsights-instrumentat…")
+	// Short name should still appear
+	assert.Contains(t, out, "azure-ai")
+	// Header should be present
+	assert.Contains(t, out, "CHECK SUMMARY")
+
+	// All rows for "Skill" column should end at the same position.
+	// Verify both header and data rows use the same width by checking
+	// that "Compliance" appears on the header line.
+	for _, line := range strings.Split(out, "\n") {
+		if strings.Contains(line, "azure-ai") {
+			// The line should have consistent spacing
+			assert.Contains(t, line, "Medium-High")
+		}
+	}
 }

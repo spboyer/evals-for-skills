@@ -6,6 +6,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"unicode/utf8"
 
 	"github.com/spboyer/waza/cmd/waza/dev"
 	"github.com/spboyer/waza/internal/checks"
@@ -133,18 +134,45 @@ func runCheckForSkills(cmd *cobra.Command, wsCtx *workspace.WorkspaceContext) er
 }
 
 func printCheckSummaryTable(w interface{ Write([]byte) (int, error) }, reports []*readinessReport) {
-	fmt.Fprintf(w, "\n")                                                                                                        //nolint:errcheck
-	fmt.Fprintf(w, "═══════════════════════════════════════════════\n")                                                         //nolint:errcheck
-	fmt.Fprintf(w, " CHECK SUMMARY\n")                                                                                          //nolint:errcheck
-	fmt.Fprintf(w, "═══════════════════════════════════════════════\n\n")                                                       //nolint:errcheck
-	fmt.Fprintf(w, "%-25s %-15s %-12s %-8s %-8s %-8s %s\n", "Skill", "Compliance", "Tokens", "Spec", "Links", "Schema", "Eval") //nolint:errcheck
-	fmt.Fprintf(w, "%s\n", strings.Repeat("─", 85))                                                                             //nolint:errcheck
+	const maxNameWidth = 25
+	const minNameWidth = 10
+
+	// Compute dynamic column width from the longest skill name.
+	nameWidth := len("Skill")
+	for _, r := range reports {
+		n := r.skillName
+		if n == "" {
+			n = "unnamed"
+		}
+		if runeLen := utf8.RuneCountInString(n); runeLen > nameWidth {
+			nameWidth = runeLen
+		}
+	}
+	if nameWidth > maxNameWidth {
+		nameWidth = maxNameWidth
+	}
+	if nameWidth < minNameWidth {
+		nameWidth = minNameWidth
+	}
+
+	// col widths: nameWidth + 1 + 15 + 1 + 12 + 1 + 8 + 1 + 8 + 1 + 8 + 1 + 4
+	tableWidth := nameWidth + 1 + 15 + 1 + 12 + 1 + 8 + 1 + 8 + 1 + 8 + 1 + 4
+
+	fmt.Fprintf(w, "\n")                                      //nolint:errcheck
+	fmt.Fprintf(w, "%s\n", strings.Repeat("═", tableWidth))   //nolint:errcheck
+	fmt.Fprintf(w, " CHECK SUMMARY\n")                        //nolint:errcheck
+	fmt.Fprintf(w, "%s\n\n", strings.Repeat("═", tableWidth)) //nolint:errcheck
+	fmt.Fprintf(w, "%-*s %-15s %-12s %-8s %-8s %-8s %s\n",    //nolint:errcheck
+		nameWidth, "Skill", "Compliance", "Tokens", "Spec", "Links", "Schema", "Eval")
+	fmt.Fprintf(w, "%s\n", strings.Repeat("─", tableWidth)) //nolint:errcheck
 
 	for _, r := range reports {
 		name := r.skillName
 		if name == "" {
 			name = "unnamed"
 		}
+		name = truncateName(name, nameWidth)
+
 		tokenStatus := "✅"
 		if r.tokenExceeded {
 			tokenStatus = "❌"
@@ -169,10 +197,19 @@ func printCheckSummaryTable(w interface{ Write([]byte) (int, error) }, reports [
 		if !r.hasEval {
 			evalStatus = "⚠️"
 		}
-		fmt.Fprintf(w, "%-25s %-15s %s %d/%-6d %s       %s      %s      %s\n", //nolint:errcheck
-			name, r.complianceLevel, tokenStatus, r.tokenCount, r.tokenLimit, specStatus, linkStatus, schemaStatus, evalStatus)
+		fmt.Fprintf(w, "%-*s %-15s %s %d/%-6d %s       %s      %s      %s\n", //nolint:errcheck
+			nameWidth, name, r.complianceLevel, tokenStatus, r.tokenCount, r.tokenLimit, specStatus, linkStatus, schemaStatus, evalStatus)
 	}
 	fmt.Fprintf(w, "\n") //nolint:errcheck
+}
+
+// truncateName shortens a name to maxLen runes, replacing the last rune with "…" if needed.
+func truncateName(name string, maxLen int) string {
+	runes := []rune(name)
+	if len(runes) <= maxLen {
+		return name
+	}
+	return string(runes[:maxLen-1]) + "…"
 }
 
 func checkReadiness(skillDir string, wsCtx *workspace.WorkspaceContext) (*readinessReport, error) {
