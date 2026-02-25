@@ -51,7 +51,10 @@ const sectionWarningMinimum = 3
 // tokenWarningThreshold returns the configured token warning threshold,
 // falling back to 2500 if not set in .waza.yaml.
 func tokenWarningThreshold() int {
-	cfg, _ := projectconfig.Load(".")
+	cfg, err := projectconfig.Load(".")
+	if err != nil || cfg == nil {
+		return projectconfig.DefaultTokenWarningThreshold
+	}
 	return cfg.Tokens.WarningThreshold
 }
 

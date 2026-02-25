@@ -47,8 +47,12 @@ func NewProgramGrader(args ProgramGraderArgs) (*programGrader, error) {
 	timeout := args.Timeout
 	if timeout <= 0 {
 		// Per-grader timeout not specified; use project config default
-		cfg, _ := projectconfig.Load(".")
-		timeout = cfg.Graders.ProgramTimeout
+		cfg, err := projectconfig.Load(".")
+		if err != nil || cfg == nil {
+			timeout = projectconfig.DefaultGraderProgramTimeout
+		} else {
+			timeout = cfg.Graders.ProgramTimeout
+		}
 	}
 
 	return &programGrader{
