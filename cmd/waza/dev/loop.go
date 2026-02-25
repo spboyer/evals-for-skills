@@ -56,9 +56,6 @@ func runDev(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return err
 	}
-	if !cmd.Flags().Changed("model") && pcfg.Dev.Model != "" {
-		modelID = pcfg.Dev.Model
-	}
 	allMode, err := cmd.Flags().GetBool("all")
 	if err != nil {
 		return err
@@ -66,6 +63,13 @@ func runDev(cmd *cobra.Command, args []string) error {
 	filterStr, err := cmd.Flags().GetString("filter")
 	if err != nil {
 		return err
+	}
+
+	// Only load model from config when in copilot mode
+	if copilotMode {
+		if !cmd.Flags().Changed("model") && pcfg.Dev.Model != "" {
+			modelID = pcfg.Dev.Model
+		}
 	}
 
 	if copilotMode {
