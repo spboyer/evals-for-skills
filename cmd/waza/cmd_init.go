@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"fmt"
 	"io"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"strings"
@@ -29,6 +30,7 @@ type skillEntry struct {
 
 func newInitCommand() *cobra.Command {
 	var noSkill bool
+	var flagSkillsDir, flagEvalsDir, flagResultsDir string
 
 	cmd := &cobra.Command{
 		Use:   "init [directory]",
@@ -48,14 +50,22 @@ After scaffolding, prompts to create a new skill (calls waza new internally).
 
 Use --no-skill to skip the skill creation prompt.
 
+Path detection: waza init scans the project directory for existing skills,
+evals, and results. Detected paths are offered as defaults in interactive
+mode. Use --skills-dir, --evals-dir, --results-dir to override in
+non-interactive sessions.
+
 If no directory is specified, the current directory is used.`,
 		Args: cobra.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return initCommandE(cmd, args, noSkill)
+			return initCommandE(cmd, args, noSkill, flagSkillsDir, flagEvalsDir, flagResultsDir)
 		},
 	}
 
 	cmd.Flags().BoolVar(&noSkill, "no-skill", false, "Skip the first-skill creation prompt")
+	cmd.Flags().StringVar(&flagSkillsDir, "skills-dir", "", "Skills directory (overrides detection and defaults)")
+	cmd.Flags().StringVar(&flagEvalsDir, "evals-dir", "", "Evals directory (overrides detection and defaults)")
+	cmd.Flags().StringVar(&flagResultsDir, "results-dir", "", "Results directory (overrides detection and defaults)")
 
 	return cmd
 }
@@ -110,7 +120,81 @@ func displayInventory(out io.Writer, absDir string, opts ...workspace.DetectOpti
 	return inventory
 }
 
-func initCommandE(cmd *cobra.Command, args []string, noSkill bool) error {
+// detectedPaths holds paths discovered by scanning the project directory.
+type detectedPaths struct {
+	SkillsDir  string // relative path to the directory containing skill subdirectories
+	EvalsDir   string // relative path to the directory containing eval subdirectories
+	ResultsDir string // relative path to the directory containing result files
+}
+
+// detectPaths scans root for existing skills, evals, and results directories.
+// It walks the full tree (skipping hidden dirs, node_modules, vendor) and
+// returns the first match found for each path type as a relative path.
+func detectPaths(root string) detectedPaths {
+	absRoot, err := filepath.Abs(root)
+	if err != nil {
+		return detectedPaths{}
+	}
+
+	var dp detectedPaths
+
+	_ = filepath.WalkDir(absRoot, func(path string, d fs.DirEntry, err error) error {
+		if err != nil {
+			return nil
+		}
+
+		// Skip hidden directories, node_modules, vendor
+		if d.IsDir() {
+			name := d.Name()
+			if strings.HasPrefix(name, ".") || name == "node_modules" || name == "vendor" {
+				return fs.SkipDir
+			}
+		}
+
+		if d.IsDir() {
+			return nil
+		}
+
+		// All three detected — stop walking
+		if dp.SkillsDir != "" && dp.EvalsDir != "" && dp.ResultsDir != "" {
+			return fs.SkipAll
+		}
+
+		fileName := d.Name()
+
+		// Detect skills: SKILL.md → grandparent is the skills root
+		if dp.SkillsDir == "" && fileName == "SKILL.md" {
+			skillDir := filepath.Dir(path)      // e.g., /root/plugin/skills/my-skill
+			skillsRoot := filepath.Dir(skillDir) // e.g., /root/plugin/skills
+			if rel, relErr := filepath.Rel(absRoot, skillsRoot); relErr == nil && rel != "." {
+				dp.SkillsDir = filepath.ToSlash(rel) + "/"
+			}
+		}
+
+		// Detect evals: eval.yaml → grandparent is the evals root
+		if dp.EvalsDir == "" && (fileName == "eval.yaml" || fileName == "eval.yml") {
+			evalDir := filepath.Dir(path)      // e.g., /root/tests/evals/my-skill
+			evalsRoot := filepath.Dir(evalDir) // e.g., /root/tests/evals
+			if rel, relErr := filepath.Rel(absRoot, evalsRoot); relErr == nil && rel != "." {
+				dp.EvalsDir = filepath.ToSlash(rel) + "/"
+			}
+		}
+
+		// Detect results: *results*.json → containing directory is the results root
+		if dp.ResultsDir == "" && strings.HasSuffix(fileName, ".json") && strings.Contains(strings.ToLower(fileName), "results") {
+			resultsRoot := filepath.Dir(path)
+			if rel, relErr := filepath.Rel(absRoot, resultsRoot); relErr == nil && rel != "." {
+				dp.ResultsDir = filepath.ToSlash(rel) + "/"
+			}
+		}
+
+		return nil
+	})
+
+	return dp
+}
+
+func initCommandE(cmd *cobra.Command, args []string, noSkill bool, flagSkillsDir, flagEvalsDir, flagResultsDir string) error {
 	dir := "."
 	if len(args) > 0 {
 		dir = args[0]
@@ -155,6 +239,43 @@ func initCommandE(cmd *cobra.Command, args []string, noSkill bool) error {
 			skillsPath = cfg.Paths.Skills
 			evalsPath = cfg.Paths.Evals
 			resultsPath = cfg.Paths.Results
+		}
+	}
+
+	// --- Path resolution: CLI flags > detected paths > config defaults ---
+	detected := detectPaths(absDir)
+	if detected.SkillsDir != "" && skillsPath == projectconfig.DefaultSkillsDir {
+		skillsPath = detected.SkillsDir
+	}
+	if detected.EvalsDir != "" && evalsPath == projectconfig.DefaultEvalsDir {
+		evalsPath = detected.EvalsDir
+	}
+	if detected.ResultsDir != "" && resultsPath == projectconfig.DefaultResultsDir {
+		resultsPath = detected.ResultsDir
+	}
+
+	// CLI flags take highest priority
+	if flagSkillsDir != "" {
+		skillsPath = flagSkillsDir
+	}
+	if flagEvalsDir != "" {
+		evalsPath = flagEvalsDir
+	}
+	if flagResultsDir != "" {
+		resultsPath = flagResultsDir
+	}
+
+	// Show detection results when paths were discovered
+	if needConfigPrompt && (detected.SkillsDir != "" || detected.EvalsDir != "" || detected.ResultsDir != "") {
+		fmt.Fprintf(out, "\n🔍 Detected existing paths:\n") //nolint:errcheck
+		if detected.SkillsDir != "" {
+			fmt.Fprintf(out, "   Skills:  %s\n", detected.SkillsDir) //nolint:errcheck
+		}
+		if detected.EvalsDir != "" {
+			fmt.Fprintf(out, "   Evals:   %s\n", detected.EvalsDir) //nolint:errcheck
+		}
+		if detected.ResultsDir != "" {
+			fmt.Fprintf(out, "   Results: %s\n", detected.ResultsDir) //nolint:errcheck
 		}
 	}
 
