@@ -177,7 +177,7 @@ func TestLoadConfig_WazaYAMLWins(t *testing.T) {
 	cfg, err := LoadConfig(dir)
 	require.NoError(t, err)
 
-	w.Close()
+	_ = w.Close()
 	var buf [512]byte
 	n, _ := r.Read(buf[:])
 	os.Stderr = oldStderr
