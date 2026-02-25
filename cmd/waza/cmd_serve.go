@@ -46,7 +46,10 @@ JSON-RPC methods (when using --tcp or stdin/stdout):
   run.cancel     Cancel a running eval`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			// Apply .waza.yaml defaults when CLI flags not explicitly set.
-			cfg, _ := projectconfig.Load(".")
+			cfg, err := projectconfig.Load(".")
+			if err != nil || cfg == nil {
+				cfg = projectconfig.New()
+			}
 			if !cmd.Flags().Changed("port") && cfg.Server.Port > 0 {
 				httpPort = cfg.Server.Port
 			}

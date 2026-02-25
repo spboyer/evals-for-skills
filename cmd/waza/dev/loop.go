@@ -34,7 +34,10 @@ type devConfig struct {
 
 func runDev(cmd *cobra.Command, args []string) error {
 	// Load .waza.yaml defaults for dev flags.
-	pcfg, _ := projectconfig.Load(".")
+	pcfg, err := projectconfig.Load(".")
+	if err != nil || pcfg == nil {
+		pcfg = projectconfig.New()
+	}
 
 	// Check for --scaffold-triggers first — it's a standalone mode.
 	scaffoldTriggers, err := cmd.Flags().GetBool("scaffold-triggers")
