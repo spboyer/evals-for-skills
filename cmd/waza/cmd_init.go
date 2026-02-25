@@ -16,6 +16,7 @@ import (
 
 	"github.com/spboyer/waza/internal/projectconfig"
 	"github.com/spboyer/waza/internal/scaffold"
+	"github.com/spboyer/waza/internal/skill"
 	"github.com/spboyer/waza/internal/workspace"
 )
 
@@ -95,14 +96,32 @@ func displayInventory(out io.Writer, absDir string, opts ...workspace.DetectOpti
 
 	fmt.Fprintf(out, "\nSkills in this project:\n") //nolint:errcheck
 	for _, inv := range inventory {
+		// Count tokens for SKILL.md
+		tokenStr := ""
+		skillPath := filepath.Join(inv.Dir, "SKILL.md")
+		if data, err := os.ReadFile(skillPath); err == nil {
+			var sk skill.Skill
+			if err := sk.UnmarshalText(data); err == nil {
+				tokenLimit := resolveSkillTokenLimit(absDir)
+				if tokenLimit == 0 {
+					tokenLimit = 500 // default SKILL.md limit
+				}
+				icon := "✅"
+				if sk.Tokens > tokenLimit {
+					icon = "⚠️"
+				}
+				tokenStr = fmt.Sprintf(" %s %d tokens", icon, sk.Tokens)
+			}
+		}
+
 		if inv.HasEval {
 			relEval := inv.EvalPath
 			if rel, err := filepath.Rel(absDir, inv.EvalPath); err == nil {
 				relEval = rel
 			}
-			fmt.Fprintf(out, "  %s %-22s eval: %s\n", greenCheck, inv.Name, relEval) //nolint:errcheck
+			fmt.Fprintf(out, "  %s %-22s%s   eval: %s\n", greenCheck, inv.Name, tokenStr, relEval) //nolint:errcheck
 		} else {
-			fmt.Fprintf(out, "  %s %-22s missing eval\n", redCross, inv.Name) //nolint:errcheck
+			fmt.Fprintf(out, "  %s %-22s%s   missing eval\n", redCross, inv.Name, tokenStr) //nolint:errcheck
 		}
 	}
 	fmt.Fprintf(out, "\n%d skills found, %d missing eval\n", len(inventory), missing) //nolint:errcheck

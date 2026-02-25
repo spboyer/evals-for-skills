@@ -11,6 +11,7 @@ import (
 
 	"github.com/spboyer/waza/cmd/waza/dev"
 	"github.com/spboyer/waza/internal/checks"
+	"github.com/spboyer/waza/internal/projectconfig"
 	"github.com/spboyer/waza/internal/scoring"
 	"github.com/spboyer/waza/internal/skill"
 	"github.com/spboyer/waza/internal/validation"
@@ -258,8 +259,9 @@ func checkReadiness(skillDir string, wsCtx *workspace.WorkspaceContext) (*readin
 	linkScorer := &dev.LinkScorer{}
 	report.linkResult = linkScorer.Score(&sk)
 
-	// 4. Check token budget
-	tokenData, err := (&checks.TokenBudgetChecker{}).Budget(sk)
+	// 4. Check token budget (resolve per-skill limit from project config)
+	tokenLimit := resolveSkillTokenLimit(filepath.Dir(skillDir))
+	tokenData, err := (&checks.TokenBudgetChecker{Limit: tokenLimit}).Budget(sk)
 	if err != nil {
 		return nil, err
 	}
@@ -306,6 +308,32 @@ func checkReadiness(skillDir string, wsCtx *workspace.WorkspaceContext) (*readin
 	}
 
 	return report, nil
+}
+
+// resolveSkillTokenLimit loads per-skill token limits from .waza.yaml (or
+// .token-limits.json) and returns the resolved limit for SKILL.md.
+// Falls back to 0 (which lets TokenBudgetChecker use scoring.TokenSoftLimit).
+func resolveSkillTokenLimit(startDir string) int {
+	// Try project config first (.waza.yaml tokens.limits section)
+	if cfg, err := projectconfig.Load(startDir); err == nil && cfg.Tokens.Limits != nil {
+		limCfg := checks.TokenLimitsConfig{
+			Defaults:  cfg.Tokens.Limits.Defaults,
+			Overrides: cfg.Tokens.Limits.Overrides,
+		}
+		if limCfg.Defaults != nil {
+			lr := checks.GetLimitForFile("SKILL.md", limCfg)
+			return lr.Limit
+		}
+	}
+
+	// Try .token-limits.json
+	limCfg, err := checks.LoadLimitsConfig(startDir)
+	if err == nil {
+		lr := checks.GetLimitForFile("SKILL.md", limCfg)
+		return lr.Limit
+	}
+
+	return 0 // fall back to TokenBudgetChecker default (scoring.TokenSoftLimit)
 }
 
 //nolint:errcheck // display function — fmt.Fprintf errors to stdout are not actionable
