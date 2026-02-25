@@ -26,14 +26,14 @@ const (
 	DefaultCacheDir = ".waza-cache"
 
 	DefaultServerPort       = 3000
-	DefaultServerResultsDir = "."
+	DefaultServerResultsDir = "results/"
 
 	DefaultDevModel         = "claude-sonnet-4-20250514"
 	DefaultDevTarget        = "medium-high"
 	DefaultDevMaxIterations = 5
 
-	DefaultTokenWarningThreshold = 2500
-	DefaultTokenFallbackLimit    = 2000
+	DefaultTokenWarningThreshold = 500
+	DefaultTokenFallbackLimit    = 1000
 
 	DefaultGraderProgramTimeout = 30
 )
@@ -129,7 +129,7 @@ func New() *ProjectConfig {
 		},
 		Server: ServerConfig{
 			Port:       DefaultServerPort,
-			ResultsDir: DefaultServerResultsDir,
+			ResultsDir: DefaultResultsDir,
 		},
 		Dev: DevConfig{
 			Model:         DefaultDevModel,
