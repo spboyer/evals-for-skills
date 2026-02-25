@@ -75,7 +75,7 @@ func (c *TokenLimitsChecker) Check(sk skill.Skill) (*CheckResult, error) {
 			rel = f
 		}
 		rel = filepath.ToSlash(filepath.Clean(rel))
-		count := counter.Count(string(content))
+		count := counter.Count(strings.ReplaceAll(string(content), "\r\n", "\n"))
 		lr := GetLimitForFile(rel, cfg)
 		isExceeded := count > lr.Limit
 		if isExceeded {
