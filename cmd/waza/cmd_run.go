@@ -108,7 +108,10 @@ You can also specify a skill name to run its eval:
 
 func runCommandE(cmd *cobra.Command, args []string) error {
 	// Load .waza.yaml project config and apply defaults for unset flags
-	cfg, _ := projectconfig.Load(".") // ignore error — defaults are fine
+	cfg, err := projectconfig.Load(".")
+	if err != nil || cfg == nil {
+		cfg = projectconfig.New()
+	}
 	if !cmd.Flags().Changed("parallel") && cfg.Defaults.Parallel != nil {
 		parallel = *cfg.Defaults.Parallel
 	}
