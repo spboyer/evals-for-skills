@@ -240,7 +240,8 @@ func checkReadiness(skillDir string, wsCtx *workspace.WorkspaceContext) (*readin
 	report.skillName = sk.Frontmatter.Name
 
 	// 3. Run compliance scoring
-	complianceData, err := (&checks.ComplianceScoreChecker{}).Score(sk)
+	tokenLimit := resolveSkillTokenLimit(filepath.Dir(skillDir))
+	complianceData, err := (&checks.ComplianceScoreChecker{TokenLimit: tokenLimit}).Score(sk)
 	if err != nil {
 		return nil, err
 	}
@@ -260,7 +261,6 @@ func checkReadiness(skillDir string, wsCtx *workspace.WorkspaceContext) (*readin
 	report.linkResult = linkScorer.Score(&sk)
 
 	// 4. Check token budget (resolve per-skill limit from project config)
-	tokenLimit := resolveSkillTokenLimit(filepath.Dir(skillDir))
 	tokenData, err := (&checks.TokenBudgetChecker{Limit: tokenLimit}).Budget(sk)
 	if err != nil {
 		return nil, err
@@ -370,7 +370,7 @@ func displayReadinessReport(out interface{ Write([]byte) (int, error) }, report 
 			if issue.Severity == "error" {
 				emoji = "❌"
 			}
-			fmt.Fprintf(w, "   %s %s\n", emoji, issue.Message)
+			fmt.Fprintf(w, "   %s  %s\n", emoji, issue.Message)
 		}
 	}
 	fmt.Fprintf(w, "\n")

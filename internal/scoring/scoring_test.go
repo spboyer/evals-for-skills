@@ -420,7 +420,7 @@ func TestValidateTokenBudget(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			r := &ScoreResult{}
-			validateTokenBudget(tt.tokens, r)
+			validateTokenBudget(tt.tokens, TokenSoftLimit, r)
 			if tt.wantRule == "" {
 				require.Empty(t, r.Issues)
 			} else {

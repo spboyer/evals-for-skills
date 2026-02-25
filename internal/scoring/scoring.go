@@ -101,9 +101,12 @@ type Scorer interface {
 }
 
 // HeuristicScorer scores skills using pattern-matching heuristics.
-type HeuristicScorer struct{}
+type HeuristicScorer struct {
+	// TokenSoftLimit overrides the default soft limit when > 0.
+	TokenSoftLimit int
+}
 
-func (HeuristicScorer) Score(sk *skill.Skill) *ScoreResult {
+func (h HeuristicScorer) Score(sk *skill.Skill) *ScoreResult {
 	result := &ScoreResult{}
 
 	if sk == nil {
@@ -132,8 +135,13 @@ func (HeuristicScorer) Score(sk *skill.Skill) *ScoreResult {
 	validateName(name, result)
 	validateDescriptionLength(result.DescriptionLen, result)
 
+	softLimit := TokenSoftLimit
+	if h.TokenSoftLimit > 0 {
+		softLimit = h.TokenSoftLimit
+	}
+
 	if sk.Tokens > 0 {
-		validateTokenBudget(sk.Tokens, result)
+		validateTokenBudget(sk.Tokens, softLimit, result)
 	}
 
 	result.Level = computeLevel(result)
@@ -235,17 +243,17 @@ func validateDescriptionLength(length int, r *ScoreResult) {
 	}
 }
 
-func validateTokenBudget(tokenCount int, r *ScoreResult) {
+func validateTokenBudget(tokenCount int, softLimit int, r *ScoreResult) {
 	if tokenCount > TokenHardLimit {
 		r.Issues = append(r.Issues, Issue{
 			Rule:     "token-hard-limit",
 			Message:  fmt.Sprintf("SKILL.md is %d tokens (hard limit %d)", tokenCount, TokenHardLimit),
 			Severity: "error",
 		})
-	} else if tokenCount > TokenSoftLimit {
+	} else if tokenCount > softLimit {
 		r.Issues = append(r.Issues, Issue{
 			Rule:     "token-soft-limit",
-			Message:  fmt.Sprintf("SKILL.md is %d tokens (soft limit %d)", tokenCount, TokenSoftLimit),
+			Message:  fmt.Sprintf("SKILL.md is %d tokens (soft limit %d)", tokenCount, softLimit),
 			Severity: "warning",
 		})
 	}
