@@ -24,7 +24,7 @@ const (
 // maxParentWalk is the maximum number of parent directories to walk up when searching.
 const maxParentWalk = 10
 
-// DetectOption configures workspace detection behaviour.
+// DetectOption configures workspace detection behavior.
 type DetectOption func(*detectOptions)
 
 type detectOptions struct {

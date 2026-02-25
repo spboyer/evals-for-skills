@@ -637,7 +637,7 @@ func generateWazaConfig(engine, model, skillsPath, evalsPath, resultsPath string
 	if err := enc.Encode(&cfg); err != nil {
 		return fmt.Sprintf("defaults:\n  engine: %s\n  model: %s\n", engine, model)
 	}
-	enc.Close()
+	_ = enc.Close()
 
 	var sb strings.Builder
 	sb.WriteString("# yaml-language-server: $schema=https://raw.githubusercontent.com/spboyer/waza/main/schemas/config.schema.json\n\n")
