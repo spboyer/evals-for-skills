@@ -228,7 +228,6 @@ func checkReadiness(skillDir string, wsCtx *workspace.WorkspaceContext) (*readin
 	report.tokenLimit = tokenData.TokenLimit
 	report.tokenExceeded = tokenData.Exceeded
 
-
 	// 5. Check for eval.yaml (try workspace-aware detection first, then co-located)
 	if wsCtx != nil {
 		if evalPath, findErr := workspace.FindEval(wsCtx, sk.Frontmatter.Name); findErr == nil && evalPath != "" {
@@ -263,7 +262,7 @@ func checkReadiness(skillDir string, wsCtx *workspace.WorkspaceContext) (*readin
 			report.taskSchemaErrs = taskErrs
 		} else {
 			// Surface validation errors (e.g., unreadable/invalid eval.yaml) via the report
-			report.evalSchemaErrs = append(report.evalSchemaErrs, valErr)
+			report.evalSchemaErrs = append(report.evalSchemaErrs, valErr.Error())
 		}
 	}
 
