@@ -384,13 +384,13 @@ func displayReadinessReport(out interface{ Write([]byte) (int, error) }, report 
 	fmt.Fprintf(w, "📋 Compliance Score: %s\n", report.complianceLevel)
 	switch report.complianceLevel {
 	case scoring.AdherenceHigh:
-		fmt.Fprintf(w, "   ✅ Excellent! Your skill meets all compliance requirements.\n")
+		fmt.Fprintf(w, "   ✅  Excellent! Your skill meets all compliance requirements.\n")
 	case scoring.AdherenceMediumHigh:
 		fmt.Fprintf(w, "   ⚠️  Good, but could be improved. Missing routing clarity.\n")
 	case scoring.AdherenceMedium:
 		fmt.Fprintf(w, "   ⚠️  Needs improvement. Missing anti-triggers and routing clarity.\n")
 	default:
-		fmt.Fprintf(w, "   ❌ Needs significant improvement. Description too short or missing triggers.\n")
+		fmt.Fprintf(w, "   ❌  Needs significant improvement. Description too short or missing triggers.\n")
 	}
 
 	if len(report.complianceScore.Issues) > 0 {
@@ -409,9 +409,9 @@ func displayReadinessReport(out interface{ Write([]byte) (int, error) }, report 
 	if report.specResult != nil {
 		fmt.Fprintf(w, "📐 Spec Compliance: %d/%d checks passed\n", report.specResult.Pass, report.specResult.Total)
 		if report.specResult.Passed() {
-			fmt.Fprintf(w, "   ✅ Meets agentskills.io specification.\n")
+			fmt.Fprintf(w, "   ✅  Meets agentskills.io specification.\n")
 		} else {
-			fmt.Fprintf(w, "   ❌ Does not fully meet agentskills.io specification.\n")
+			fmt.Fprintf(w, "   ❌  Does not fully meet agentskills.io specification.\n")
 		}
 		if len(report.specResult.Issues) > 0 {
 			for _, issue := range report.specResult.Issues {
@@ -419,7 +419,7 @@ func displayReadinessReport(out interface{ Write([]byte) (int, error) }, report 
 				if issue.Severity == "error" {
 					emoji = "❌"
 				}
-				fmt.Fprintf(w, "   %s [%s] %s\n", emoji, issue.Rule, issue.Message)
+				fmt.Fprintf(w, "   %s  [%s] %s\n", emoji, issue.Rule, issue.Message)
 			}
 		}
 		fmt.Fprintf(w, "\n")
@@ -429,7 +429,7 @@ func displayReadinessReport(out interface{ Write([]byte) (int, error) }, report 
 	if report.mcpResult != nil {
 		fmt.Fprintf(w, "🔌 MCP Integration: %d/4\n", report.mcpResult.SubScore)
 		if report.mcpResult.SubScore == 4 {
-			fmt.Fprintf(w, "   ✅ All MCP integration checks passed.\n")
+			fmt.Fprintf(w, "   ✅  All MCP integration checks passed.\n")
 		} else {
 			fmt.Fprintf(w, "   ⚠️  MCP documentation incomplete (%d/4 checks passed).\n", report.mcpResult.SubScore)
 		}
@@ -438,7 +438,7 @@ func displayReadinessReport(out interface{ Write([]byte) (int, error) }, report 
 			if issue.Severity == "error" {
 				emoji = "❌"
 			}
-			fmt.Fprintf(w, "   %s [%s] %s\n", emoji, issue.Rule, issue.Message)
+			fmt.Fprintf(w, "   %s  [%s] %s\n", emoji, issue.Rule, issue.Message)
 		}
 		fmt.Fprintf(w, "\n")
 	}
@@ -450,7 +450,7 @@ func displayReadinessReport(out interface{ Write([]byte) (int, error) }, report 
 			if report.linkResult.TotalLinks == 0 {
 				fmt.Fprintf(w, "   — No links found.\n")
 			} else {
-				fmt.Fprintf(w, "   ✅ All links valid.\n")
+				fmt.Fprintf(w, "   ✅  All links valid.\n")
 			}
 		} else {
 			problems := len(report.linkResult.BrokenLinks) + len(report.linkResult.DirectoryLinks) +
@@ -459,13 +459,13 @@ func displayReadinessReport(out interface{ Write([]byte) (int, error) }, report 
 			fmt.Fprintf(w, "   ⚠️  %d link issue(s) found.\n", problems)
 		}
 		for _, bl := range report.linkResult.BrokenLinks {
-			fmt.Fprintf(w, "   ❌ [%s] → %s: %s\n", bl.Source, bl.Target, bl.Reason)
+			fmt.Fprintf(w, "   ❌  [%s] → %s: %s\n", bl.Source, bl.Target, bl.Reason)
 		}
 		for _, dl := range report.linkResult.DirectoryLinks {
 			fmt.Fprintf(w, "   ⚠️  [%s] → %s: %s\n", dl.Source, dl.Target, dl.Reason)
 		}
 		for _, se := range report.linkResult.ScopeEscapes {
-			fmt.Fprintf(w, "   ❌ [%s] → %s: %s\n", se.Source, se.Target, se.Reason)
+			fmt.Fprintf(w, "   ❌  [%s] → %s: %s\n", se.Source, se.Target, se.Reason)
 		}
 		for _, du := range report.linkResult.DeadURLs {
 			fmt.Fprintf(w, "   ⚠️  [%s] → %s: %s\n", du.Source, du.Target, du.Reason)
@@ -483,10 +483,10 @@ func displayReadinessReport(out interface{ Write([]byte) (int, error) }, report 
 	fmt.Fprintf(w, "📊 Token Budget: %d / %d tokens\n", report.tokenCount, report.tokenLimit)
 	if report.tokenExceeded {
 		over := report.tokenCount - report.tokenLimit
-		fmt.Fprintf(w, "   ❌ Exceeds limit by %d tokens. Consider reducing content.\n", over)
+		fmt.Fprintf(w, "   ❌  Exceeds limit by %d tokens. Consider reducing content.\n", over)
 	} else {
 		remaining := report.tokenLimit - report.tokenCount
-		fmt.Fprintf(w, "   ✅ Within budget (%d tokens remaining).\n", remaining)
+		fmt.Fprintf(w, "   ✅  Within budget (%d tokens remaining).\n", remaining)
 	}
 	fmt.Fprintf(w, "\n")
 
@@ -494,7 +494,7 @@ func displayReadinessReport(out interface{ Write([]byte) (int, error) }, report 
 	fmt.Fprintf(w, "🧪 Evaluation Suite: ")
 	if report.hasEval {
 		fmt.Fprintf(w, "Found\n")
-		fmt.Fprintf(w, "   ✅ eval.yaml detected. Run 'waza run eval.yaml' to test.\n")
+		fmt.Fprintf(w, "   ✅  eval.yaml detected. Run 'waza run eval.yaml' to test.\n")
 	} else {
 		fmt.Fprintf(w, "Not Found\n")
 		fmt.Fprintf(w, "   ⚠️  No eval.yaml found. Consider creating tests.\n")
@@ -509,7 +509,7 @@ func displayReadinessReport(out interface{ Write([]byte) (int, error) }, report 
 		if hasEvalSchemaErrs {
 			fmt.Fprintf(w, "📐 Eval Schema: %d error(s)\n", len(report.evalSchemaErrs))
 			for _, e := range report.evalSchemaErrs {
-				fmt.Fprintf(w, "   ❌ %s\n", e)
+				fmt.Fprintf(w, "   ❌  %s\n", e)
 			}
 			fmt.Fprintf(w, "\n")
 		}
@@ -518,18 +518,18 @@ func displayReadinessReport(out interface{ Write([]byte) (int, error) }, report 
 			for file, errs := range report.taskSchemaErrs {
 				fmt.Fprintf(w, "   %s:\n", file)
 				for _, e := range errs {
-					fmt.Fprintf(w, "     ❌ %s\n", e)
+					fmt.Fprintf(w, "     ❌  %s\n", e)
 				}
 			}
 			fmt.Fprintf(w, "\n")
 		}
 		if !hasEvalSchemaErrs && !hasTaskSchemaErrs {
 			fmt.Fprintf(w, "📐 Schema Validation: Passed\n")
-			fmt.Fprintf(w, "   ✅ eval.yaml schema valid\n")
+			fmt.Fprintf(w, "   ✅  eval.yaml schema valid\n")
 			// Count validated task files
 			taskCount := countValidatedTasks(report)
 			if taskCount > 0 {
-				fmt.Fprintf(w, "   ✅ %d task file(s) validated\n", taskCount)
+				fmt.Fprintf(w, "   ✅  %d task file(s) validated\n", taskCount)
 			}
 			fmt.Fprintf(w, "\n")
 		}
