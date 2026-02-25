@@ -5,6 +5,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/charmbracelet/huh"
 	"github.com/charmbracelet/lipgloss"
@@ -243,6 +244,17 @@ func initCommandE(cmd *cobra.Command, args []string, noSkill bool) error {
 			if err := pathsForm.Run(); err != nil {
 				// keep current values on error
 				_ = err
+			}
+
+			// Validate paths are safe (no absolute paths or traversal)
+			for _, p := range []string{skillsPath, evalsPath, resultsPath} {
+				cleaned := filepath.Clean(p)
+				if filepath.IsAbs(cleaned) || strings.HasPrefix(cleaned, "..") {
+					return fmt.Errorf("path %q must be relative and within the project directory", p)
+				}
+				if strings.ContainsAny(p, ":#") {
+					return fmt.Errorf("path %q contains invalid characters", p)
+				}
 			}
 		}
 

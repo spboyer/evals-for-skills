@@ -142,8 +142,12 @@ func runCommandE(cmd *cobra.Command, args []string) error {
 	// Apply config defaults for output-dir when not explicitly set
 	if outputDir == "" && !cmd.Flags().Changed("output-dir") && outputPath == "" {
 		wd, _ := os.Getwd() //nolint:errcheck
-		if cfg, err := projectconfig.Load(wd); err == nil && cfg.Paths.Results != "results/" {
-			outputDir = cfg.Paths.Results
+		if cfg, err := projectconfig.Load(wd); err == nil && cfg != nil && cfg.Paths.Results != projectconfig.DefaultResultsDir {
+			resultsPath := cfg.Paths.Results
+			cleaned := filepath.Clean(resultsPath)
+			if !filepath.IsAbs(cleaned) && !strings.HasPrefix(cleaned, "..") {
+				outputDir = cleaned
+			}
 		}
 	}
 
