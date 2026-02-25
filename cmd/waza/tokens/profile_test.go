@@ -74,7 +74,7 @@ func TestProfile_WarningNoSteps(t *testing.T) {
 
 func TestProfile_WarningHighTokens(t *testing.T) {
 	dir := t.TempDir()
-	// Create a file with lots of content to exceed 2500 tokens
+	// Create a file with lots of content to exceed 500 tokens
 	var b bytes.Buffer
 	b.WriteString("---\nname: big-skill\ndescription: test\n---\n\n")
 	for i := 0; i < 100; i++ {
@@ -91,7 +91,7 @@ func TestProfile_WarningHighTokens(t *testing.T) {
 	require.NoError(t, cmd.Execute())
 
 	require.Contains(t, out.String(), "token count")
-	require.Contains(t, out.String(), "exceeds 2500")
+	require.Contains(t, out.String(), "exceeds 500")
 }
 
 func TestProfile_WarningFewSections(t *testing.T) {

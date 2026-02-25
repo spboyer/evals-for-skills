@@ -30,7 +30,7 @@ func TestNew_ReturnsAllDefaults(t *testing.T) {
 
 	// Server
 	assertEqualInt(t, "Server.Port", 3000, cfg.Server.Port)
-	assertEqual(t, "Server.ResultsDir", ".", cfg.Server.ResultsDir)
+	assertEqual(t, "Server.ResultsDir", "results/", cfg.Server.ResultsDir)
 
 	// Dev
 	assertEqual(t, "Dev.Model", "claude-sonnet-4-20250514", cfg.Dev.Model)
@@ -38,8 +38,8 @@ func TestNew_ReturnsAllDefaults(t *testing.T) {
 	assertEqualInt(t, "Dev.MaxIterations", 5, cfg.Dev.MaxIterations)
 
 	// Tokens
-	assertEqualInt(t, "Tokens.WarningThreshold", 2500, cfg.Tokens.WarningThreshold)
-	assertEqualInt(t, "Tokens.FallbackLimit", 2000, cfg.Tokens.FallbackLimit)
+	assertEqualInt(t, "Tokens.WarningThreshold", 500, cfg.Tokens.WarningThreshold)
+	assertEqualInt(t, "Tokens.FallbackLimit", 1000, cfg.Tokens.FallbackLimit)
 	if cfg.Tokens.Limits != nil {
 		t.Error("Tokens.Limits should be nil by default")
 	}
