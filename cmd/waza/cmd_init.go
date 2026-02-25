@@ -7,9 +7,9 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"text/tabwriter"
 
 	"github.com/charmbracelet/huh"
-	"github.com/charmbracelet/lipgloss"
 	"github.com/spf13/cobra"
 	"golang.org/x/term"
 	"gopkg.in/yaml.v3"
@@ -83,9 +83,6 @@ func displayInventory(out io.Writer, absDir string, opts ...workspace.DetectOpti
 		return inventory
 	}
 
-	greenCheck := lipgloss.NewStyle().Foreground(lipgloss.Color("2")).Render("✓")
-	redCross := lipgloss.NewStyle().Foreground(lipgloss.Color("1")).Render("✗")
-
 	missing := 0
 	for _, inv := range inventory {
 		if !inv.HasEval {
@@ -93,18 +90,17 @@ func displayInventory(out io.Writer, absDir string, opts ...workspace.DetectOpti
 		}
 	}
 
+	// Use tabwriter for consistent column alignment regardless of name length.
+	tw := tabwriter.NewWriter(out, 0, 0, 2, ' ', 0)
 	fmt.Fprintf(out, "\nSkills in this project:\n") //nolint:errcheck
 	for _, inv := range inventory {
 		if inv.HasEval {
-			relEval := inv.EvalPath
-			if rel, err := filepath.Rel(absDir, inv.EvalPath); err == nil {
-				relEval = rel
-			}
-			fmt.Fprintf(out, "  %s %-22s   eval: %s\n", greenCheck, inv.Name, relEval) //nolint:errcheck
+			fmt.Fprintf(tw, "  ✓\tSkill: %s\tEval: %s\n", inv.Name, inv.Name) //nolint:errcheck
 		} else {
-			fmt.Fprintf(out, "  %s %-22s   missing eval\n", redCross, inv.Name) //nolint:errcheck
+			fmt.Fprintf(tw, "  ✗\tSkill: %s\tmissing eval\n", inv.Name) //nolint:errcheck
 		}
 	}
+	tw.Flush()                                                                        //nolint:errcheck
 	fmt.Fprintf(out, "\n%d skills found, %d missing eval\n", len(inventory), missing) //nolint:errcheck
 
 	return inventory
@@ -124,10 +120,6 @@ func initCommandE(cmd *cobra.Command, args []string, noSkill bool) error {
 	projectName := filepath.Base(absOrDefault(dir))
 	isTTY := term.IsTerminal(int(os.Stdin.Fd()))
 	absDir := absOrDefault(dir)
-
-	// Styled indicators
-	greenCheck := lipgloss.NewStyle().Foreground(lipgloss.Color("2")).Render("✓")
-	yellowPlus := lipgloss.NewStyle().Foreground(lipgloss.Color("3")).Render("+")
 
 	fmt.Fprintf(out, "🔧 Initializing waza project: %s\n", projectName) //nolint:errcheck
 
@@ -372,25 +364,12 @@ func initCommandE(cmd *cobra.Command, args []string, noSkill bool) error {
 		{filepath.Join(absDir, "README.md"), "Getting started guide", false, initReadme(projectName)},
 	}
 
-	// Append discovered skills and their eval status
-	for _, inv := range inventory {
-		items = append(items, initItem{
-			path:  filepath.Join(inv.Dir, "SKILL.md"),
-			label: fmt.Sprintf("Skill: %s", inv.Name),
-		})
-		if inv.HasEval {
-			items = append(items, initItem{
-				path:  inv.EvalPath,
-				label: fmt.Sprintf("Eval: %s", inv.Name),
-			})
-		}
-	}
-
 	fmt.Fprintf(out, "\nProject structure:\n\n") //nolint:errcheck
 
+	tw2 := tabwriter.NewWriter(out, 0, 0, 2, ' ', 0)
 	created := 0
 	for _, item := range items {
-		var status string
+		var indicator string
 		var existed bool
 
 		if item.isDir {
@@ -424,19 +403,20 @@ func initCommandE(cmd *cobra.Command, args []string, noSkill bool) error {
 		}
 
 		if existed {
-			status = greenCheck
+			indicator = "✓"
 		} else {
-			status = yellowPlus
+			indicator = "+"
 			created++
 		}
 
-		fmt.Fprintf(out, "  %s %-35s %s\n", status, relPath, item.label) //nolint:errcheck
+		fmt.Fprintf(tw2, "  %s\t%s\t%s\n", indicator, relPath, item.label) //nolint:errcheck
 	}
+	tw2.Flush() //nolint:errcheck
 
 	// --- Phase 5b: Summary ---
 	fmt.Fprintln(out) //nolint:errcheck
 	if created == 0 {
-		fmt.Fprintf(out, "%s Project up to date.\n", greenCheck) //nolint:errcheck
+		fmt.Fprintf(out, "✓ Project up to date.\n") //nolint:errcheck
 	} else if created == len(items) {
 		fmt.Fprintf(out, "✅ Project created — %d items set up.\n", created) //nolint:errcheck
 	} else {
