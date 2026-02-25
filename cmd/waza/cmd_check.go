@@ -162,7 +162,7 @@ func printCheckSummaryTable(w interface{ Write([]byte) (int, error) }, reports [
 	fmt.Fprintf(w, "%s\n", strings.Repeat("═", tableWidth))   //nolint:errcheck
 	fmt.Fprintf(w, " CHECK SUMMARY\n")                        //nolint:errcheck
 	fmt.Fprintf(w, "%s\n\n", strings.Repeat("═", tableWidth)) //nolint:errcheck
-	fmt.Fprintf(w, "%-*s %-15s %-12s %-8s %-8s %-8s %s\n",    //nolint:errcheck
+	fmt.Fprintf(w, "%-*s %-15s %-13s %-8s %-8s %-8s %s\n",    //nolint:errcheck
 		nameWidth, "Skill", "Compliance", "Tokens", "Spec", "Links", "Schema", "Eval")
 	fmt.Fprintf(w, "%s\n", strings.Repeat("─", tableWidth)) //nolint:errcheck
 
@@ -197,8 +197,9 @@ func printCheckSummaryTable(w interface{ Write([]byte) (int, error) }, reports [
 		if !r.hasEval {
 			evalStatus = "⚠️"
 		}
-		fmt.Fprintf(w, "%-*s %-15s %s %d/%-6d %s       %s      %s      %s\n", //nolint:errcheck
-			nameWidth, name, r.complianceLevel, tokenStatus, r.tokenCount, r.tokenLimit, specStatus, linkStatus, schemaStatus, evalStatus)
+		tokenStr := fmt.Sprintf("%s %d/%d", tokenStatus, r.tokenCount, r.tokenLimit)
+		fmt.Fprintf(w, "%-*s %-15s %-13s %-8s %-8s %-8s %s\n", //nolint:errcheck
+			nameWidth, name, r.complianceLevel, tokenStr, specStatus, linkStatus, schemaStatus, evalStatus)
 	}
 	fmt.Fprintf(w, "\n") //nolint:errcheck
 }
