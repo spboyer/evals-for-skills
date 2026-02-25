@@ -194,7 +194,7 @@ func printCheckSummaryTable(w interface{ Write([]byte) (int, error) }, reports [
 		if r.tokenExceeded {
 			tokenStatus = "❌"
 		} else if r.tokenWarning {
-			tokenStatus = "⚠️"
+			tokenStatus = "⚠️ "
 		}
 		specStatus := "✅"
 		if r.specResult != nil && !r.specResult.Passed() {
@@ -273,7 +273,8 @@ func checkReadiness(skillDir string, wsCtx *workspace.WorkspaceContext) (*readin
 
 	// 3. Run compliance scoring
 	tokenLimit := resolveSkillTokenLimit(filepath.Dir(skillDir))
-	complianceData, err := (&checks.ComplianceScoreChecker{TokenLimit: tokenLimit}).Score(sk)
+	warnThreshold := resolveWarningThreshold(filepath.Dir(skillDir))
+	complianceData, err := (&checks.ComplianceScoreChecker{TokenLimit: tokenLimit, WarningThreshold: warnThreshold}).Score(sk)
 	if err != nil {
 		return nil, err
 	}
