@@ -206,7 +206,7 @@ func DisplayCheckResults(w io.Writer, title string, results []*checks.CheckResul
 			icon = "⚠️"
 		}
 		fprintf(w, "  %s %s: %s\n", icon, r.Name, r.Summary)
-		if d, ok := r.Data.(*checks.ScoreCheckData); ok && d.Evidence != "" && !r.Passed {
+		if d, ok := r.Data.(*checks.ScoreCheckData); ok && d.Evidence != "" && (!r.Passed || d.Status == checks.StatusWarning) {
 			fprintf(w, "     📎 %s\n", d.Evidence)
 		}
 	}

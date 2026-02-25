@@ -227,13 +227,18 @@ func TestSpecCompatibilityChecker(t *testing.T) {
 			passed: true,
 		},
 		{
-			name:   "valid compatibility",
-			sk:     makeSkill("s", "d", map[string]any{"compatibility": "Works with copilot"}, ""),
+			name:   "valid compatibility map",
+			sk:     makeSkill("s", "d", map[string]any{"compatibility": map[string]any{"editors": "vscode"}}, ""),
 			passed: true,
 		},
 		{
-			name:   "over 500 chars",
-			sk:     makeSkill("s", "d", map[string]any{"compatibility": strings.Repeat("x", 501)}, ""),
+			name:   "compatibility is a string (not a map)",
+			sk:     makeSkill("s", "d", map[string]any{"compatibility": "Works with copilot"}, ""),
+			passed: false,
+		},
+		{
+			name:   "compatibility map with non-string value",
+			sk:     makeSkill("s", "d", map[string]any{"compatibility": map[string]any{"editors": 42}}, ""),
 			passed: false,
 		},
 		{
@@ -268,19 +273,19 @@ func TestSpecLicenseChecker(t *testing.T) {
 		{
 			name:   "license missing",
 			sk:     makeSkill("s", "d", map[string]any{}, ""),
-			passed: false,
+			passed: true,
 			status: StatusWarning,
 		},
 		{
 			name:   "license empty string",
 			sk:     makeSkill("s", "d", map[string]any{"license": ""}, ""),
-			passed: false,
+			passed: true,
 			status: StatusWarning,
 		},
 		{
 			name:   "no frontmatter",
 			sk:     skill.Skill{},
-			passed: false,
+			passed: true,
 			status: StatusWarning,
 		},
 	}
@@ -313,25 +318,25 @@ func TestSpecVersionChecker(t *testing.T) {
 		{
 			name:   "no metadata",
 			sk:     makeSkill("s", "d", map[string]any{}, ""),
-			passed: false,
+			passed: true,
 			status: StatusWarning,
 		},
 		{
 			name:   "metadata without version",
 			sk:     makeSkill("s", "d", map[string]any{"metadata": map[string]any{"author": "me"}}, ""),
-			passed: false,
+			passed: true,
 			status: StatusWarning,
 		},
 		{
 			name:   "empty version",
 			sk:     makeSkill("s", "d", map[string]any{"metadata": map[string]any{"version": ""}}, ""),
-			passed: false,
+			passed: true,
 			status: StatusWarning,
 		},
 		{
 			name:   "metadata not a map",
 			sk:     makeSkill("s", "d", map[string]any{"metadata": "string-value"}, ""),
-			passed: false,
+			passed: true,
 			status: StatusWarning,
 		},
 	}

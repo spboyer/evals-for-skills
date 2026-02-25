@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"path/filepath"
 	"regexp"
+	"sort"
 	"strings"
 	"unicode/utf8"
 
@@ -94,6 +95,7 @@ func (*SpecAllowedFieldsChecker) Check(sk skill.Skill) (*CheckResult, error) {
 			unknown = append(unknown, key)
 		}
 	}
+	sort.Strings(unknown)
 	if len(unknown) > 0 {
 		return &CheckResult{
 			Name:    "spec-allowed-fields",
@@ -250,22 +252,24 @@ func (*SpecCompatibilityChecker) Check(sk skill.Skill) (*CheckResult, error) {
 			Data:    &ScoreCheckData{Status: StatusOK},
 		}, nil
 	}
-	s, isStr := val.(string)
-	if !isStr {
-		return &CheckResult{
-			Name:    "spec-compatibility",
-			Passed:  true,
-			Summary: "Compatibility field present (non-string type)",
-			Data:    &ScoreCheckData{Status: StatusOK},
-		}, nil
-	}
-	if utf8.RuneCountInString(s) > 500 {
+	m, isMap := val.(map[string]any)
+	if !isMap {
 		return &CheckResult{
 			Name:    "spec-compatibility",
 			Passed:  false,
-			Summary: fmt.Sprintf("Compatibility field is %d characters (max 500)", utf8.RuneCountInString(s)),
-			Data:    &ScoreCheckData{Status: StatusWarning, Evidence: "agentskills.io spec: compatibility must not exceed 500 characters"},
+			Summary: "Compatibility field must be a map",
+			Data:    &ScoreCheckData{Status: StatusWarning, Evidence: "agentskills.io spec: compatibility must be a mapping (e.g., editors, platforms)"},
 		}, nil
+	}
+	for k, v := range m {
+		if _, ok := v.(string); !ok {
+			return &CheckResult{
+				Name:    "spec-compatibility",
+				Passed:  false,
+				Summary: fmt.Sprintf("Compatibility key %q has non-string value", k),
+				Data:    &ScoreCheckData{Status: StatusWarning, Evidence: "agentskills.io spec: compatibility map values must be strings"},
+			}, nil
+		}
 	}
 	return &CheckResult{
 		Name:    "spec-compatibility",
@@ -286,7 +290,7 @@ func (*SpecLicenseChecker) Check(sk skill.Skill) (*CheckResult, error) {
 	if sk.FrontmatterRaw == nil {
 		return &CheckResult{
 			Name:    "spec-license",
-			Passed:  false,
+			Passed:  true,
 			Summary: "No license field found",
 			Data:    &ScoreCheckData{Status: StatusWarning, Evidence: "Best practice: include a license field (e.g., MIT, Apache-2.0)"},
 		}, nil
@@ -295,7 +299,7 @@ func (*SpecLicenseChecker) Check(sk skill.Skill) (*CheckResult, error) {
 	if !ok {
 		return &CheckResult{
 			Name:    "spec-license",
-			Passed:  false,
+			Passed:  true,
 			Summary: "No license field found",
 			Data:    &ScoreCheckData{Status: StatusWarning, Evidence: "Best practice: include a license field (e.g., MIT, Apache-2.0)"},
 		}, nil
@@ -304,7 +308,7 @@ func (*SpecLicenseChecker) Check(sk skill.Skill) (*CheckResult, error) {
 	if isStr && strings.TrimSpace(s) == "" {
 		return &CheckResult{
 			Name:    "spec-license",
-			Passed:  false,
+			Passed:  true,
 			Summary: "License field is empty",
 			Data:    &ScoreCheckData{Status: StatusWarning, Evidence: "Best practice: include a non-empty license value"},
 		}, nil
@@ -328,7 +332,7 @@ func (*SpecVersionChecker) Check(sk skill.Skill) (*CheckResult, error) {
 	if sk.FrontmatterRaw == nil {
 		return &CheckResult{
 			Name:    "spec-version",
-			Passed:  false,
+			Passed:  true,
 			Summary: "No metadata.version field found",
 			Data:    &ScoreCheckData{Status: StatusWarning, Evidence: "Best practice: include metadata.version for tracking and compatibility"},
 		}, nil
@@ -337,7 +341,7 @@ func (*SpecVersionChecker) Check(sk skill.Skill) (*CheckResult, error) {
 	if !ok {
 		return &CheckResult{
 			Name:    "spec-version",
-			Passed:  false,
+			Passed:  true,
 			Summary: "No metadata.version field found",
 			Data:    &ScoreCheckData{Status: StatusWarning, Evidence: "Best practice: include metadata.version for tracking and compatibility"},
 		}, nil
@@ -346,7 +350,7 @@ func (*SpecVersionChecker) Check(sk skill.Skill) (*CheckResult, error) {
 	if !isMap {
 		return &CheckResult{
 			Name:    "spec-version",
-			Passed:  false,
+			Passed:  true,
 			Summary: "metadata is not a map; version field not found",
 			Data:    &ScoreCheckData{Status: StatusWarning, Evidence: "Best practice: include metadata.version for tracking and compatibility"},
 		}, nil
@@ -355,7 +359,7 @@ func (*SpecVersionChecker) Check(sk skill.Skill) (*CheckResult, error) {
 	if !hasVer {
 		return &CheckResult{
 			Name:    "spec-version",
-			Passed:  false,
+			Passed:  true,
 			Summary: "No metadata.version field found",
 			Data:    &ScoreCheckData{Status: StatusWarning, Evidence: "Best practice: include metadata.version for tracking and compatibility"},
 		}, nil
@@ -364,7 +368,7 @@ func (*SpecVersionChecker) Check(sk skill.Skill) (*CheckResult, error) {
 	if isStr && strings.TrimSpace(s) == "" {
 		return &CheckResult{
 			Name:    "spec-version",
-			Passed:  false,
+			Passed:  true,
 			Summary: "metadata.version is empty",
 			Data:    &ScoreCheckData{Status: StatusWarning, Evidence: "Best practice: include a non-empty metadata.version"},
 		}, nil
