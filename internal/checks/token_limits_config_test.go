@@ -171,8 +171,13 @@ func TestLoadConfig_WazaYAMLWins(t *testing.T) {
 
 	// Capture stderr for the note
 	oldStderr := os.Stderr
-	r, w, _ := os.Pipe()
+	r, w, err := os.Pipe()
+	require.NoError(t, err)
 	os.Stderr = w
+	t.Cleanup(func() {
+		os.Stderr = oldStderr
+		_ = r.Close()
+	})
 
 	cfg, err := LoadConfig(dir)
 	require.NoError(t, err)
@@ -180,7 +185,6 @@ func TestLoadConfig_WazaYAMLWins(t *testing.T) {
 	_ = w.Close()
 	var buf [512]byte
 	n, _ := r.Read(buf[:])
-	os.Stderr = oldStderr
 
 	// .waza.yaml values should win
 	require.Equal(t, 700, cfg.Defaults["*.md"])
