@@ -6,8 +6,9 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
-	"text/tabwriter"
 	"unicode/utf8"
+
+	"github.com/mattn/go-runewidth"
 
 	"github.com/spboyer/waza/cmd/waza/dev"
 	"github.com/spboyer/waza/internal/checks"
@@ -158,14 +159,29 @@ func printCheckSummaryTable(w interface{ Write([]byte) (int, error) }, reports [
 		nameWidth = minNameWidth
 	}
 
-	fmt.Fprintf(w, "\n")                                      //nolint:errcheck
-	fmt.Fprintf(w, "%s\n", strings.Repeat("═", tableWidth))   //nolint:errcheck
-	fmt.Fprintf(w, " CHECK SUMMARY\n")                        //nolint:errcheck
-	fmt.Fprintf(w, "%s\n\n", strings.Repeat("═", tableWidth)) //nolint:errcheck
+	// Fixed column widths (display columns) for emoji-safe alignment.
+	const colCompliance = 14
+	const colTokens = 16
+	const colSpec = 6
+	const colLinks = 6
+	const colSchema = 6
+	const colEval = 4
+	totalWidth := nameWidth + colCompliance + colTokens + colSpec + colLinks + colSchema + colEval + 12 // 12 = 6 gaps × 2 spaces
 
-	tw := tabwriter.NewWriter(w, 0, 0, 2, ' ', 0)
-	fmt.Fprintln(tw, "Skill\tCompliance\tTokens\tSpec\tLinks\tSchema\tEval") //nolint:errcheck
-	fmt.Fprintf(w, "%s\n", strings.Repeat("─", tableWidth))                  //nolint:errcheck
+	fmt.Fprintf(w, "\n")                                       //nolint:errcheck
+	fmt.Fprintf(w, "%s\n", strings.Repeat("═", totalWidth))    //nolint:errcheck
+	fmt.Fprintf(w, " CHECK SUMMARY\n")                         //nolint:errcheck
+	fmt.Fprintf(w, "%s\n\n", strings.Repeat("═", totalWidth))  //nolint:errcheck
+
+	fmt.Fprintf(w, "%s  %s  %s  %s  %s  %s  %s\n", //nolint:errcheck
+		padRight("Skill", nameWidth),
+		padRight("Compliance", colCompliance),
+		padRight("Tokens", colTokens),
+		padRight("Spec", colSpec),
+		padRight("Links", colLinks),
+		padRight("Schema", colSchema),
+		"Eval")
+	fmt.Fprintf(w, "%s\n", strings.Repeat("─", totalWidth)) //nolint:errcheck
 
 	for _, r := range reports {
 		name := r.skillName
@@ -199,10 +215,15 @@ func printCheckSummaryTable(w interface{ Write([]byte) (int, error) }, reports [
 			evalStatus = "⚠️"
 		}
 		tokenStr := fmt.Sprintf("%s %d/%d", tokenStatus, r.tokenCount, r.tokenLimit)
-		fmt.Fprintf(tw, "%s\t%s\t%s\t%s\t%s\t%s\t%s\n", //nolint:errcheck
-			name, r.complianceLevel, tokenStr, specStatus, linkStatus, schemaStatus, evalStatus)
+		fmt.Fprintf(w, "%s  %s  %s  %s  %s  %s  %s\n", //nolint:errcheck
+			padRight(name, nameWidth),
+			padRight(string(r.complianceLevel), colCompliance),
+			padRight(tokenStr, colTokens),
+			padRight(specStatus, colSpec),
+			padRight(linkStatus, colLinks),
+			padRight(schemaStatus, colSchema),
+			evalStatus)
 	}
-	tw.Flush()           //nolint:errcheck
 	fmt.Fprintf(w, "\n") //nolint:errcheck
 }
 
@@ -213,6 +234,15 @@ func truncateName(name string, maxLen int) string {
 		return name
 	}
 	return string(runes[:maxLen-1]) + "…"
+}
+
+// padRight pads s with spaces so its terminal display width reaches width.
+func padRight(s string, width int) string {
+	sw := runewidth.StringWidth(s)
+	if sw >= width {
+		return s
+	}
+	return s + strings.Repeat(" ", width-sw)
 }
 
 func checkReadiness(skillDir string, wsCtx *workspace.WorkspaceContext) (*readinessReport, error) {
