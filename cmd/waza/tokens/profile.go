@@ -55,6 +55,9 @@ func tokenWarningThreshold() int {
 	if err != nil || cfg == nil {
 		return projectconfig.DefaultTokenWarningThreshold
 	}
+	if cfg.Tokens.WarningThreshold <= 0 {
+		return projectconfig.DefaultTokenWarningThreshold
+	}
 	return cfg.Tokens.WarningThreshold
 }
 
