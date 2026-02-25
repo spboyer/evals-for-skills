@@ -228,9 +228,6 @@ func checkReadiness(skillDir string, wsCtx *workspace.WorkspaceContext) (*readin
 	report.tokenLimit = tokenData.TokenLimit
 	report.tokenExceeded = tokenData.Exceeded
 
-	// Use default token limit for SKILL.md (500 tokens is the standard)
-	report.tokenLimit = 500
-	report.tokenExceeded = report.tokenCount > report.tokenLimit
 
 	// 5. Check for eval.yaml (try workspace-aware detection first, then co-located)
 	if wsCtx != nil {
@@ -264,6 +261,9 @@ func checkReadiness(skillDir string, wsCtx *workspace.WorkspaceContext) (*readin
 		if valErr == nil {
 			report.evalSchemaErrs = evalErrs
 			report.taskSchemaErrs = taskErrs
+		} else {
+			// Surface validation errors (e.g., unreadable/invalid eval.yaml) via the report
+			report.evalSchemaErrs = append(report.evalSchemaErrs, valErr)
 		}
 	}
 
