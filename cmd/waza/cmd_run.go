@@ -115,7 +115,7 @@ func runCommandE(cmd *cobra.Command, args []string) error {
 	if !cmd.Flags().Changed("workers") && cfg.Defaults.Workers != 0 {
 		workers = cfg.Defaults.Workers
 	}
-	if !cmd.Flags().Changed("cache") && cfg.Cache.Enabled != nil {
+	if !cmd.Flags().Changed("cache") && !cmd.Flags().Changed("no-cache") && cfg.Cache.Enabled != nil {
 		enableCache = *cfg.Cache.Enabled
 	}
 	if !cmd.Flags().Changed("cache-dir") && cfg.Cache.Dir != "" {
