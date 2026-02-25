@@ -255,7 +255,7 @@ func TestInitCommand_WazaYAMLContent(t *testing.T) {
 	assert.Contains(t, content, "skills: skills/")
 	assert.Contains(t, content, "evals: evals/")
 	assert.Contains(t, content, "results: results/")
-	// Verify all config sections are marshalled (no longer commented out)
+	// Verify all config sections are marshaled (no longer commented out)
 	assert.Contains(t, content, "cache:")
 	assert.Contains(t, content, "server:")
 	assert.Contains(t, content, "tokens:")

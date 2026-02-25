@@ -727,8 +727,9 @@ func initReadme(projectName string) string {
 `, projectName)
 }
 
-// generateWazaConfig produces the .waza.yaml content by marshalling a ProjectConfig struct.
-// Only non-zero fields appear in the output (omitempty). No hand-coded comments.
+// generateWazaConfig produces the .waza.yaml content by marshaling a ProjectConfig struct.
+// projectconfig.New() populates all defaults, so most fields will appear in the output;
+// omitempty only omits truly zero/nil values (e.g. empty judgeModel). No hand-coded comments.
 func generateWazaConfig(engine, model, skillsPath, evalsPath, resultsPath string) string {
 	cfg := projectconfig.New()
 	cfg.Paths.Skills = skillsPath
