@@ -25,7 +25,12 @@ func newCheckCmd() *cobra.Command {
 
 Paths may be files or directories (scanned recursively for .md/.mdx files).
 A relative path is resolved from the working directory; an absolute path is
-used as-is. When no path is given, the working directory is scanned.
+used as-is.
+
+When no path is given, workspace detection determines what to check:
+  - In a multi-skill workspace, each skill is checked with per-skill headers
+  - In a single-skill workspace, that skill's directory is checked
+  - Otherwise, the working directory is scanned
 
 If the first argument looks like a skill name (no path separators or file
 extension), it is resolved via workspace detection to scope checking to that
@@ -87,9 +92,12 @@ func runCheck(cmd *cobra.Command, args []string) error {
 
 	var paths []string
 
-	// If the first arg looks like a skill name (not a path), resolve via workspace
-	if len(args) > 0 && !workspace.LooksLikePath(args[0]) {
-		ctx, ctxErr := workspace.DetectContext(rootDir)
+	if len(args) > 0 && workspace.LooksLikePath(args[0]) {
+		// Explicit paths — use as-is (escape hatch)
+		paths = args
+	} else if len(args) > 0 {
+		// Skill name — resolve via workspace with config options
+		ctx, ctxErr := workspace.DetectContext(rootDir, ConfigDetectOptions()...)
 		if ctxErr != nil {
 			return fmt.Errorf("detecting workspace: %w", ctxErr)
 		}
@@ -99,34 +107,23 @@ func runCheck(cmd *cobra.Command, args []string) error {
 		}
 		rootDir = si.Dir
 	} else {
-		paths = args
+		// No args: workspace-aware mode
+		ctx, ctxErr := workspace.DetectContext(rootDir, ConfigDetectOptions()...)
+		if ctxErr == nil {
+			switch ctx.Type {
+			case workspace.ContextMultiSkill:
+				return runCheckBatch(cmd, ctx.Skills, format, strict, quiet)
+			case workspace.ContextSingleSkill:
+				rootDir = ctx.Skills[0].Dir
+			}
+		}
+		// ContextNone or error: fall through to CWD scan
 	}
 
-	checker := &checks.TokenLimitsChecker{
-		Paths: paths,
-	}
-	limitsData, err := checker.Limits(skill.Skill{Path: filepath.Join(rootDir, "SKILL.md")})
+	results, err := computeCheckResults(rootDir, paths)
 	if err != nil {
 		return err
 	}
-
-	var results []checkResult
-	for _, r := range limitsData.Results {
-		results = append(results, checkResult{
-			File:     r.File,
-			Tokens:   r.Tokens,
-			Limit:    r.Limit,
-			Pattern:  r.Pattern,
-			Exceeded: r.Exceeded,
-		})
-	}
-
-	sort.Slice(results, func(i, j int) bool {
-		if results[i].Exceeded != results[j].Exceeded {
-			return results[i].Exceeded
-		}
-		return results[i].File < results[j].File
-	})
 
 	output := ""
 	switch format {
@@ -239,4 +236,85 @@ func checkJSON(results []checkResult) (string, error) {
 	enc.SetIndent("", "  ")
 	err := enc.Encode(report)
 	return buf.String(), err
+}
+
+// computeCheckResults runs the token limits checker and returns sorted results.
+func computeCheckResults(rootDir string, paths []string) ([]checkResult, error) {
+	checker := &checks.TokenLimitsChecker{
+		Paths: paths,
+	}
+	limitsData, err := checker.Limits(skill.Skill{Path: filepath.Join(rootDir, "SKILL.md")})
+	if err != nil {
+		return nil, err
+	}
+
+	var results []checkResult
+	for _, r := range limitsData.Results {
+		results = append(results, checkResult{
+			File:     r.File,
+			Tokens:   r.Tokens,
+			Limit:    r.Limit,
+			Pattern:  r.Pattern,
+			Exceeded: r.Exceeded,
+		})
+	}
+
+	sort.Slice(results, func(i, j int) bool {
+		if results[i].Exceeded != results[j].Exceeded {
+			return results[i].Exceeded
+		}
+		return results[i].File < results[j].File
+	})
+
+	return results, nil
+}
+
+// runCheckBatch runs token limit checks for each skill in a multi-skill workspace.
+func runCheckBatch(cmd *cobra.Command, skills []workspace.SkillInfo, format string, strict bool, quiet bool) error {
+	out := cmd.OutOrStdout()
+	anyExceeded := false
+
+	for i, si := range skills {
+		if i > 0 && !quiet {
+			fmt.Fprintln(out)
+		}
+		if !quiet {
+			fmt.Fprintf(out, "─── %s ───\n", si.Name)
+		}
+
+		results, err := computeCheckResults(si.Dir, nil)
+		if err != nil {
+			fmt.Fprintf(cmd.ErrOrStderr(), "  ⚠️  %s: %s\n", si.Name, err)
+			continue
+		}
+
+		if countExceeded(results) > 0 {
+			anyExceeded = true
+		}
+
+		if !quiet {
+			var output string
+			switch format {
+			case "json":
+				output, err = checkJSON(results)
+			case "table":
+				output = checkTable(results)
+			default:
+				return errors.New("invalid format: " + format)
+			}
+			if err != nil {
+				return err
+			}
+			if _, err := fmt.Fprint(out, output); err != nil {
+				return fmt.Errorf("writing output: %w", err)
+			}
+		}
+	}
+
+	if strict && anyExceeded {
+		cmd.SilenceErrors = true
+		cmd.SilenceUsage = true
+		return errors.New("one or more skills have files exceeding token limits")
+	}
+	return nil
 }

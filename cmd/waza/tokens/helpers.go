@@ -6,6 +6,9 @@ import (
 	"path/filepath"
 	"strings"
 	"time"
+
+	"github.com/spboyer/waza/internal/projectconfig"
+	"github.com/spboyer/waza/internal/workspace"
 )
 
 // FileResult holds token count results for a single file.
@@ -86,4 +89,21 @@ func findMarkdownFiles(paths []string, rootDir string) ([]string, error) {
 	}
 
 	return result, nil
+}
+
+// ConfigDetectOptions loads .waza.yaml project config and returns workspace
+// DetectOptions derived from the configured paths.
+func ConfigDetectOptions() []workspace.DetectOption {
+	wd, err := os.Getwd()
+	if err != nil {
+		return nil
+	}
+	cfg, err := projectconfig.Load(wd)
+	if err != nil {
+		return nil
+	}
+	return []workspace.DetectOption{
+		workspace.WithSkillsDir(cfg.Paths.Skills),
+		workspace.WithEvalsDir(cfg.Paths.Evals),
+	}
 }

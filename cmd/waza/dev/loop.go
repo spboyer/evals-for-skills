@@ -143,7 +143,7 @@ func runDev(cmd *cobra.Command, args []string) error {
 		if wdErr != nil {
 			return fmt.Errorf("getting working directory: %w", wdErr)
 		}
-		ctx, ctxErr := workspace.DetectContext(wd)
+		ctx, ctxErr := workspace.DetectContext(wd, workspace.WithSkillsDir(pcfg.Paths.Skills), workspace.WithEvalsDir(pcfg.Paths.Evals))
 		if ctxErr != nil {
 			return fmt.Errorf("detecting workspace: %w", ctxErr)
 		}
@@ -194,11 +194,15 @@ type batchSkillResult struct {
 }
 
 func runDevBatch(cmd *cobra.Command, args []string, allMode bool, filterStr string, copilotMode bool, modelID string, target scoring.AdherenceLevel, maxIter int, auto bool) error {
+	pcfg, err := projectconfig.Load(".")
+	if err != nil || pcfg == nil {
+		pcfg = projectconfig.New()
+	}
 	wd, err := os.Getwd()
 	if err != nil {
 		return fmt.Errorf("getting working directory: %w", err)
 	}
-	ctx, err := workspace.DetectContext(wd)
+	ctx, err := workspace.DetectContext(wd, workspace.WithSkillsDir(pcfg.Paths.Skills), workspace.WithEvalsDir(pcfg.Paths.Evals))
 	if err != nil {
 		return fmt.Errorf("detecting workspace: %w", err)
 	}
@@ -598,7 +602,11 @@ func runScaffoldTriggers(cmd *cobra.Command, skillArg string) error {
 		if wdErr != nil {
 			return fmt.Errorf("getting working directory: %w", wdErr)
 		}
-		ctx, ctxErr := workspace.DetectContext(wd)
+		scfg, _ := projectconfig.Load(wd)
+		if scfg == nil {
+			scfg = projectconfig.New()
+		}
+		ctx, ctxErr := workspace.DetectContext(wd, workspace.WithSkillsDir(scfg.Paths.Skills), workspace.WithEvalsDir(scfg.Paths.Evals))
 		if ctxErr != nil {
 			return fmt.Errorf("detecting workspace: %w", ctxErr)
 		}

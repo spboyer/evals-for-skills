@@ -46,7 +46,12 @@ func newSuggestCmd() *cobra.Command {
 
 Paths may be files or directories (scanned recursively for .md/.mdx files).
 A relative path is resolved from the working directory; an absolute path is
-used as-is. When no path is given, the working directory is scanned.
+used as-is.
+
+When no path is given, workspace detection determines what to analyze:
+  - In a multi-skill workspace, each skill is analyzed with per-skill headers
+  - In a single-skill workspace, that skill's directory is analyzed
+  - Otherwise, the working directory is scanned
 
 If the first argument looks like a skill name (no path separators or file
 extension), it is resolved via workspace detection to scope suggestions to
@@ -108,9 +113,14 @@ func runSuggest(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("getting current directory: %w", err)
 	}
 
-	// If the first arg looks like a skill name (not a path), resolve via workspace
-	if len(args) > 0 && !workspace.LooksLikePath(args[0]) {
-		ctx, ctxErr := workspace.DetectContext(rootDir)
+	var filePaths []string
+
+	if len(args) > 0 && workspace.LooksLikePath(args[0]) {
+		// Explicit paths — use as-is (escape hatch)
+		filePaths = args
+	} else if len(args) > 0 {
+		// Skill name — resolve via workspace with config options
+		ctx, ctxErr := workspace.DetectContext(rootDir, ConfigDetectOptions()...)
 		if ctxErr != nil {
 			return fmt.Errorf("detecting workspace: %w", ctxErr)
 		}
@@ -119,24 +129,18 @@ func runSuggest(cmd *cobra.Command, args []string) error {
 			return findErr
 		}
 		rootDir = si.Dir
-		args = nil
-	}
-
-	checker := &checks.TokenLimitsChecker{
-		Paths: args,
-	}
-	limitsData, err := checker.Limits(skill.Skill{Path: filepath.Join(rootDir, "SKILL.md")})
-	if err != nil {
-		return err
-	}
-
-	// Build a map from file path to resolved limit for use in analysis
-	limitsByFile := make(map[string]int, len(limitsData.Results))
-	var files []string
-	for _, r := range limitsData.Results {
-		absPath := filepath.Join(rootDir, filepath.FromSlash(r.File))
-		files = append(files, absPath)
-		limitsByFile[r.File] = r.Limit
+	} else {
+		// No args: workspace-aware mode
+		ctx, ctxErr := workspace.DetectContext(rootDir, ConfigDetectOptions()...)
+		if ctxErr == nil {
+			switch ctx.Type {
+			case workspace.ContextMultiSkill:
+				return runSuggestBatch(cmd, ctx.Skills, format, minSavings, copilot, modelID)
+			case workspace.ContextSingleSkill:
+				rootDir = ctx.Skills[0].Dir
+			}
+		}
+		// ContextNone or error: fall through to CWD scan
 	}
 
 	counter, err := tokens.NewCounter(tokens.TokenizerDefault)
@@ -146,15 +150,63 @@ func runSuggest(cmd *cobra.Command, args []string) error {
 	out := cmd.OutOrStdout()
 	errOut := cmd.ErrOrStderr()
 
-	var analyses []fileAnalysis
+	var engine execution.AgentEngine
 	if copilot {
-		engine := newChatEngine(modelID)
+		engine = newChatEngine(modelID)
 		defer func() {
 			if shutdownErr := engine.Shutdown(cmd.Context()); shutdownErr != nil {
 				fmt.Fprintf(errOut, "⚠️  error shutting down Copilot engine: %v\n", shutdownErr) //nolint:errcheck
 			}
 		}()
+	}
 
+	var analyses []fileAnalysis
+	if copilot {
+		stopSpinner := spinner.Start(errOut, "🤖 Analyzing with Copilot...")
+		analyses, err = collectFileAnalyses(rootDir, filePaths, counter, engine, cmd)
+		stopSpinner()
+	} else {
+		analyses, err = collectFileAnalyses(rootDir, filePaths, counter, nil, cmd)
+	}
+	if err != nil {
+		return err
+	}
+
+	analyses = filterSuggestions(analyses, minSavings)
+
+	if format == "json" {
+		s, err := suggestionJSON(analyses)
+		if err != nil {
+			return err
+		}
+		fmt.Fprint(out, s) //nolint:errcheck
+		return nil
+	}
+	fmt.Fprint(out, suggestionText(analyses)) //nolint:errcheck
+	return nil
+}
+
+// collectFileAnalyses discovers and analyzes files in rootDir.
+// When engine is non-nil, Copilot-based analysis is used; otherwise heuristic analysis.
+func collectFileAnalyses(rootDir string, paths []string, counter tokens.Counter, engine execution.AgentEngine, cmd *cobra.Command) ([]fileAnalysis, error) {
+	checker := &checks.TokenLimitsChecker{Paths: paths}
+	limitsData, err := checker.Limits(skill.Skill{Path: filepath.Join(rootDir, "SKILL.md")})
+	if err != nil {
+		return nil, err
+	}
+
+	limitsByFile := make(map[string]int, len(limitsData.Results))
+	var files []string
+	for _, r := range limitsData.Results {
+		absPath := filepath.Join(rootDir, filepath.FromSlash(r.File))
+		files = append(files, absPath)
+		limitsByFile[r.File] = r.Limit
+	}
+
+	errOut := cmd.ErrOrStderr()
+	var analyses []fileAnalysis
+
+	if engine != nil {
 		ctx, cancel := context.WithTimeout(cmd.Context(), 4*time.Minute)
 		defer cancel()
 
@@ -164,7 +216,6 @@ func runSuggest(cmd *cobra.Command, args []string) error {
 		}
 		ch := make(chan result, len(files))
 		sem := make(chan struct{}, maxCopilotWorkers)
-		stopSpinner := spinner.Start(errOut, "🤖 Analyzing with Copilot...")
 
 		var wg sync.WaitGroup
 		for _, f := range files {
@@ -174,23 +225,23 @@ func runSuggest(cmd *cobra.Command, args []string) error {
 				sem <- struct{}{}
 				defer func() { <-sem }()
 
-				relPath, err := filepath.Rel(rootDir, f)
-				if err != nil {
-					ch <- result{err: fmt.Errorf("getting relative path for %s: %w", f, err)}
+				relPath, relErr := filepath.Rel(rootDir, f)
+				if relErr != nil {
+					ch <- result{err: fmt.Errorf("getting relative path for %s: %w", f, relErr)}
 					return
 				}
 				if relPath == "" {
 					relPath = f
 				}
-				b, err := os.ReadFile(f)
-				if err != nil {
-					ch <- result{err: fmt.Errorf("reading file %s: %w", f, err)}
+				b, readErr := os.ReadFile(f)
+				if readErr != nil {
+					ch <- result{err: fmt.Errorf("reading file %s: %w", f, readErr)}
 					return
 				}
 				text := string(b)
-				res, err := copilotReport(ctx, engine, text)
-				if err != nil {
-					ch <- result{err: fmt.Errorf("getting Copilot suggestions for %s: %w", f, err)}
+				res, reportErr := copilotReport(ctx, engine, text)
+				if reportErr != nil {
+					ch <- result{err: fmt.Errorf("getting Copilot suggestions for %s: %w", f, reportErr)}
 					return
 				}
 				r := countTokens(counter, text, relPath)
@@ -211,8 +262,7 @@ func runSuggest(cmd *cobra.Command, args []string) error {
 
 		for r := range ch {
 			if ctx.Err() != nil {
-				stopSpinner()
-				return ctx.Err()
+				return nil, ctx.Err()
 			}
 			if r.err != nil {
 				fmt.Fprintf(errOut, "⚠️  %s\n", r.err) //nolint:errcheck
@@ -220,32 +270,73 @@ func runSuggest(cmd *cobra.Command, args []string) error {
 			}
 			analyses = append(analyses, r.analysis)
 		}
-		stopSpinner()
 	} else {
 		for _, f := range files {
-			a, err := analyzeFile(counter, f, rootDir, limitsByFile)
-			if err != nil {
-				fmt.Fprintf(errOut, "⚠️  Error analyzing %s: %s\n", f, err) //nolint:errcheck
+			a, aErr := analyzeFile(counter, f, rootDir, limitsByFile)
+			if aErr != nil {
+				fmt.Fprintf(errOut, "⚠️  Error analyzing %s: %s\n", f, aErr) //nolint:errcheck
 				continue
 			}
 			analyses = append(analyses, *a)
 		}
 	}
+
 	sort.Slice(analyses, func(i, j int) bool {
 		return analyses[i].File < analyses[j].File
 	})
 
-	analyses = filterSuggestions(analyses, minSavings)
+	return analyses, nil
+}
+
+// runSuggestBatch runs token suggestions for each skill in a multi-skill workspace.
+func runSuggestBatch(cmd *cobra.Command, skills []workspace.SkillInfo, format string, minSavings int, copilot bool, modelID string) error {
+	counter, err := tokens.NewCounter(tokens.TokenizerDefault)
+	if err != nil {
+		return err
+	}
+	out := cmd.OutOrStdout()
+	errOut := cmd.ErrOrStderr()
+
+	var engine execution.AgentEngine
+	if copilot {
+		engine = newChatEngine(modelID)
+		defer func() {
+			if shutdownErr := engine.Shutdown(cmd.Context()); shutdownErr != nil {
+				fmt.Fprintf(errOut, "⚠️  error shutting down Copilot engine: %v\n", shutdownErr) //nolint:errcheck
+			}
+		}()
+	}
+
+	var allAnalyses []fileAnalysis
+	for i, si := range skills {
+		if i > 0 && format != "json" {
+			fmt.Fprintln(out) //nolint:errcheck
+		}
+		if format != "json" {
+			fmt.Fprintf(out, "─── %s ───\n", si.Name) //nolint:errcheck
+		}
+
+		analyses, aErr := collectFileAnalyses(si.Dir, nil, counter, engine, cmd)
+		if aErr != nil {
+			fmt.Fprintf(errOut, "  ⚠️  %s: %s\n", si.Name, aErr) //nolint:errcheck
+			continue
+		}
+		analyses = filterSuggestions(analyses, minSavings)
+
+		if format == "json" {
+			allAnalyses = append(allAnalyses, analyses...)
+		} else {
+			fmt.Fprint(out, suggestionText(analyses)) //nolint:errcheck
+		}
+	}
 
 	if format == "json" {
-		s, err := suggestionJSON(analyses)
+		s, err := suggestionJSON(allAnalyses)
 		if err != nil {
 			return err
 		}
 		fmt.Fprint(out, s) //nolint:errcheck
-		return nil
 	}
-	fmt.Fprint(out, suggestionText(analyses)) //nolint:errcheck
 	return nil
 }
 
