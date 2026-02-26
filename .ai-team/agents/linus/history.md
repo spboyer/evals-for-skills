@@ -92,9 +92,3 @@ All code roles now use `claude-opus-4.6`. Docs/Scribe/diversity use `gemini-3-pr
 - **Files changed:** `cmd/waza/cmd_suggest.go` (new), `cmd/waza/cmd_suggest_test.go` (new), `internal/suggest/prompt.go` (new), `internal/suggest/suggest.go` (new), `internal/suggest/suggest_test.go` (new), `cmd/waza/root.go`, `README.md`, `site/src/content/docs/reference/cli.mdx`
 - **What:** Added `waza suggest <skill-path>` for LLM-driven eval generation. Command supports `--model`, `--dry-run` (default), `--apply`, `--output-dir`, and `--format yaml|json`. New `internal/suggest` package builds prompt context from SKILL.md + grader types + eval schema summary + example eval, parses structured YAML responses, validates generated `eval_yaml`, and writes `eval.yaml`/task/fixture files when applying.
 - **Key learning:** A robust parser needs to handle both structured wrapper YAML (`eval_yaml` + files) and fenced YAML blocks from models. Validating generated `eval_yaml` against `models.BenchmarkSpec.Validate()` catches malformed model output early before writing files.
-
-### #458 — Suggest compatibility fixes
-- **Date:** 2026-02-26
-- **Branch:** `squad/458-fix-suggest-compat`
-- **Files changed:** `internal/suggest/prompt.go`, `internal/suggest/suggest_test.go`, `internal/graders/keyword_grader.go`, `internal/graders/keyword_grader_test.go`
-- **What:** Updated suggest prompts to require `inputs.prompt` task format and correct `skill_invocation` config fields, plus added a backward-compatible `keywords` alias for the keyword grader with coverage.
