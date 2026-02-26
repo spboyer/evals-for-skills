@@ -269,45 +269,87 @@ func computeCheckResults(rootDir string, paths []string) ([]checkResult, error) 
 	return results, nil
 }
 
+// batchCheckReport wraps per-skill check results for JSON output.
+type batchCheckReport struct {
+	Timestamp string             `json:"timestamp"`
+	Skills    []skillCheckReport `json:"skills"`
+}
+
+// skillCheckReport holds check results for a single skill in batch mode.
+type skillCheckReport struct {
+	Skill         string        `json:"skill"`
+	TotalFiles    int           `json:"totalFiles"`
+	ExceededCount int           `json:"exceededCount"`
+	Results       []checkResult `json:"results,omitempty"`
+	Error         string        `json:"error,omitempty"`
+}
+
 // runCheckBatch runs token limit checks for each skill in a multi-skill workspace.
 func runCheckBatch(cmd *cobra.Command, skills []workspace.SkillInfo, format string, strict bool, quiet bool) error {
 	out := cmd.OutOrStdout()
 	anyExceeded := false
 
+	var skillReports []skillCheckReport
+
 	for i, si := range skills {
-		if i > 0 && !quiet {
-			fmt.Fprintln(out)
-		}
-		if !quiet {
-			fmt.Fprintf(out, "─── %s ───\n", si.Name)
+		if format == "table" {
+			if i > 0 && !quiet {
+				fmt.Fprintln(out) //nolint:errcheck
+			}
+			if !quiet {
+				fmt.Fprintf(out, "─── %s ───\n", si.Name) //nolint:errcheck
+			}
 		}
 
 		results, err := computeCheckResults(si.Dir, nil)
 		if err != nil {
-			fmt.Fprintf(cmd.ErrOrStderr(), "  ⚠️  %s: %s\n", si.Name, err)
+			fmt.Fprintf(cmd.ErrOrStderr(), "  ⚠️  %s: %s\n", si.Name, err) //nolint:errcheck
+			if format == "json" {
+				skillReports = append(skillReports, skillCheckReport{
+					Skill: si.Name,
+					Error: err.Error(),
+				})
+			}
 			continue
 		}
 
-		if countExceeded(results) > 0 {
+		exceeded := countExceeded(results)
+		if exceeded > 0 {
 			anyExceeded = true
 		}
 
-		if !quiet {
-			var output string
-			switch format {
-			case "json":
-				output, err = checkJSON(results)
-			case "table":
-				output = checkTable(results)
-			default:
-				return errors.New("invalid format: " + format)
+		switch format {
+		case "json":
+			skillReports = append(skillReports, skillCheckReport{
+				Skill:         si.Name,
+				TotalFiles:    len(results),
+				ExceededCount: exceeded,
+				Results:       results,
+			})
+		case "table":
+			if !quiet {
+				if _, wErr := fmt.Fprint(out, checkTable(results)); wErr != nil {
+					return fmt.Errorf("writing output: %w", wErr)
+				}
 			}
-			if err != nil {
-				return err
-			}
-			if _, err := fmt.Fprint(out, output); err != nil {
-				return fmt.Errorf("writing output: %w", err)
-			}
+		default:
+			return errors.New("invalid format: " + format)
+		}
+	}
+
+	if format == "json" {
+		report := batchCheckReport{
+			Timestamp: nowISO(),
+			Skills:    skillReports,
+		}
+		var buf bytes.Buffer
+		enc := json.NewEncoder(&buf)
+		enc.SetIndent("", "  ")
+		if err := enc.Encode(report); err != nil {
+			return err
+		}
+		if _, err := fmt.Fprint(out, buf.String()); err != nil {
+			return fmt.Errorf("writing output: %w", err)
 		}
 	}
 

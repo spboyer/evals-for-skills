@@ -75,6 +75,7 @@ type suggestion struct {
 }
 
 type fileAnalysis struct {
+	Skill              string       `json:"skill,omitempty"`
 	File               string       `json:"file"`
 	Tokens             int          `json:"tokens"`
 	Characters         int          `json:"characters"`
@@ -324,6 +325,9 @@ func runSuggestBatch(cmd *cobra.Command, skills []workspace.SkillInfo, format st
 		analyses = filterSuggestions(analyses, minSavings)
 
 		if format == "json" {
+			for j := range analyses {
+				analyses[j].Skill = si.Name
+			}
 			allAnalyses = append(allAnalyses, analyses...)
 		} else {
 			fmt.Fprint(out, suggestionText(analyses)) //nolint:errcheck
