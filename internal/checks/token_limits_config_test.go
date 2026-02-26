@@ -128,9 +128,9 @@ func TestLoadLimitsConfig_NoFile(t *testing.T) {
 func TestGetLimitForFile_WorkspaceRelPrefix(t *testing.T) {
 	cfg := TokenLimitsConfig{
 		Defaults: map[string]int{
-			"plugin/skills/**/SKILL.md":          1000,
-			"plugin/skills/**/references/*.md":   800,
-			"*.md":                               2000,
+			"plugin/skills/**/SKILL.md":        1000,
+			"plugin/skills/**/references/*.md": 800,
+			"*.md":                             2000,
 		},
 		Overrides: map[string]int{
 			"plugin/skills/special/OVERRIDE.md": 42,
@@ -163,7 +163,7 @@ func TestGetLimitForFile_WorkspaceRelPrefix(t *testing.T) {
 	// Skill-relative match still wins when pattern matches without prefix.
 	cfgLocal := TokenLimitsConfig{
 		Defaults: map[string]int{
-			"SKILL.md": 500,
+			"SKILL.md":                  500,
 			"plugin/skills/**/SKILL.md": 1000,
 		},
 		Overrides: map[string]int{},
