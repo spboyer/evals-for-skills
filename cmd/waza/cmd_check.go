@@ -788,7 +788,7 @@ func displayReadinessReport(out writer, report *readinessReport) {
 		writeStatus(w, statusIcon("error"), "Needs significant improvement. Description too short or missing triggers.")
 	}
 	if len(report.complianceScore.Issues) > 0 {
-		fmt.Fprintf(w, "   Issues found:\n")
+		fmt.Fprintf(w, "\n   Issues found:\n")
 		for _, issue := range report.complianceScore.Issues {
 			state := "warning"
 			if issue.Severity == "error" {
@@ -864,7 +864,7 @@ func displayReadinessReport(out writer, report *readinessReport) {
 			writeStatus(w, statusIcon("warning"), fmt.Sprintf("[%s] → %s: %s", du.Source, du.Target, du.Reason))
 		}
 		if len(report.linkResult.OrphanedFiles) > 0 {
-			fmt.Fprintf(w, "   Orphaned files in references/:\n")
+			fmt.Fprintf(w, "\n   Orphaned files in references/:\n")
 			for _, f := range report.linkResult.OrphanedFiles {
 				writeStatus(w, statusIcon("warning"), f)
 			}
