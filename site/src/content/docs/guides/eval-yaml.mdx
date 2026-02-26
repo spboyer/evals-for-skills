@@ -44,6 +44,10 @@ tasks:
 | `description` | string | ✓ | What the eval tests |
 | `skill` | string | ✓ | Associated skill name |
 | `version` | string | ✗ | Version number (e.g., "1.0") |
+| `inputs` | object | ✗ | Key-value map of global template variables (see [Template Variables](#template-variables)) |
+| `tasks_from` | string | ✗ | Path to an external YAML file containing the task list |
+| `hooks` | object | ✗ | Lifecycle hooks that run shell commands at specific points (see [Hooks](#hooks)) |
+| `baseline` | bool | ✗ | Mark this spec as a baseline for A/B comparison |
 
 ## Config Section
 
@@ -69,6 +73,12 @@ config:
 | `model` | string | *required* | Default model for tasks (override with `--model` flag) |
 | `judge_model` | string | (same as `model`) | Model for `prompt`-type graders (LLM-as-judge) |
 | `executor` | string | `copilot-sdk` | Executor: `mock` (local, fast) or `copilot-sdk` (real API) |
+| `max_attempts` | int | 0 | Maximum retry attempts per task on failure (0 = no retries) |
+| `group_by` | string | — | Group results by a field (e.g., `tags`, `task_id`) |
+| `fail_fast` | bool | false | Stop the entire run on first task failure |
+| `skill_directories` | list[str] | `[]` | Additional directories to search for skills |
+| `required_skills` | list[str] | `[]` | Skills that must be available before running |
+| `mcp_servers` | object | — | MCP server configurations for the evaluation |
 
 **Common Timeouts:**
 - `60` — Quick tasks (single-file review, validation)
@@ -108,7 +118,7 @@ All graders return:
 - `passed`: boolean
 - `message`: human-readable result
 
-See the **[Validators & Graders](../graders/)** guide for all 11 types and examples.
+See the **[Validators & Graders](../graders/)** guide for all 12 types and examples.
 
 ## Tasks Section
 
@@ -431,6 +441,87 @@ tasks:
         max_response_time_ms: 5000  # Quick
         max_tokens: 1000         # Concise
 ```
+
+## Hooks
+
+Lifecycle hooks run shell commands at specific points during an evaluation. Use them for setup, teardown, or validation.
+
+```yaml
+hooks:
+  before_run:
+    - command: "npm install"
+      working_directory: "./fixtures"
+      error_on_fail: true
+  after_run:
+    - command: "bash cleanup.sh"
+  before_task:
+    - command: "echo Starting task"
+  after_task:
+    - command: "bash collect-metrics.sh"
+```
+
+| Hook | When it runs |
+|------|-------------|
+| `before_run` | Once, before the entire evaluation starts |
+| `after_run` | Once, after all tasks complete |
+| `before_task` | Before each individual task |
+| `after_task` | After each individual task |
+
+Each hook entry:
+
+| Field | Type | Default | Description |
+|-------|------|---------|-------------|
+| `command` | string | *(required)* | Shell command to execute |
+| `working_directory` | string | `.` | Working directory for the command |
+| `exit_codes` | list[int] | `[0]` | Acceptable exit codes |
+| `error_on_fail` | bool | false | Abort the run if this hook fails |
+
+---
+
+## Template Variables
+
+Use the `inputs` field to define global template variables that are substituted into task prompts:
+
+```yaml
+inputs:
+  language: python
+  framework: fastapi
+
+tasks:
+  - id: scaffold-001
+    inputs:
+      prompt: "Create a {{language}} app using {{framework}}"
+```
+
+Prompt templating also supports fixture file injection:
+
+```yaml
+inputs:
+  prompt: |
+    Explain this code:
+    {{fixture:sample.py}}
+```
+
+The `{{fixture:filename}}` syntax inlines the content of a file from the fixtures directory into the prompt.
+
+---
+
+## External Task Lists
+
+Use `tasks_from` to load task definitions from a separate YAML file:
+
+```yaml
+name: shared-eval
+tasks_from: shared-tasks.yaml
+
+config:
+  trials_per_task: 3
+  model: claude-sonnet-4.6
+```
+
+This is useful when multiple eval specs share the same task set but differ in config or graders.
+
+---
 
 ## Best Practices
 

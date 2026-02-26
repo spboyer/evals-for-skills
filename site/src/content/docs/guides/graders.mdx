@@ -460,6 +460,67 @@ When `allow_extra: false`, extra invocations beyond the required list reduce the
 
 ---
 
+## Tool Constraint (`tool_constraint`)
+
+Validates which tools an agent should or shouldn't use, and enforces turn and token limits. Reads from the **session digest** to check tool usage, turn counts, and total token consumption.
+
+```yaml
+- type: tool_constraint
+  name: guardrails
+  config:
+    expect_tools:
+      - bash
+      - edit
+    reject_tools:
+      - rm
+      - sudo
+    max_turns: 10
+    max_tokens: 50000
+```
+
+| Option | Type | Default | Description |
+|--------|------|---------|-------------|
+| `expect_tools` | `list[str]` | `[]` | Tool names that **must** appear in the session |
+| `reject_tools` | `list[str]` | `[]` | Tool names that **must not** appear |
+| `max_turns` | `int` | `0` | Maximum conversation turns (0 = no limit) |
+| `max_tokens` | `int` | `0` | Maximum total token usage (0 = no limit) |
+
+At least one constraint must be configured. Each configured rule counts as one check.
+
+**Scoring:** `passed_checks / total_checks`
+
+<Aside type="tip" title="tool_constraint vs. behavior">
+Both `behavior` and `tool_constraint` can check tool usage and token limits. Use `tool_constraint` when you want to validate specific tool names (expect/reject lists) alongside turn and token budgets. Use `behavior` when you need `max_duration_ms` or `max_tool_calls` (total count, not specific names).
+</Aside>
+
+### Example: safety guardrails
+
+```yaml
+- type: tool_constraint
+  name: safety_check
+  config:
+    reject_tools:
+      - rm
+      - sudo
+      - kill
+    max_turns: 15
+    max_tokens: 100000
+```
+
+### Example: required workflow tools
+
+```yaml
+- type: tool_constraint
+  name: workflow_tools
+  config:
+    expect_tools:
+      - bash
+      - edit
+      - grep
+```
+
+---
+
 ## Program
 
 Runs any external command to grade the agent output. The agent output is passed via **stdin**, and the workspace directory is available as the `WAZA_WORKSPACE_DIR` environment variable. Exit code 0 means pass (score `1.0`); non-zero means fail (score `0.0`).
