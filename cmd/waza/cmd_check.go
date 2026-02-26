@@ -1,11 +1,14 @@
 package main
 
 import (
+	"bytes"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
+	"time"
 	"unicode/utf8"
 
 	"github.com/mattn/go-runewidth"
@@ -46,7 +49,90 @@ You can also specify a skill name or path:
 		RunE:          runCheck,
 		SilenceErrors: true,
 	}
+	cmd.Flags().String("format", "text", "Output format: text | json")
 	return cmd
+}
+
+// --- JSON output structs ---
+
+type checkJSONReport struct {
+	Timestamp string            `json:"timestamp"`
+	Skills    []skillJSONReport `json:"skills"`
+}
+
+type skillJSONReport struct {
+	Name           string          `json:"name"`
+	Path           string          `json:"path"`
+	Ready          bool            `json:"ready"`
+	Compliance     complianceJSON  `json:"compliance"`
+	TokenBudget    tokenBudgetJSON `json:"tokenBudget"`
+	SpecCompliance []checkItemJSON `json:"specCompliance"`
+	McpIntegration *mcpJSON        `json:"mcpIntegration,omitempty"`
+	Links          *linksJSON      `json:"links,omitempty"`
+	Eval           evalJSON        `json:"eval"`
+	Schema         *schemaJSON     `json:"schema,omitempty"`
+	AdvisoryChecks []checkItemJSON `json:"advisoryChecks,omitempty"`
+	NextSteps      []string        `json:"nextSteps"`
+}
+
+type complianceJSON struct {
+	Level  string      `json:"level"`
+	Issues []issueJSON `json:"issues,omitempty"`
+}
+
+type issueJSON struct {
+	Severity string `json:"severity"`
+	Message  string `json:"message"`
+}
+
+type tokenBudgetJSON struct {
+	Count    int    `json:"count"`
+	Limit    int    `json:"limit"`
+	Exceeded bool   `json:"exceeded"`
+	Warning  bool   `json:"warning"`
+	Status   string `json:"status"` // "ok", "warning", "exceeded"
+}
+
+type checkItemJSON struct {
+	Name     string `json:"name"`
+	Passed   bool   `json:"passed"`
+	Summary  string `json:"summary"`
+	Status   string `json:"status,omitempty"`   // "ok", "optimal", "warning"
+	Evidence string `json:"evidence,omitempty"` // supporting detail
+}
+
+type mcpJSON struct {
+	Score  int         `json:"score"`
+	Total  int         `json:"total"`
+	Issues []issueJSON `json:"issues,omitempty"`
+}
+
+type linkIssueJSON struct {
+	Source string `json:"source"`
+	Target string `json:"target"`
+	Reason string `json:"reason"`
+}
+
+type linksJSON struct {
+	Valid          int             `json:"valid"`
+	Total          int             `json:"total"`
+	Passed         bool            `json:"passed"`
+	BrokenLinks    []linkIssueJSON `json:"brokenLinks,omitempty"`
+	DirectoryLinks []linkIssueJSON `json:"directoryLinks,omitempty"`
+	ScopeEscapes   []linkIssueJSON `json:"scopeEscapes,omitempty"`
+	DeadURLs       []linkIssueJSON `json:"deadURLs,omitempty"`
+	OrphanedFiles  []string        `json:"orphanedFiles,omitempty"`
+}
+
+type evalJSON struct {
+	Found bool   `json:"found"`
+	Path  string `json:"path,omitempty"`
+}
+
+type schemaJSON struct {
+	EvalErrors []string            `json:"evalErrors,omitempty"`
+	TaskErrors map[string][]string `json:"taskErrors,omitempty"`
+	Valid      bool                `json:"valid"`
 }
 
 type readinessReport struct {
@@ -69,6 +155,14 @@ type readinessReport struct {
 }
 
 func runCheck(cmd *cobra.Command, args []string) error {
+	format, err := cmd.Flags().GetString("format")
+	if err != nil {
+		return err
+	}
+	if format != "text" && format != "json" {
+		return fmt.Errorf("invalid format %q: expected text or json", format)
+	}
+
 	// If arg looks like a file path, use it directly
 	if len(args) > 0 && workspace.LooksLikePath(args[0]) {
 		skillDir := args[0]
@@ -83,14 +177,13 @@ func runCheck(cmd *cobra.Command, args []string) error {
 		if err != nil {
 			return err
 		}
-		displayReadinessReport(cmd.OutOrStdout(), report)
-		return nil
+		return outputCheckReport(cmd, format, []*readinessReport{report})
 	}
 
 	// Try workspace detection
 	wsCtx, err := resolveWorkspace(args)
 	if err == nil && len(wsCtx.Skills) > 0 {
-		return runCheckForSkills(cmd, wsCtx)
+		return runCheckForSkills(cmd, wsCtx, format)
 	}
 
 	// Fallback: current directory
@@ -108,16 +201,15 @@ func runCheck(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	displayReadinessReport(cmd.OutOrStdout(), report)
-	return nil
+	return outputCheckReport(cmd, format, []*readinessReport{report})
 }
 
-func runCheckForSkills(cmd *cobra.Command, wsCtx *workspace.WorkspaceContext) error {
+func runCheckForSkills(cmd *cobra.Command, wsCtx *workspace.WorkspaceContext, format string) error {
 	w := cmd.OutOrStdout()
 	var reports []*readinessReport
 
 	for i, si := range wsCtx.Skills {
-		if len(wsCtx.Skills) > 1 {
+		if format == "text" && len(wsCtx.Skills) > 1 {
 			if i > 0 {
 				fmt.Fprintln(w) //nolint:errcheck
 			}
@@ -129,11 +221,17 @@ func runCheckForSkills(cmd *cobra.Command, wsCtx *workspace.WorkspaceContext) er
 			return fmt.Errorf("checking skill %s: %w", si.Name, err)
 		}
 		reports = append(reports, report)
-		displayReadinessReport(w, report)
+		if format == "text" {
+			displayReadinessReport(w, report)
+		}
 	}
 
-	if len(wsCtx.Skills) > 1 {
+	if format == "text" && len(wsCtx.Skills) > 1 {
 		printCheckSummaryTable(w, reports)
+	}
+
+	if format == "json" {
+		return outputCheckJSON(cmd, reports)
 	}
 	return nil
 }
@@ -416,6 +514,177 @@ func resolveWarningThreshold(startDir string) int {
 	return cfg.Tokens.WarningThreshold
 }
 
+// outputCheckReport dispatches to text or JSON output.
+func outputCheckReport(cmd *cobra.Command, format string, reports []*readinessReport) error {
+	if format == "json" {
+		return outputCheckJSON(cmd, reports)
+	}
+	w := cmd.OutOrStdout()
+	for _, report := range reports {
+		displayReadinessReport(w, report)
+	}
+	return nil
+}
+
+// outputCheckJSON marshals reports as JSON to the command's stdout.
+func outputCheckJSON(cmd *cobra.Command, reports []*readinessReport) error {
+	jsonReport := checkJSONReport{
+		Timestamp: time.Now().UTC().Format(time.RFC3339Nano),
+		Skills:    make([]skillJSONReport, 0, len(reports)),
+	}
+	for _, r := range reports {
+		jsonReport.Skills = append(jsonReport.Skills, buildSkillJSON(r))
+	}
+
+	var buf bytes.Buffer
+	enc := json.NewEncoder(&buf)
+	enc.SetIndent("", "  ")
+	if err := enc.Encode(jsonReport); err != nil {
+		return fmt.Errorf("encoding JSON: %w", err)
+	}
+	_, err := fmt.Fprint(cmd.OutOrStdout(), buf.String())
+	return err
+}
+
+// buildSkillJSON converts a readinessReport to its JSON representation.
+func buildSkillJSON(report *readinessReport) skillJSONReport {
+	specChecksPassed := true
+	for _, c := range report.scoreSpecChecks {
+		if !c.Passed {
+			specChecksPassed = false
+			break
+		}
+	}
+	isReady := report.complianceLevel.AtLeast(scoring.AdherenceMediumHigh) &&
+		!report.tokenExceeded &&
+		(report.linkResult == nil || report.linkResult.Passed()) &&
+		len(report.evalSchemaErrs) == 0 &&
+		len(report.taskSchemaErrs) == 0 &&
+		specChecksPassed
+
+	skillName := report.skillName
+	if skillName == "" {
+		skillName = "unnamed-skill"
+	}
+
+	jr := skillJSONReport{
+		Name:  skillName,
+		Path:  report.skillPath,
+		Ready: isReady,
+	}
+
+	// Compliance
+	jr.Compliance = complianceJSON{Level: string(report.complianceLevel)}
+	if report.complianceScore != nil {
+		for _, iss := range report.complianceScore.Issues {
+			jr.Compliance.Issues = append(jr.Compliance.Issues, issueJSON{
+				Severity: iss.Severity,
+				Message:  iss.Message,
+			})
+		}
+	}
+
+	// Token budget
+	tokenStatus := "ok"
+	if report.tokenExceeded {
+		tokenStatus = "exceeded"
+	} else if report.tokenWarning {
+		tokenStatus = "warning"
+	}
+	jr.TokenBudget = tokenBudgetJSON{
+		Count:    report.tokenCount,
+		Limit:    report.tokenLimit,
+		Exceeded: report.tokenExceeded,
+		Warning:  report.tokenWarning,
+		Status:   tokenStatus,
+	}
+
+	// Spec compliance
+	for _, c := range report.scoreSpecChecks {
+		item := checkItemJSON{
+			Name:    c.Name,
+			Passed:  c.Passed,
+			Summary: c.Summary,
+		}
+		if sh, ok := c.Data.(checks.StatusHolder); ok {
+			item.Status = string(sh.GetStatus())
+		}
+		if d, ok := c.Data.(*checks.ScoreCheckData); ok && d.Evidence != "" {
+			item.Evidence = d.Evidence
+		}
+		jr.SpecCompliance = append(jr.SpecCompliance, item)
+	}
+
+	// MCP integration
+	if report.mcpResult != nil {
+		mcp := &mcpJSON{Score: report.mcpResult.SubScore, Total: 4}
+		for _, iss := range report.mcpResult.Issues {
+			mcp.Issues = append(mcp.Issues, issueJSON{
+				Severity: iss.Severity,
+				Message:  fmt.Sprintf("[%s] %s", iss.Rule, iss.Message),
+			})
+		}
+		jr.McpIntegration = mcp
+	}
+
+	// Links
+	if report.linkResult != nil {
+		lr := &linksJSON{
+			Valid:  report.linkResult.ValidLinks,
+			Total:  report.linkResult.TotalLinks,
+			Passed: report.linkResult.Passed(),
+		}
+		for _, bl := range report.linkResult.BrokenLinks {
+			lr.BrokenLinks = append(lr.BrokenLinks, linkIssueJSON{Source: bl.Source, Target: bl.Target, Reason: bl.Reason})
+		}
+		for _, dl := range report.linkResult.DirectoryLinks {
+			lr.DirectoryLinks = append(lr.DirectoryLinks, linkIssueJSON{Source: dl.Source, Target: dl.Target, Reason: dl.Reason})
+		}
+		for _, se := range report.linkResult.ScopeEscapes {
+			lr.ScopeEscapes = append(lr.ScopeEscapes, linkIssueJSON{Source: se.Source, Target: se.Target, Reason: se.Reason})
+		}
+		for _, du := range report.linkResult.DeadURLs {
+			lr.DeadURLs = append(lr.DeadURLs, linkIssueJSON{Source: du.Source, Target: du.Target, Reason: du.Reason})
+		}
+		lr.OrphanedFiles = report.linkResult.OrphanedFiles
+		jr.Links = lr
+	}
+
+	// Eval
+	jr.Eval = evalJSON{Found: report.hasEval, Path: report.evalPath}
+
+	// Schema
+	if report.hasEval {
+		s := &schemaJSON{
+			Valid:      len(report.evalSchemaErrs) == 0 && len(report.taskSchemaErrs) == 0,
+			EvalErrors: report.evalSchemaErrs,
+			TaskErrors: report.taskSchemaErrs,
+		}
+		jr.Schema = s
+	}
+
+	// Advisory checks
+	for _, c := range report.scoreAdvisoryChecks {
+		item := checkItemJSON{
+			Name:    c.Name,
+			Passed:  c.Passed,
+			Summary: c.Summary,
+		}
+		if sh, ok := c.Data.(checks.StatusHolder); ok {
+			item.Status = string(sh.GetStatus())
+		}
+		if d, ok := c.Data.(*checks.ScoreCheckData); ok && d.Evidence != "" {
+			item.Evidence = d.Evidence
+		}
+		jr.AdvisoryChecks = append(jr.AdvisoryChecks, item)
+	}
+
+	// Next steps
+	jr.NextSteps = generateNextSteps(report)
+
+	return jr
+}
+
 //nolint:errcheck // display function — fmt.Fprintf errors to stdout are not actionable
 func displayReadinessReport(out interface{ Write([]byte) (int, error) }, report *readinessReport) {
 	w := out
@@ -466,13 +735,13 @@ func displayReadinessReport(out interface{ Write([]byte) (int, error) }, report 
 		total := len(report.scoreSpecChecks)
 		fmt.Fprintf(w, "📐 Spec Compliance: %d/%d checks passed\n", pass, total)
 		if pass == total {
-			fmt.Fprintf(w, "   ✅ Meets agentskills.io specification.\n")
+			fmt.Fprintf(w, "   ✅  Meets agentskills.io specification.\n")
 		} else {
 			fmt.Fprintf(w, "   ❌  Does not fully meet agentskills.io specification.\n")
 		}
 		for _, c := range report.scoreSpecChecks {
 			if !c.Passed {
-				fmt.Fprintf(w, "   ❌ [%s] %s\n", c.Name, c.Summary)
+				fmt.Fprintf(w, "   ❌  [%s] %s\n", c.Name, c.Summary)
 			}
 		}
 		fmt.Fprintf(w, "\n")
@@ -501,7 +770,7 @@ func displayReadinessReport(out interface{ Write([]byte) (int, error) }, report 
 		fmt.Fprintf(w, "📎 Links: %d/%d valid\n", report.linkResult.ValidLinks, report.linkResult.TotalLinks)
 		if report.linkResult.Passed() {
 			if report.linkResult.TotalLinks == 0 {
-				fmt.Fprintf(w, "   — No links found.\n")
+				fmt.Fprintf(w, "   —  No links found.\n")
 			} else {
 				fmt.Fprintf(w, "   ✅  All links valid.\n")
 			}

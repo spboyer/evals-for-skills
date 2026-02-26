@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"encoding/json"
 	"os"
 	"path/filepath"
 	"strings"
@@ -544,6 +545,171 @@ func TestPrintCheckSummaryTable_DynamicWidth(t *testing.T) {
 		if strings.Contains(line, "azure-ai") {
 			// The line should have consistent spacing
 			assert.Contains(t, line, "Medium-High")
+		}
+	}
+}
+
+func TestCheckCommandJSONOutput(t *testing.T) {
+	tmpDir := t.TempDir()
+	skillContent := `---
+name: json-test-skill
+description: This is a test skill for testing JSON output format from the check command.
+---
+
+# JSON Test Skill
+
+This is the body of the test skill.
+`
+	require.NoError(t, os.WriteFile(filepath.Join(tmpDir, "SKILL.md"), []byte(skillContent), 0644))
+
+	cmd := newCheckCommand()
+	var output bytes.Buffer
+	cmd.SetOut(&output)
+	cmd.SetErr(&output)
+	cmd.SetArgs([]string{tmpDir, "--format", "json"})
+
+	err := cmd.Execute()
+	require.NoError(t, err)
+
+	var report checkJSONReport
+	err = json.Unmarshal(output.Bytes(), &report)
+	require.NoError(t, err, "output should be valid JSON: %s", output.String())
+
+	assert.NotEmpty(t, report.Timestamp)
+	require.Len(t, report.Skills, 1)
+
+	sk := report.Skills[0]
+	assert.Equal(t, "json-test-skill", sk.Name)
+	assert.NotEmpty(t, sk.Path)
+	assert.NotEmpty(t, sk.Compliance.Level)
+	assert.Greater(t, sk.TokenBudget.Count, 0)
+	assert.Greater(t, sk.TokenBudget.Limit, 0)
+	assert.Contains(t, []string{"ok", "warning", "exceeded"}, sk.TokenBudget.Status)
+	assert.False(t, sk.Eval.Found)
+	assert.NotEmpty(t, sk.NextSteps)
+}
+
+func TestCheckCommandJSONHighCompliance(t *testing.T) {
+	tmpDir := t.TempDir()
+	skillContent := `---
+name: high-json-skill
+description: "**WORKFLOW SKILL** - This is a comprehensive test skill. USE FOR: testing, validation, compliance checks. DO NOT USE FOR: unrelated tasks, production use. INVOKES: internal validators. FOR SINGLE OPERATIONS: use direct commands."
+---
+
+# High Compliance Skill
+
+This skill has high compliance.
+`
+	require.NoError(t, os.WriteFile(filepath.Join(tmpDir, "SKILL.md"), []byte(skillContent), 0644))
+
+	cmd := newCheckCommand()
+	var output bytes.Buffer
+	cmd.SetOut(&output)
+	cmd.SetErr(&output)
+	cmd.SetArgs([]string{tmpDir, "--format", "json"})
+
+	err := cmd.Execute()
+	require.NoError(t, err)
+
+	var report checkJSONReport
+	require.NoError(t, json.Unmarshal(output.Bytes(), &report))
+	require.Len(t, report.Skills, 1)
+
+	sk := report.Skills[0]
+	assert.Equal(t, "High", sk.Compliance.Level)
+	assert.Empty(t, sk.Compliance.Issues)
+	// Ready may be false due to spec checks (e.g. dir name mismatch in temp dir)
+	assert.False(t, sk.TokenBudget.Exceeded)
+	assert.Equal(t, "ok", sk.TokenBudget.Status)
+}
+
+func TestCheckCommandJSONWithEval(t *testing.T) {
+	tmpDir := t.TempDir()
+	skillContent := `---
+name: eval-json-test
+description: A test skill with evaluation suite for JSON output testing.
+---
+
+# Test Skill
+
+Body content.
+`
+	require.NoError(t, os.WriteFile(filepath.Join(tmpDir, "SKILL.md"), []byte(skillContent), 0644))
+
+	evalContent := `name: test-eval
+tasks: []
+`
+	require.NoError(t, os.WriteFile(filepath.Join(tmpDir, "eval.yaml"), []byte(evalContent), 0644))
+
+	cmd := newCheckCommand()
+	var output bytes.Buffer
+	cmd.SetOut(&output)
+	cmd.SetErr(&output)
+	cmd.SetArgs([]string{tmpDir, "--format", "json"})
+
+	err := cmd.Execute()
+	require.NoError(t, err)
+
+	var report checkJSONReport
+	require.NoError(t, json.Unmarshal(output.Bytes(), &report))
+	require.Len(t, report.Skills, 1)
+
+	sk := report.Skills[0]
+	assert.True(t, sk.Eval.Found)
+	assert.NotNil(t, sk.Schema)
+	// Schema validity depends on eval.yaml content; verify struct is populated
+	assert.NotNil(t, sk.Schema)
+}
+
+func TestCheckCommandJSONInvalidFormat(t *testing.T) {
+	tmpDir := t.TempDir()
+	require.NoError(t, os.WriteFile(filepath.Join(tmpDir, "SKILL.md"), []byte("---\nname: test\n---\n# Test\n"), 0644))
+
+	cmd := newCheckCommand()
+	var output bytes.Buffer
+	cmd.SetOut(&output)
+	cmd.SetErr(&output)
+	cmd.SetArgs([]string{tmpDir, "--format", "xml"})
+
+	err := cmd.Execute()
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "invalid format")
+}
+
+func TestCheckCommandEmojiSpacingConsistency(t *testing.T) {
+	tmpDir := t.TempDir()
+	skillContent := `---
+name: spacing-test
+description: Short description.
+---
+
+# Test
+
+Body.
+`
+	require.NoError(t, os.WriteFile(filepath.Join(tmpDir, "SKILL.md"), []byte(skillContent), 0644))
+
+	cmd := newCheckCommand()
+	var output bytes.Buffer
+	cmd.SetOut(&output)
+	cmd.SetErr(&output)
+	cmd.SetArgs([]string{tmpDir})
+
+	err := cmd.Execute()
+	require.NoError(t, err)
+
+	result := output.String()
+	// All sub-item lines with status emojis should use 2-space gap after emoji
+	for _, line := range strings.Split(result, "\n") {
+		trimmed := strings.TrimSpace(line)
+		// Check indented lines starting with status emojis (sub-items)
+		if strings.HasPrefix(line, "   ") {
+			if strings.HasPrefix(trimmed, "✅ ") && !strings.HasPrefix(trimmed, "✅  ") {
+				t.Errorf("inconsistent spacing in line (expected 2 spaces after emoji): %q", line)
+			}
+			if strings.HasPrefix(trimmed, "❌ ") && !strings.HasPrefix(trimmed, "❌  ") {
+				t.Errorf("inconsistent spacing in line (expected 2 spaces after emoji): %q", line)
+			}
 		}
 	}
 }
