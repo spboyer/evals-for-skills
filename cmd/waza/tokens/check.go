@@ -21,7 +21,12 @@ func newCheckCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "check [skill-name | paths...]",
 		Short: "Check files against token limits",
-		Long: `Check markdown files against token limits from .token-limits.json.
+		Long: `Check markdown files against token limits.
+
+Limits are resolved in priority order:
+  1. .waza.yaml tokens.limits section (primary — workspace-level config)
+  2. .token-limits.json in the skill directory (fallback — standalone use)
+  3. Built-in defaults when neither config exists
 
 Paths may be files or directories (scanned recursively for .md/.mdx files).
 A relative path is resolved from the working directory; an absolute path is
@@ -36,17 +41,8 @@ If the first argument looks like a skill name (no path separators or file
 extension), it is resolved via workspace detection to scope checking to that
 skill's directory.
 
-When no .token-limits.json is found, these defaults apply:
-
-  defaults:
-    SKILL.md              500 tokens
-    references/**/*.md   1000 tokens
-    docs/**/*.md         1500 tokens
-    *.md                 2000 tokens
-
-  overrides (not subject to the *.md default):
-    README.md            3000 tokens
-    CONTRIBUTING.md      2500 tokens`,
+Patterns support workspace-root-relative paths (e.g., plugin/skills/**/SKILL.md).
+Configure tokens.warningThreshold and tokens.fallbackLimit in .waza.yaml.`,
 		Args: cobra.ArbitraryArgs,
 		RunE: runCheck,
 	}

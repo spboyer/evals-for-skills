@@ -109,10 +109,9 @@ func ConfigDetectOptions() []workspace.DetectOption {
 	}
 }
 
-// resolveLimitsConfig returns a TokenLimitsConfig from .waza.yaml if the
-// skill directory has no local .token-limits.json. When neither source
-// provides limits the returned Config has nil Defaults, which tells
-// TokenLimitsChecker.Check to auto-load defaults.
+// resolveLimitsConfig returns a TokenLimitsConfig using .waza.yaml as the
+// primary source. Falls back to .token-limits.json (handled by Check()),
+// then built-in defaults when neither provides limits.
 func resolveLimitsConfig(skillDir string) checks.TokenLimitsConfig {
 	// Skill-level .token-limits.json takes precedence — let Check() load it.
 	if _, err := os.Stat(filepath.Join(skillDir, ".token-limits.json")); err == nil {

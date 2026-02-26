@@ -1,6 +1,32 @@
 # Token Limits Configuration
 
-The `.token-limits.json` file defines token budgets for markdown files in your project. The token CLI uses this configuration to validate files and report violations.
+Token limits are resolved in priority order:
+
+1. **`.waza.yaml`** `tokens.limits` section — primary, workspace-level config
+2. **`.token-limits.json`** in the skill directory — fallback for standalone use
+3. **Built-in defaults** when neither config exists
+
+You can also configure `tokens.warningThreshold` and `tokens.fallbackLimit` in `.waza.yaml`.
+Patterns support workspace-root-relative paths (e.g., `plugin/skills/**/SKILL.md`).
+
+## .waza.yaml tokens section (recommended)
+
+```yaml
+tokens:
+  warningThreshold: 2500
+  fallbackLimit: 2000
+  limits:
+    defaults:
+      "SKILL.md": 500
+      "references/**/*.md": 1000
+      "*.md": 2000
+    overrides:
+      "README.md": 3000
+```
+
+## .token-limits.json (fallback)
+
+The `.token-limits.json` file can still define token budgets per skill directory. It is checked when `.waza.yaml` does not provide limits.
 
 ## File Structure
 
@@ -114,7 +140,7 @@ Example resolution for `references/test-templates/jest.md`:
 
 ## Default Configuration
 
-When `.token-limits.json` is missing, these defaults apply:
+When neither `.waza.yaml` nor `.token-limits.json` provides limits, these built-in defaults apply:
 
 ```json
 {

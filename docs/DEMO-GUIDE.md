@@ -180,7 +180,7 @@ echo ""
 echo "📊 Token count as JSON:"
 ./waza-bin tokens count examples/ --format json | jq '.'
 
-# Check files against token limits (500 token limit per file)
+# Check files against token limits (from .waza.yaml or built-in defaults)
 echo ""
 echo "✅ Check against token limits:"
 ./waza-bin tokens check examples/ --limit 500

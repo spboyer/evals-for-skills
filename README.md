@@ -302,7 +302,7 @@ Check if a skill is ready for submission with a comprehensive readiness report.
 
 Performs five types of checks:
 1. **Compliance scoring** — Validates frontmatter adherence (Low/Medium/Medium-High/High)
-2. **Token budget** — Checks if SKILL.md is within token limits (default: 500 tokens)
+2. **Token budget** — Checks if SKILL.md is within token limits (configurable in `.waza.yaml` `tokens.limits`)
 3. **Evaluation suite** — Checks for the presence of eval.yaml
 4. **Spec compliance** — Validates the skill against the agentskills.io spec (frontmatter structure, required fields, naming rules, directory match, description length, compatibility, license, and version)
 5. **Advisory checks** — Detects quality and maintainability issues (reference module count, complexity classification, negative delta risk patterns, procedural content, and over-specificity)

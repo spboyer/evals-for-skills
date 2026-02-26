@@ -8,7 +8,12 @@ func NewCommand() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "tokens",
 		Short: "Token management for markdown files",
-		Long: `Analyze token counts in markdown files. Subcommands:
+		Long: `Analyze token counts in markdown files.
+
+Limits are loaded from .waza.yaml (tokens.limits), falling back to
+.token-limits.json, then built-in defaults.
+
+Subcommands:
   check     Check files against token limits
   compare   Compare tokens between git refs
   count     Count tokens in markdown files

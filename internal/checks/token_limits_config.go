@@ -24,7 +24,7 @@ type TokenLimitsConfig struct {
 	Overrides   map[string]int `json:"overrides"`
 }
 
-// DefaultLimits is the fallback configuration when no .token-limits.json exists.
+// DefaultLimits is the built-in fallback when neither .waza.yaml nor .token-limits.json provides limits.
 var DefaultLimits = TokenLimitsConfig{
 	Defaults: map[string]int{
 		"SKILL.md":           500,
@@ -39,6 +39,7 @@ var DefaultLimits = TokenLimitsConfig{
 }
 
 // LoadLimitsConfig unmarshals dir/.token-limits.json or returns [DefaultLimits].
+// Note: callers should prefer .waza.yaml tokens.limits; this is the fallback path.
 func LoadLimitsConfig(dir string) (TokenLimitsConfig, error) {
 	path := filepath.Join(dir, ".token-limits.json")
 	data, err := os.ReadFile(path)

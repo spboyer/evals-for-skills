@@ -369,8 +369,9 @@ func checkReadiness(skillDir string, wsCtx *workspace.WorkspaceContext) (*readin
 	return report, nil
 }
 
-// resolveSkillTokenLimit loads per-skill token limits from .waza.yaml (or
-// .token-limits.json) and returns the resolved limit for SKILL.md.
+// resolveSkillTokenLimit loads per-skill token limits from .waza.yaml
+// (primary) or .token-limits.json (fallback) and returns the resolved
+// limit for SKILL.md.
 // Falls back to 0 (which lets TokenBudgetChecker use scoring.TokenSoftLimit).
 func resolveSkillTokenLimit(startDir string) int {
 	// Try project config first (.waza.yaml tokens.limits section)
@@ -395,7 +396,7 @@ func resolveSkillTokenLimit(startDir string) int {
 		}
 	}
 
-	// Try .token-limits.json
+	// Try .token-limits.json (fallback)
 	limCfg, err := checks.LoadLimitsConfig(startDir)
 	if err == nil {
 		lr := checks.GetLimitForFile("SKILL.md", limCfg)
