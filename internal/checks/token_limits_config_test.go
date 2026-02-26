@@ -122,5 +122,55 @@ func TestLoadLimitsConfig_NoFile(t *testing.T) {
 	require.Equal(t, DefaultLimits, cfg)
 }
 
+// TestGetLimitForFile_WorkspaceRelPrefix verifies that workspace-root-relative
+// patterns (e.g. "plugin/skills/**/SKILL.md") match when a workspace prefix is
+// supplied, even though the file path itself is skill-directory-relative.
+func TestGetLimitForFile_WorkspaceRelPrefix(t *testing.T) {
+	cfg := TokenLimitsConfig{
+		Defaults: map[string]int{
+			"plugin/skills/**/SKILL.md":          1000,
+			"plugin/skills/**/references/*.md":   800,
+			"*.md":                               2000,
+		},
+		Overrides: map[string]int{
+			"plugin/skills/special/OVERRIDE.md": 42,
+		},
+	}
+
+	// Without prefix: SKILL.md only matches *.md (2000).
+	lr := GetLimitForFile("SKILL.md", cfg)
+	require.Equal(t, 2000, lr.Limit)
+	require.Equal(t, "*.md", lr.Pattern)
+
+	// With prefix: SKILL.md → plugin/skills/azure-deploy/SKILL.md → matches 1000.
+	lr = GetLimitForFile("SKILL.md", cfg, "plugin/skills/azure-deploy")
+	require.Equal(t, 1000, lr.Limit)
+	require.Equal(t, "plugin/skills/**/SKILL.md", lr.Pattern)
+
+	// Nested reference file with prefix.
+	lr = GetLimitForFile("references/doc.md", cfg, "plugin/skills/azure-deploy")
+	require.Equal(t, 800, lr.Limit)
+	require.Equal(t, "plugin/skills/**/references/*.md", lr.Pattern)
+
+	// Override matched via prefixed path.
+	lr = GetLimitForFile("OVERRIDE.md", cfg, "plugin/skills/special")
+	require.Equal(t, 42, lr.Limit)
+
+	// Empty prefix behaves like no prefix.
+	lr = GetLimitForFile("SKILL.md", cfg, "")
+	require.Equal(t, 2000, lr.Limit)
+
+	// Skill-relative match still wins when pattern matches without prefix.
+	cfgLocal := TokenLimitsConfig{
+		Defaults: map[string]int{
+			"SKILL.md": 500,
+			"plugin/skills/**/SKILL.md": 1000,
+		},
+		Overrides: map[string]int{},
+	}
+	lr = GetLimitForFile("SKILL.md", cfgLocal, "plugin/skills/azure-deploy")
+	require.Equal(t, 500, lr.Limit, "skill-relative match should take precedence")
+}
+
 // Note: .waza.yaml integration tests for token limits live in
 // cmd/waza/tokens/internal/limits_test.go, not here.

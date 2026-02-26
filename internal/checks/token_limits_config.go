@@ -124,11 +124,25 @@ type LimitResult struct {
 }
 
 // GetLimitForFile determines the token limit for a file.
-func GetLimitForFile(filePath string, cfg TokenLimitsConfig) LimitResult {
+// An optional workspaceRelPrefix (e.g. "plugin/skills/azure-deploy") is
+// prepended to filePath so workspace-root-relative patterns such as
+// "plugin/skills/**/SKILL.md" can match alongside skill-relative patterns.
+// Patterns are tried in specificity order; for each pattern both the
+// skill-relative and workspace-relative paths are checked.
+func GetLimitForFile(filePath string, cfg TokenLimitsConfig, workspaceRelPrefix ...string) LimitResult {
 	normalized := normalizePath(filePath)
+
+	// Compute workspace-relative path when a prefix is provided.
+	prefixed := ""
+	if len(workspaceRelPrefix) > 0 && workspaceRelPrefix[0] != "" {
+		prefixed = normalizePath(workspaceRelPrefix[0] + "/" + filePath)
+	}
 
 	for overridePath, limit := range cfg.Overrides {
 		if normalized == overridePath || strings.HasSuffix(normalized, "/"+overridePath) {
+			return LimitResult{Limit: limit, Pattern: overridePath}
+		}
+		if prefixed != "" && (prefixed == overridePath || strings.HasSuffix(prefixed, "/"+overridePath)) {
 			return LimitResult{Limit: limit, Pattern: overridePath}
 		}
 	}
@@ -147,6 +161,9 @@ func GetLimitForFile(filePath string, cfg TokenLimitsConfig) LimitResult {
 
 	for _, e := range entries {
 		if matchesPattern(normalized, e.pattern) {
+			return LimitResult{Limit: e.limit, Pattern: e.pattern}
+		}
+		if prefixed != "" && matchesPattern(prefixed, e.pattern) {
 			return LimitResult{Limit: e.limit, Pattern: e.pattern}
 		}
 	}

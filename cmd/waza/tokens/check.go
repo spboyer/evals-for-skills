@@ -89,6 +89,7 @@ func runCheck(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return fmt.Errorf("getting current directory: %w", err)
 	}
+	workspaceRoot := rootDir
 
 	var paths []string
 
@@ -112,7 +113,7 @@ func runCheck(cmd *cobra.Command, args []string) error {
 		if ctxErr == nil {
 			switch ctx.Type {
 			case workspace.ContextMultiSkill:
-				return runCheckBatch(cmd, ctx.Skills, format, strict, quiet)
+				return runCheckBatch(cmd, ctx.Skills, format, strict, quiet, workspaceRoot)
 			case workspace.ContextSingleSkill:
 				rootDir = ctx.Skills[0].Dir
 			}
@@ -120,7 +121,7 @@ func runCheck(cmd *cobra.Command, args []string) error {
 		// ContextNone or error: fall through to CWD scan
 	}
 
-	results, err := computeCheckResults(rootDir, paths)
+	results, err := computeCheckResults(rootDir, paths, computeWorkspaceRelPrefix(workspaceRoot, rootDir))
 	if err != nil {
 		return err
 	}
@@ -239,9 +240,11 @@ func checkJSON(results []checkResult) (string, error) {
 }
 
 // computeCheckResults runs the token limits checker and returns sorted results.
-func computeCheckResults(rootDir string, paths []string) ([]checkResult, error) {
+func computeCheckResults(rootDir string, paths []string, workspaceRelPrefix string) ([]checkResult, error) {
 	checker := &checks.TokenLimitsChecker{
-		Paths: paths,
+		Config:             resolveLimitsConfig(rootDir),
+		Paths:              paths,
+		WorkspaceRelPrefix: workspaceRelPrefix,
 	}
 	limitsData, err := checker.Limits(skill.Skill{Path: filepath.Join(rootDir, "SKILL.md")})
 	if err != nil {
@@ -285,7 +288,7 @@ type skillCheckReport struct {
 }
 
 // runCheckBatch runs token limit checks for each skill in a multi-skill workspace.
-func runCheckBatch(cmd *cobra.Command, skills []workspace.SkillInfo, format string, strict bool, quiet bool) error {
+func runCheckBatch(cmd *cobra.Command, skills []workspace.SkillInfo, format string, strict bool, quiet bool, workspaceRoot string) error {
 	out := cmd.OutOrStdout()
 	anyExceeded := false
 
@@ -301,7 +304,7 @@ func runCheckBatch(cmd *cobra.Command, skills []workspace.SkillInfo, format stri
 			}
 		}
 
-		results, err := computeCheckResults(si.Dir, nil)
+		results, err := computeCheckResults(si.Dir, nil, computeWorkspaceRelPrefix(workspaceRoot, si.Dir))
 		if err != nil {
 			fmt.Fprintf(cmd.ErrOrStderr(), "  ⚠️  %s: %s\n", si.Name, err) //nolint:errcheck
 			if format == "json" {

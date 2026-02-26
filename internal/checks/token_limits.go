@@ -12,9 +12,10 @@ import (
 
 // TokenLimitsChecker validates that markdown files are within configured token limits.
 type TokenLimitsChecker struct {
-	Config    TokenLimitsConfig // zero value triggers auto-loading from skill dir
-	Paths     []string          // specific paths to check; nil scans skill dir
-	Tokenizer tokens.Tokenizer  // empty means use TokenizerDefault
+	Config             TokenLimitsConfig // zero value triggers auto-loading from skill dir
+	Paths              []string          // specific paths to check; nil scans skill dir
+	Tokenizer          tokens.Tokenizer  // empty means use TokenizerDefault
+	WorkspaceRelPrefix string            // skill dir relative to workspace root (e.g. "plugin/skills/azure-deploy")
 }
 
 // TokenLimitFileResult holds check results for a single file.
@@ -76,7 +77,7 @@ func (c *TokenLimitsChecker) Check(sk skill.Skill) (*CheckResult, error) {
 		}
 		rel = filepath.ToSlash(filepath.Clean(rel))
 		count := counter.Count(strings.ReplaceAll(string(content), "\r\n", "\n"))
-		lr := GetLimitForFile(rel, cfg)
+		lr := GetLimitForFile(rel, cfg, c.WorkspaceRelPrefix)
 		isExceeded := count > lr.Limit
 		if isExceeded {
 			exceeded++

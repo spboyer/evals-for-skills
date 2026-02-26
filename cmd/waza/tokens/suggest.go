@@ -115,6 +115,7 @@ func runSuggest(cmd *cobra.Command, args []string) error {
 	}
 
 	var filePaths []string
+	workspaceRoot := rootDir
 
 	if len(args) > 0 && workspace.LooksLikePath(args[0]) {
 		// Explicit paths — use as-is (escape hatch)
@@ -136,7 +137,7 @@ func runSuggest(cmd *cobra.Command, args []string) error {
 		if ctxErr == nil {
 			switch ctx.Type {
 			case workspace.ContextMultiSkill:
-				return runSuggestBatch(cmd, ctx.Skills, format, minSavings, copilot, modelID)
+				return runSuggestBatch(cmd, ctx.Skills, format, minSavings, copilot, modelID, workspaceRoot)
 			case workspace.ContextSingleSkill:
 				rootDir = ctx.Skills[0].Dir
 			}
@@ -161,13 +162,15 @@ func runSuggest(cmd *cobra.Command, args []string) error {
 		}()
 	}
 
+	wsPrefix := computeWorkspaceRelPrefix(workspaceRoot, rootDir)
+
 	var analyses []fileAnalysis
 	if copilot {
 		stopSpinner := spinner.Start(errOut, "🤖 Analyzing with Copilot...")
-		analyses, err = collectFileAnalyses(rootDir, filePaths, counter, engine, cmd)
+		analyses, err = collectFileAnalyses(rootDir, filePaths, counter, engine, cmd, wsPrefix)
 		stopSpinner()
 	} else {
-		analyses, err = collectFileAnalyses(rootDir, filePaths, counter, nil, cmd)
+		analyses, err = collectFileAnalyses(rootDir, filePaths, counter, nil, cmd, wsPrefix)
 	}
 	if err != nil {
 		return err
@@ -189,8 +192,12 @@ func runSuggest(cmd *cobra.Command, args []string) error {
 
 // collectFileAnalyses discovers and analyzes files in rootDir.
 // When engine is non-nil, Copilot-based analysis is used; otherwise heuristic analysis.
-func collectFileAnalyses(rootDir string, paths []string, counter tokens.Counter, engine execution.AgentEngine, cmd *cobra.Command) ([]fileAnalysis, error) {
-	checker := &checks.TokenLimitsChecker{Paths: paths}
+func collectFileAnalyses(rootDir string, paths []string, counter tokens.Counter, engine execution.AgentEngine, cmd *cobra.Command, workspaceRelPrefix string) ([]fileAnalysis, error) {
+	checker := &checks.TokenLimitsChecker{
+		Config:             resolveLimitsConfig(rootDir),
+		Paths:              paths,
+		WorkspaceRelPrefix: workspaceRelPrefix,
+	}
 	limitsData, err := checker.Limits(skill.Skill{Path: filepath.Join(rootDir, "SKILL.md")})
 	if err != nil {
 		return nil, err
@@ -290,7 +297,7 @@ func collectFileAnalyses(rootDir string, paths []string, counter tokens.Counter,
 }
 
 // runSuggestBatch runs token suggestions for each skill in a multi-skill workspace.
-func runSuggestBatch(cmd *cobra.Command, skills []workspace.SkillInfo, format string, minSavings int, copilot bool, modelID string) error {
+func runSuggestBatch(cmd *cobra.Command, skills []workspace.SkillInfo, format string, minSavings int, copilot bool, modelID string, workspaceRoot string) error {
 	counter, err := tokens.NewCounter(tokens.TokenizerDefault)
 	if err != nil {
 		return err
@@ -317,7 +324,7 @@ func runSuggestBatch(cmd *cobra.Command, skills []workspace.SkillInfo, format st
 			fmt.Fprintf(out, "─── %s ───\n", si.Name) //nolint:errcheck
 		}
 
-		analyses, aErr := collectFileAnalyses(si.Dir, nil, counter, engine, cmd)
+		analyses, aErr := collectFileAnalyses(si.Dir, nil, counter, engine, cmd, computeWorkspaceRelPrefix(workspaceRoot, si.Dir))
 		if aErr != nil {
 			fmt.Fprintf(errOut, "  ⚠️  %s: %s\n", si.Name, aErr) //nolint:errcheck
 			continue

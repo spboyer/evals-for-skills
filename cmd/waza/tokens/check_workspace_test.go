@@ -2,8 +2,10 @@ package tokens
 
 import (
 	"bytes"
+	"encoding/json"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -262,4 +264,85 @@ func TestWorkspace_CheckEmptySkillsDir(t *testing.T) {
 	err := cmd.Execute()
 	// Should fail — no SKILL.md means no skill to find
 	require.Error(t, err, "should error when skill dir exists but has no SKILL.md")
+}
+
+// ---------------------------------------------------------------------------
+// Workspace-root-relative pattern tests (Issue #444)
+// ---------------------------------------------------------------------------
+
+// TestWorkspace_CheckPrefixedPatterns verifies that workspace-root-relative
+// patterns in .waza.yaml (e.g. "custom-skills/**/SKILL.md") resolve
+// correctly when tokens check runs against a specific skill.
+func TestWorkspace_CheckPrefixedPatterns(t *testing.T) {
+	dir := t.TempDir()
+
+	writeWazaYaml(t, dir, `paths:
+  skills: custom-skills/
+tokens:
+  limits:
+    defaults:
+      "custom-skills/**/SKILL.md": 1000
+      "custom-skills/**/references/*.md": 800
+`)
+
+	skillDir := filepath.Join(dir, "custom-skills", "my-skill")
+	writeSkill(t, skillDir, "my-skill")
+
+	refsDir := filepath.Join(skillDir, "references")
+	require.NoError(t, os.MkdirAll(refsDir, 0o755))
+	require.NoError(t, os.WriteFile(filepath.Join(refsDir, "doc.md"), []byte("# Doc\n"), 0o644))
+
+	t.Chdir(dir)
+
+	out := new(bytes.Buffer)
+	cmd := newCheckCmd()
+	cmd.SetOut(out)
+	cmd.SetArgs([]string{"my-skill", "--format", "json"})
+	require.NoError(t, cmd.Execute())
+
+	var report checkReport
+	require.NoError(t, json.Unmarshal(out.Bytes(), &report))
+	require.Equal(t, 2, report.TotalFiles, "should find SKILL.md and references/doc.md")
+
+	for _, r := range report.Results {
+		switch {
+		case strings.HasSuffix(r.File, "SKILL.md"):
+			assert.Equal(t, 1000, r.Limit, "SKILL.md should match prefixed pattern")
+			assert.Equal(t, "custom-skills/**/SKILL.md", r.Pattern)
+		case strings.HasSuffix(r.File, "doc.md"):
+			assert.Equal(t, 800, r.Limit, "doc.md should match prefixed references pattern")
+			assert.Equal(t, "custom-skills/**/references/*.md", r.Pattern)
+		default:
+			t.Errorf("unexpected file in results: %s", r.File)
+		}
+	}
+}
+
+// TestWorkspace_CheckPrefixedPatterns_BatchMode verifies workspace-root-relative
+// patterns work when no args are given (multi-skill batch mode).
+func TestWorkspace_CheckPrefixedPatterns_BatchMode(t *testing.T) {
+	dir := t.TempDir()
+
+	writeWazaYaml(t, dir, `paths:
+  skills: custom-skills/
+tokens:
+  limits:
+    defaults:
+      "custom-skills/**/SKILL.md": 750
+`)
+
+	writeSkill(t, filepath.Join(dir, "custom-skills", "sk-a"), "sk-a")
+	writeSkill(t, filepath.Join(dir, "custom-skills", "sk-b"), "sk-b")
+
+	t.Chdir(dir)
+
+	out := new(bytes.Buffer)
+	cmd := newCheckCmd()
+	cmd.SetOut(out)
+	// No args — batch mode
+	require.NoError(t, cmd.Execute())
+
+	result := out.String()
+	assert.Contains(t, result, "sk-a")
+	assert.Contains(t, result, "sk-b")
 }

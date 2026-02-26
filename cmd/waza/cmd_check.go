@@ -380,7 +380,17 @@ func resolveSkillTokenLimit(startDir string) int {
 			Overrides: cfg.Tokens.Limits.Overrides,
 		}
 		if limCfg.Defaults != nil {
-			lr := checks.GetLimitForFile("SKILL.md", limCfg)
+			// Compute workspace-relative prefix so workspace-root-relative
+			// patterns (e.g. "plugin/skills/**/SKILL.md") can match.
+			prefix := ""
+			if wd, wdErr := os.Getwd(); wdErr == nil {
+				if abs, absErr := filepath.Abs(startDir); absErr == nil {
+					if rel, relErr := filepath.Rel(wd, abs); relErr == nil && rel != "." {
+						prefix = filepath.ToSlash(rel)
+					}
+				}
+			}
+			lr := checks.GetLimitForFile("SKILL.md", limCfg, prefix)
 			return lr.Limit
 		}
 	}
