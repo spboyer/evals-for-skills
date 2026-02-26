@@ -197,7 +197,7 @@ Run an evaluation benchmark from a spec file.
 | `--cache-dir <dir>` | | Cache directory (default: `.waza-cache`) |
 | `--reporter <spec>` | | Output reporters: `json` (default), `junit:<path>` (repeatable) |
 | `--baseline` | | A/B testing mode — runs each task twice (without skill = baseline, with skill = normal) and computes improvement scores |
-| `--discover` | | Auto skill discovery — walks directory tree for SKILL.md + eval.yaml pairs |
+| `--discover` | | Auto skill discovery — walks directory tree for SKILL.md + eval.yaml (root/tests/evals) |
 | `--strict` | | Fail if any SKILL.md lacks eval coverage (use with `--discover`) |
 
 **Result Caching**

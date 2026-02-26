@@ -2,7 +2,6 @@ package discovery
 
 import (
 	"fmt"
-	"io/fs"
 	"os"
 	"path/filepath"
 	"strings"
@@ -23,7 +22,7 @@ func (d DiscoveredSkill) HasEval() bool {
 
 // Discover walks the given root directory and finds all skills with eval configs.
 // A skill is a directory containing SKILL.md. An eval config is eval.yaml either
-// in the same directory or in a tests/ subdirectory.
+// in the same directory, in an evals/ subdirectory, or in a tests/ subdirectory.
 func Discover(root string) ([]DiscoveredSkill, error) {
 	absRoot, err := filepath.Abs(root)
 	if err != nil {
@@ -35,25 +34,30 @@ func Discover(root string) ([]DiscoveredSkill, error) {
 		return nil, fmt.Errorf("root path: %w", err)
 	}
 
+	resolvedRoot, err := filepath.EvalSymlinks(absRoot)
+	if err != nil {
+		return nil, fmt.Errorf("resolving root symlink: %w", err)
+	}
+
 	var skills []DiscoveredSkill
 
-	err = filepath.WalkDir(absRoot, func(path string, d fs.DirEntry, err error) error {
+	err = filepath.Walk(resolvedRoot, func(path string, info os.FileInfo, err error) error {
 		if err != nil {
 			return nil // skip inaccessible entries
 		}
 
 		// Skip hidden directories
-		if d.IsDir() && strings.HasPrefix(d.Name(), ".") {
-			return fs.SkipDir
+		if info.IsDir() && strings.HasPrefix(info.Name(), ".") {
+			return filepath.SkipDir
 		}
 
 		// Skip node_modules and similar
-		if d.IsDir() && (d.Name() == "node_modules" || d.Name() == "vendor") {
-			return fs.SkipDir
+		if info.IsDir() && (info.Name() == "node_modules" || info.Name() == "vendor") {
+			return filepath.SkipDir
 		}
 
 		// Look for SKILL.md files
-		if !d.IsDir() && d.Name() == "SKILL.md" {
+		if !info.IsDir() && info.Name() == "SKILL.md" {
 			dir := filepath.Dir(path)
 			name := filepath.Base(dir)
 			evalPath := findEvalConfig(dir)
@@ -69,17 +73,18 @@ func Discover(root string) ([]DiscoveredSkill, error) {
 		return nil
 	})
 	if err != nil {
-		return nil, fmt.Errorf("walking directory %s: %w", absRoot, err)
+		return nil, fmt.Errorf("walking directory %s: %w", resolvedRoot, err)
 	}
 
 	return skills, nil
 }
 
 // findEvalConfig looks for eval.yaml in standard locations relative to a skill directory.
-// Priority: tests/eval.yaml > eval.yaml
+// Priority: tests/eval.yaml > evals/eval.yaml > eval.yaml
 func findEvalConfig(skillDir string) string {
 	candidates := []string{
 		filepath.Join(skillDir, "tests", "eval.yaml"),
+		filepath.Join(skillDir, "evals", "eval.yaml"),
 		filepath.Join(skillDir, "eval.yaml"),
 	}
 

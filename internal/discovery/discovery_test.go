@@ -174,6 +174,25 @@ func TestDiscoverTestsEvalTakesPriority(t *testing.T) {
 	}
 }
 
+func TestDiscoverEvalsSubdir(t *testing.T) {
+	root := t.TempDir()
+
+	setupSkillDir(t, filepath.Join(root, "evals-skill"))
+	setupEvalFile(t, filepath.Join(root, "evals-skill", "evals", "eval.yaml"))
+
+	skills, err := Discover(root)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if len(skills) != 1 {
+		t.Fatalf("expected 1 skill, got %d", len(skills))
+	}
+	if filepath.Base(filepath.Dir(skills[0].EvalPath)) != "evals" {
+		t.Error("evals/eval.yaml should be discovered")
+	}
+}
+
 func TestDiscoverNonexistentRoot(t *testing.T) {
 	_, err := Discover("/nonexistent/path/that/does/not/exist")
 	if err == nil {
