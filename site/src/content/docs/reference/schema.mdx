@@ -445,20 +445,21 @@ Optional project-level configuration file.
 
 ```yaml
 # Root of waza project
-name: my-eval-suite
-version: "1.0"
+paths:
+  skills: skills
+  evals: evals
+  results: results
 
 # Model defaults
-model: claude-sonnet-4.6
-timeout_seconds: 300
+defaults:
+  model: claude-sonnet-4.6
+  timeout: 300
+  workers: 4
 
-# Directories
-skills_dir: skills
-evals_dir: evals
-fixtures_dir: fixtures
-
-# CI/CD
-github_actions: true
+# Cache settings
+cache:
+  enabled: false
+  dir: .waza-cache
 ```
 
 ## Example Complete eval.yaml
