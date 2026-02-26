@@ -244,3 +244,50 @@ Top issues are multiplicative with benchmark scale (tasks × runs × graders). C
 ### Session Log
 
 See `.ai-team/log/2026-02-26-performance-audit.md` for detailed session notes.
+
+## 2026-02-26: Documentation Audit — 8 findings (3 blocking, 5 stale)
+
+**By:** Saul (Documentation Lead) + Livingston (Documentation Specialist)  
+**Date:** 2026-02-26  
+**Status:** AUDIT + REMEDIATION IN PROGRESS  
+**Impact:** Release completeness, user guidance, accuracy
+
+### What
+
+Comprehensive audit of waza documentation across site, README, guides, and CLI reference:
+
+**Blocking Issues (must fix before v0.9.0 release):**
+1. **tool_constraint grader missing from graders guide** — Implemented in code, documented in cli.mdx, but comprehensive graders guide (guides/graders.mdx) omits it. Claims "11 built-in types" but only documents 10. Needs ~80-line section with config options, use cases, and examples.
+2. **AZD extension URL outdated** — releases.mdx still points to v0.8.0 instead of v0.9.0. Users installing via azd will get outdated extension. Should be: `azd-ext-microsoft-azd-waza_0.9.0` (not 0.8.0).
+3. **Token commands documented but not implemented** — cli.mdx documents `waza tokens count`, `check`, `profile`, `suggest` (lines 293–351), but no `cmd_tokens.go` exists. Commands only exist: run, init, new, check, compare, suggest, serve, dev, cache. Either remove docs or implement immediately.
+
+**Stale Sections (should address before launch):**
+1. **eval-yaml.mdx missing 7 v0.8.0 config fields:** group_by, inputs, tasks_from, max_attempts, hooks, weight (on graders), template variables. Guide documents basic config but misses feature expansion.
+2. **No examples for v0.9.0 features:** Missing baseline testing, pairwise LLM judging, tool_constraint examples, auto-discovery examples. Only basic code-explainer and grader-showcase exist.
+3. **Workspace-aware tokens not documented:** PR #443 added batch mode and config-driven limits, but docs don't explain `waza tokens check` (no args) auto-detects workspace. Pattern matching for workspace-root-relative paths not mentioned.
+4. **Schema example uses snake_case keys:** schema.mdx shows old naming (timeout_seconds, skills_dir, evals_dir, fixtures_dir) but PR #440 converted all keys to camelCase (programTimeout, skillsDir, evalsDir, fixturesDir).
+5. **waza check --format json flag missing:** PR #452 added `--format json` support, but cli.mdx doesn't document it. Only `waza tokens check --format json` is documented.
+
+**Passes:**
+- Site builds without errors (13 pages, 2.32s) ✓
+- CHANGELOG.md synchronized with version.txt (v0.9.0) ✓
+- install.sh handles macOS ARM64 correctly ✓
+- Recent features (spec compliance, advisory checks, link validation, --discover, interactive skill) well-documented ✓
+
+### Why
+
+Documentation must stay in sync with code. Release consistency requires: same version numbers (v0.9.0 everywhere), complete feature coverage, and accurate examples. Token command docs being present but unimplemented is a usability trap.
+
+### Remediation
+
+**PR #454 (Livingston):** Fixed cli.mdx (added `--format` flag) and schema.mdx (updated to camelCase keys)
+
+**PR #455 (Linus):** Fixed graders.mdx (added tool_constraint section), eval-yaml.mdx (added 6 missing config fields with examples), releases.mdx (v0.8.0 → v0.9.0 AZD URL)
+
+Both PRs created from separate worktrees in parallel.
+
+**Remaining:** Token command status (implement or remove docs) is still open pending Rusty decision.
+
+### Session Log
+
+See `.ai-team/log/2026-02-26-docs-audit-fixes.md` for session notes.
