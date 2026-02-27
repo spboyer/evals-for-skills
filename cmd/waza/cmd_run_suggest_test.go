@@ -236,9 +236,7 @@ func TestBuildRunSuggestionPrompt_IncludesOnlyFailureEvidence(t *testing.T) {
 		},
 	}
 
-	skillPaths := resolveSuggestionSkillPaths(spec, filepath.Join(skillDir, "eval.yaml"))
-	resources := loadSkillResources(skillPaths)
-	prompt := buildRunAnalysisPrompt(spec, failingTests, failedTriggers, testDefinitions, resources)
+	prompt := buildRunAnalysisPrompt(spec, failingTests, failedTriggers, testDefinitions)
 
 	assert.Contains(t, prompt, "Global graders from eval.yaml")
 	assert.Contains(t, prompt, "must-mention-foo")
@@ -272,7 +270,7 @@ func TestBuildRunSuggestionPrompt_OmitsBenchmarkSectionWhenNoBenchmarkFailures(t
 		},
 	}
 
-	prompt := buildRunAnalysisPrompt(spec, nil, failedTriggers, nil, nil)
+	prompt := buildRunAnalysisPrompt(spec, nil, failedTriggers, nil)
 
 	assert.Contains(t, prompt, `### Prompt: "Write me a new API endpoint"`)
 	assert.Contains(t, prompt, "Given this prompt the agent should not have used the skill, however it did.")
@@ -300,7 +298,7 @@ func TestBuildRunSuggestionPrompt_OmitsTriggerSectionWhenNoTriggerFailures(t *te
 		"fail-1": "id: fail-1\nname: failing-test\ninputs:\n  prompt: explain x",
 	}
 
-	prompt := buildRunAnalysisPrompt(spec, failingTests, nil, testDefinitions, nil)
+	prompt := buildRunAnalysisPrompt(spec, failingTests, nil, testDefinitions)
 
 	assert.Contains(t, prompt, "### Test: failing-test (`fail-1`)")
 	assert.NotContains(t, prompt, "### Prompt:")
@@ -341,8 +339,7 @@ func TestBuildRunSuggestionPrompt_IncludesGraderDocs(t *testing.T) {
 		},
 	}
 
-	resources := loadSkillResources(nil)
-	prompt := buildRunAnalysisPrompt(spec, failingTests, nil, nil, resources)
+	prompt := buildRunAnalysisPrompt(spec, failingTests, nil, nil)
 
 	// Should include the grader reference section
 	assert.Contains(t, prompt, "## Grader reference")

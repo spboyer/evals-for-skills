@@ -73,7 +73,7 @@ func generateEvalAnalysis(
 	}
 
 	resources := loadSkillResources(resolvedSkillPaths)
-	prompt := buildRunAnalysisPrompt(spec, failingTests, failedTriggers, testDefinitions, resources)
+	prompt := buildRunAnalysisPrompt(spec, failingTests, failedTriggers, testDefinitions)
 	res, err := engine.Execute(ctx, &execution.ExecutionRequest{
 		Message:    prompt,
 		Timeout:    120 * time.Second,
@@ -281,7 +281,6 @@ func buildRunAnalysisPrompt(
 	failingTests []models.TestOutcome,
 	failedTriggers []models.TriggerResult,
 	testDefinitions map[string]string,
-	resources []execution.ResourceFile,
 ) string {
 	var p strings.Builder
 	p.WriteString(evalAnalysisPrompt)
