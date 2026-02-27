@@ -54,7 +54,7 @@ main() {
 
   # Get latest binary release tag (filter for v* tags; skip azd extension releases)
   tag="$(curl -fsSL "https://api.github.com/repos/${REPO}/releases" \
-    | grep '"tag_name"' | grep '"v' | head -1 | cut -d'"' -f4)"
+    | grep '"tag_name": "v' | head -1 | cut -d'"' -f4)"
 
   if [ -z "$tag" ]; then
     echo "Error: could not determine latest release." >&2
