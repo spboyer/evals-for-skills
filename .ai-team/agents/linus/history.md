@@ -92,3 +92,10 @@ All code roles now use `claude-opus-4.6`. Docs/Scribe/diversity use `gemini-3-pr
 - **Files changed:** `cmd/waza/cmd_suggest.go` (new), `cmd/waza/cmd_suggest_test.go` (new), `internal/suggest/prompt.go` (new), `internal/suggest/suggest.go` (new), `internal/suggest/suggest_test.go` (new), `cmd/waza/root.go`, `README.md`, `site/src/content/docs/reference/cli.mdx`
 - **What:** Added `waza suggest <skill-path>` for LLM-driven eval generation. Command supports `--model`, `--dry-run` (default), `--apply`, `--output-dir`, and `--format yaml|json`. New `internal/suggest` package builds prompt context from SKILL.md + grader types + eval schema summary + example eval, parses structured YAML responses, validates generated `eval_yaml`, and writes `eval.yaml`/task/fixture files when applying.
 - **Key learning:** A robust parser needs to handle both structured wrapper YAML (`eval_yaml` + files) and fenced YAML blocks from models. Validating generated `eval_yaml` against `models.BenchmarkSpec.Validate()` catches malformed model output early before writing files.
+
+### Azure Storage — ResultStore Interface & LocalStore
+- **Date:** 2026-02-27
+- **Branch:** `squad/azure-storage-results`
+- **Files changed:** `internal/storage/store.go` (new), `internal/storage/local.go` (new), `internal/storage/local_test.go` (new), `internal/projectconfig/config.go`
+- **What:** Created `ResultStore` interface (Upload/List/Download/Compare) with `LocalStore` filesystem adapter. Added `StorageConfig` to `ProjectConfig`. Factory function `NewStore` routes to local or returns error for azure-blob (stub for Virgil). 12 tests.
+- **Key learning:** Keeping `ResultStore` separate from `webapi.FileStore` is the right call — different lifecycle (write+read vs. read-only dashboard), different filtering needs. The lazy-load + cache pattern from `FileStore` translates cleanly. `StorageConfig.Enabled` as a plain bool (not `*bool`) is fine here since the zero value (false) is the correct default — no need for the pointer trick used on other config bools.
