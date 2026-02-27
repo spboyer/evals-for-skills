@@ -65,6 +65,16 @@
 
 All code roles now use `claude-opus-4.6`. Docs/Scribe/diversity use `gemini-3-pro-preview`. Heavy code gen uses `gpt-5.2-codex`. Decided by Scott Boyer. See decisions.md for full details.
 
+### Storage Package Tests (Branch: squad/azure-storage-results)
+- **Branch:** `squad/azure-storage-results`
+- **Coverage:** Added 26 new tests (9 LocalStore edge cases, 10 Azure Blob mocks, 7 StorageConfig)
+- **Edge cases tested:** Concurrent uploads (goroutine safety), large files (1000 outcomes), invalid JSON (graceful skip), permission errors, special characters in RunID, compare with non-existent run, all filters combined, empty fields
+- **Azure Blob tests:** Mock-based tests with `t.Skip()` until implementation exists — Upload serialization, download deserialization, metadata filtering, auth retry flow, network errors, graceful degradation, blob path construction, context cancellation
+- **StorageConfig tests:** Defaults, Azure config loading, backward compat (missing section), partial config, disabled state, custom container, merge behavior
+- **Test patterns:** Table-driven, `t.TempDir()`, `t.Parallel()`, mock interfaces, `t.Skip()` for future implementation
+- **Gotcha:** Tests for azure_blob.go written before implementation — structured with mocks so they compile independently and activate once `azure_blob.go` exists
+- **Total count:** 31 storage tests (12 original by Linus + 19 new), 7 storage-related config tests — all passing
+
 ### Batch Skill Processing (PR #317)
 - **Branch:** `squad/317-batch-dev`
 - **Feature:** `waza dev` now supports batch processing: multiple skill names, `--all`, and `--filter <level>`

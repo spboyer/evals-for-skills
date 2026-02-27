@@ -6,7 +6,6 @@ package storage
 import (
 	"context"
 	"errors"
-	"fmt"
 	"time"
 
 	"github.com/spboyer/waza/internal/models"
@@ -68,11 +67,11 @@ type MetricDelta struct {
 
 // NewStore creates a ResultStore based on project configuration.
 // If storage is configured with provider "azure-blob" and enabled, it returns
-// an error indicating Azure storage is not yet implemented.
+// an AzureBlobStore using DefaultAzureCredential.
 // Otherwise it returns a LocalStore backed by localDir.
 func NewStore(cfg *projectconfig.StorageConfig, localDir string) (ResultStore, error) {
 	if cfg != nil && cfg.Enabled && cfg.Provider == "azure-blob" {
-		return nil, fmt.Errorf("azure blob storage not yet implemented")
+		return NewAzureBlobStore(context.Background(), cfg.AccountName, cfg.ContainerName)
 	}
 	return NewLocalStore(localDir), nil
 }

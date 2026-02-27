@@ -99,3 +99,16 @@ All code roles now use `claude-opus-4.6`. Docs/Scribe/diversity use `gemini-3-pr
 - **Files changed:** `internal/storage/store.go` (new), `internal/storage/local.go` (new), `internal/storage/local_test.go` (new), `internal/projectconfig/config.go`
 - **What:** Created `ResultStore` interface (Upload/List/Download/Compare) with `LocalStore` filesystem adapter. Added `StorageConfig` to `ProjectConfig`. Factory function `NewStore` routes to local or returns error for azure-blob (stub for Virgil). 12 tests.
 - **Key learning:** Keeping `ResultStore` separate from `webapi.FileStore` is the right call — different lifecycle (write+read vs. read-only dashboard), different filtering needs. The lazy-load + cache pattern from `FileStore` translates cleanly. `StorageConfig.Enabled` as a plain bool (not `*bool`) is fine here since the zero value (false) is the correct default — no need for the pointer trick used on other config bools.
+
+### Azure Storage — Results CLI & Auto-Upload Wiring
+- **Date:** 2026-02-27
+- **Branch:** `squad/azure-storage-results`
+- **Files changed:** `cmd/waza/cmd_results.go` (new), `cmd/waza/cmd_run.go`, `cmd/waza/root.go`
+- **What:** Wired `ResultStore` into CLI: auto-upload after `saveOutcome` in `runCommandE` (both single-skill and multi-skill paths), `waza results list` command with `--skill`/`--model`/`--since`/`--limit` flags, and `waza results compare <id1> <id2>` command with color-coded delta display.
+- **Key learning:** Auto-upload must be fire-and-forget — storage failures should never change the run command's exit code or mask test failures. The `autoUploadOutcomes` helper encapsulates this pattern: warn on error, never return it. The `NewStore` factory signature takes `*StorageConfig` (not `context.Context` as first param) — the context is only needed for actual store operations like `Upload`/`List`/`Compare`.
+
+## Learnings
+
+- `autoUploadOutcomes` helper pattern: when integrating optional post-processing into a command, extract a helper that checks config, creates resources, and handles errors as warnings. Keeps the main flow clean.
+- `cmd.OutOrStdout()` and `cmd.ErrOrStderr()` are the only valid output channels in cobra commands — never use bare `fmt.Print` for anything that might be captured in tests.
+- `cmd.Context()` can return nil in cobra — always guard with a fallback to `context.Background()`.
