@@ -89,14 +89,14 @@ Examples:
 			}
 
 			if len(results) == 0 {
-				fmt.Fprintln(cmd.OutOrStdout(), "No results found.")
+				_, _ = fmt.Fprintln(cmd.OutOrStdout(), "No results found.")
 				return nil
 			}
 
 			// Print table header
-			fmt.Fprintf(cmd.OutOrStdout(), "%-36s  %-20s  %-24s  %9s  %s\n",
+			_, _ = fmt.Fprintf(cmd.OutOrStdout(), "%-36s  %-20s  %-24s  %9s  %s\n",
 				"Run ID", "Skill", "Model", "Pass Rate", "Timestamp")
-			fmt.Fprintf(cmd.OutOrStdout(), "%s\n",
+			_, _ = fmt.Fprintf(cmd.OutOrStdout(), "%s\n",
 				strings.Repeat("-", 36)+"  "+strings.Repeat("-", 20)+"  "+strings.Repeat("-", 24)+"  "+strings.Repeat("-", 9)+"  "+strings.Repeat("-", 19))
 
 			for _, r := range results {
@@ -112,7 +112,7 @@ Examples:
 				if len(model) > 24 {
 					model = model[:21] + "..."
 				}
-				fmt.Fprintf(cmd.OutOrStdout(), "%-36s  %-20s  %-24s  %8.1f%%  %s\n",
+				_, _ = fmt.Fprintf(cmd.OutOrStdout(), "%-36s  %-20s  %-24s  %8.1f%%  %s\n",
 					runID, skill, model, r.PassRate, r.Timestamp.Format("2006-01-02 15:04:05"))
 			}
 
@@ -168,34 +168,34 @@ Examples:
 			out := cmd.OutOrStdout()
 
 			// Header
-			fmt.Fprintf(out, "\n📊 Comparison: %s vs %s\n\n", report.Run1.RunID, report.Run2.RunID)
+			_, _ = fmt.Fprintf(out, "\n📊 Comparison: %s vs %s\n\n", report.Run1.RunID, report.Run2.RunID)
 
 			// Run info
-			fmt.Fprintf(out, "  Run 1: %s (skill: %s, model: %s)\n", report.Run1.RunID, report.Run1.Skill, report.Run1.Model)
-			fmt.Fprintf(out, "  Run 2: %s (skill: %s, model: %s)\n", report.Run2.RunID, report.Run2.Skill, report.Run2.Model)
-			fmt.Fprintln(out)
+			_, _ = fmt.Fprintf(out, "  Run 1: %s (skill: %s, model: %s)\n", report.Run1.RunID, report.Run1.Skill, report.Run1.Model)
+			_, _ = fmt.Fprintf(out, "  Run 2: %s (skill: %s, model: %s)\n", report.Run2.RunID, report.Run2.Skill, report.Run2.Model)
+			_, _ = fmt.Fprintln(out)
 
 			// Pass rate delta
 			passIndicator := deltaIndicator(report.PassDelta)
-			fmt.Fprintf(out, "  Pass Rate: %.1f%% → %.1f%% (%s%.1f%%)\n",
+			_, _ = fmt.Fprintf(out, "  Pass Rate: %.1f%% → %.1f%% (%s%.1f%%)\n",
 				report.Run1.PassRate, report.Run2.PassRate, passIndicator, report.PassDelta)
 
 			// Score delta
 			scoreIndicator := deltaIndicator(report.ScoreDelta)
-			fmt.Fprintf(out, "  Score:     %.3f → %.3f (%s%.3f)\n\n",
+			_, _ = fmt.Fprintf(out, "  Score:     %.3f → %.3f (%s%.3f)\n\n",
 				report.Run1.PassRate/100, report.Run2.PassRate/100, scoreIndicator, report.ScoreDelta)
 
 			// Per-metric deltas
 			if len(report.Metrics) > 0 {
-				fmt.Fprintf(out, "  %-24s  %10s  %10s  %10s\n", "Metric", "Run 1", "Run 2", "Delta")
-				fmt.Fprintf(out, "  %s\n", strings.Repeat("-", 24)+"  "+strings.Repeat("-", 10)+"  "+strings.Repeat("-", 10)+"  "+strings.Repeat("-", 10))
+				_, _ = fmt.Fprintf(out, "  %-24s  %10s  %10s  %10s\n", "Metric", "Run 1", "Run 2", "Delta")
+				_, _ = fmt.Fprintf(out, "  %s\n", strings.Repeat("-", 24)+"  "+strings.Repeat("-", 10)+"  "+strings.Repeat("-", 10)+"  "+strings.Repeat("-", 10))
 
 				for _, m := range report.Metrics {
 					indicator := deltaIndicator(m.Delta)
-					fmt.Fprintf(out, "  %-24s  %10.3f  %10.3f  %s%10.3f\n",
+					_, _ = fmt.Fprintf(out, "  %-24s  %10.3f  %10.3f  %s%10.3f\n",
 						m.Name, m.Value1, m.Value2, indicator, m.Delta)
 				}
-				fmt.Fprintln(out)
+				_, _ = fmt.Fprintln(out)
 			}
 
 			return nil

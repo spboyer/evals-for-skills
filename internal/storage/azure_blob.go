@@ -221,7 +221,7 @@ func (abs *AzureBlobStore) Download(ctx context.Context, runID string) (*models.
 	if err != nil {
 		return nil, fmt.Errorf("azure blob download: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	data, err := io.ReadAll(resp.Body)
 	if err != nil {
@@ -285,7 +285,7 @@ func (abs *AzureBlobStore) blobToResultSummary(blob *container.BlobItem) (Result
 
 	passRate := 0.0
 	if passRateStr != "" {
-		fmt.Sscanf(passRateStr, "%f", &passRate)
+		_, _ = fmt.Sscanf(passRateStr, "%f", &passRate)
 	}
 
 	blobPath := ""

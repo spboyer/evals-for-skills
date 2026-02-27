@@ -361,7 +361,7 @@ func TestAzureBlobStore_ContextCancellation(t *testing.T) {
 
 	mock := newMockBlobClient()
 
-	// Create a cancelled context
+	// Create a canceled context
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel()
 

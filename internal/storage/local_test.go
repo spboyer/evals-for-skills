@@ -573,7 +573,7 @@ func TestLocalStore_PermissionError(t *testing.T) {
 	if err := os.MkdirAll(readOnly, 0o555); err != nil {
 		t.Fatal(err)
 	}
-	defer os.Chmod(readOnly, 0o755) // cleanup
+	defer func() { _ = os.Chmod(readOnly, 0o755) }() // cleanup
 
 	store := NewLocalStore(readOnly)
 	outcome := makeOutcome("run-1", "skill-x", "model-y", 5, 10)
