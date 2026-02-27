@@ -528,8 +528,8 @@ func TestLocalStore_EmptyFields(t *testing.T) {
 	// Outcome with minimal fields
 	outcome := &models.EvaluationOutcome{
 		RunID:       "minimal-run",
-		SkillTested: "",        // empty skill
-		BenchName:   "bench-x", // need this to not be filtered out
+		SkillTested: "",          // empty skill
+		BenchName:   "bench-x",   // need this to not be filtered out
 		Timestamp:   time.Time{}, // zero timestamp
 		Setup:       models.OutcomeSetup{ModelID: ""},
 		Digest: models.OutcomeDigest{

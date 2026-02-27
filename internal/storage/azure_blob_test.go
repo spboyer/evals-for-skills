@@ -19,11 +19,11 @@ import (
 // Once azure_blob.go is implemented, update the implementation to use these mocks.
 
 type mockBlobClient struct {
-	blobs      map[string][]byte      // blob path -> content
-	metadata   map[string]map[string]string // blob path -> metadata
-	uploadErr  error
+	blobs       map[string][]byte            // blob path -> content
+	metadata    map[string]map[string]string // blob path -> metadata
+	uploadErr   error
 	downloadErr error
-	listErr    error
+	listErr     error
 }
 
 func newMockBlobClient() *mockBlobClient {
@@ -241,7 +241,7 @@ func TestAzureBlobStore_AuthFailure_AzLoginRetry(t *testing.T) {
 	t.Skip("Skip until azure_blob.go is implemented")
 
 	mock := newMockBlobClient()
-	
+
 	// Simulate auth error
 	mock.uploadErr = errors.New("authentication failed: No valid credentials")
 
@@ -264,7 +264,7 @@ func TestAzureBlobStore_NetworkError_Handling(t *testing.T) {
 	t.Skip("Skip until azure_blob.go is implemented")
 
 	mock := newMockBlobClient()
-	
+
 	// Simulate network error
 	mock.downloadErr = errors.New("network timeout")
 
@@ -325,7 +325,7 @@ func TestAzureBlobStore_BlobPathConstruction(t *testing.T) {
 
 	for _, tt := range tests {
 		// This would be the actual path construction logic in AzureBlobStore
-		got := fmt.Sprintf("%s/%s/%s.json", 
+		got := fmt.Sprintf("%s/%s/%s.json",
 			tt.skill,
 			tt.timestamp.Format("2006-01-02"),
 			tt.runID,
@@ -340,14 +340,14 @@ func TestAzureBlobStore_SpecialCharactersInSkillName(t *testing.T) {
 	t.Skip("Skip until azure_blob.go is implemented")
 
 	mock := newMockBlobClient()
-	
+
 	// Skill names with special characters should be sanitized for blob paths
 	outcome := makeAzureOutcome("run-1", "skill/with:special\\chars", "gpt-4o", 5, 10)
-	
+
 	// Expected: special characters should be URL-encoded or sanitized
 	// Actual implementation will determine the encoding strategy
 	data, _ := json.Marshal(outcome)
-	
+
 	// This test verifies the implementation handles special characters
 	// The exact path format will depend on the implementation
 	err := mock.Upload(context.Background(), "skill-with-special-chars/2026-02-27/run-1.json", data, nil)
@@ -360,7 +360,7 @@ func TestAzureBlobStore_ContextCancellation(t *testing.T) {
 	t.Skip("Skip until azure_blob.go is implemented")
 
 	mock := newMockBlobClient()
-	
+
 	// Create a cancelled context
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel()
@@ -371,7 +371,7 @@ func TestAzureBlobStore_ContextCancellation(t *testing.T) {
 	// Upload should respect context cancellation
 	// The actual implementation should check ctx.Err() before operations
 	err := mock.Upload(ctx, "test-path.json", data, nil)
-	
+
 	// In a real implementation with context checking, this would return context.Canceled
 	// For now, the mock doesn't check context, so we just verify it handles it gracefully
 	_ = err
