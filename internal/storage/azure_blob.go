@@ -80,7 +80,7 @@ func getCredentialWithAutoLogin(ctx context.Context) (azcore.TokenCredential, er
 
 	// In CI environments, skip interactive az login and return a clear message.
 	if isCI() {
-		return nil, fmt.Errorf("Azure credentials not available. In CI environments, set AZURE_CLIENT_ID/AZURE_CLIENT_SECRET/AZURE_TENANT_ID environment variables. (original error: %v)", err)
+		return nil, fmt.Errorf("azure credentials not available in CI: set AZURE_CLIENT_ID/AZURE_CLIENT_SECRET/AZURE_TENANT_ID environment variables (original error: %v)", err)
 	}
 
 	// If credential creation failed, attempt auto-login.

@@ -102,7 +102,7 @@ Examples:
 			if format == "json" {
 				data, err := json.MarshalIndent(results, "", "  ")
 				if err != nil {
-					return fmt.Errorf("marshalling results: %w", err)
+					return fmt.Errorf("marshaling results: %w", err)
 				}
 				_, _ = fmt.Fprintln(cmd.OutOrStdout(), string(data))
 				return nil
@@ -190,7 +190,7 @@ Examples:
 			if format == "json" {
 				data, err := json.MarshalIndent(report, "", "  ")
 				if err != nil {
-					return fmt.Errorf("marshalling comparison: %w", err)
+					return fmt.Errorf("marshaling comparison: %w", err)
 				}
 				_, _ = fmt.Fprintln(cmd.OutOrStdout(), string(data))
 				return nil
