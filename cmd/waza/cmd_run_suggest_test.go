@@ -78,7 +78,8 @@ func TestMaybeGenerateSuggestionReport_SkipsWhenNoFailures(t *testing.T) {
 		},
 	}
 
-	report, err := generateEvalAnalysis(context.Background(), spec, filepath.Join(t.TempDir(), "eval.yaml"), outcome, nil)
+	engine := execution.NewMockEngine("test-model")
+	report, err := generateEvalAnalysis(context.Background(), engine, spec, filepath.Join(t.TempDir(), "eval.yaml"), outcome, nil)
 	require.NoError(t, err)
 	assert.Empty(t, report)
 }

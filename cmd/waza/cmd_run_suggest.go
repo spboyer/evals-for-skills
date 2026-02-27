@@ -40,6 +40,7 @@ var (
 
 func generateEvalAnalysis(
 	ctx context.Context,
+	engine execution.AgentEngine,
 	spec *models.BenchmarkSpec,
 	specPath string,
 	outcome *models.EvaluationOutcome,
@@ -70,15 +71,6 @@ func generateEvalAnalysis(
 	if spec.Config.EngineType != "copilot-sdk" {
 		return generateFakeSuggestionReport(spec, len(failingTests), len(failedTriggers)), nil
 	}
-
-	engine := execution.NewCopilotEngineBuilder(spec.Config.ModelID, nil).Build()
-	defer func() {
-		shutdownCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-		defer cancel()
-		if shutdownErr := engine.Shutdown(shutdownCtx); shutdownErr != nil {
-			fmt.Fprintf(os.Stderr, "\n⚠️  Copilot engine shutdown error: %v\n", shutdownErr) //nolint:errcheck
-		}
-	}()
 
 	resources := loadSkillResources(resolvedSkillPaths)
 	prompt := buildRunAnalysisPrompt(spec, failingTests, failedTriggers, testDefinitions, resources)

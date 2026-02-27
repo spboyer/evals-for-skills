@@ -534,6 +534,9 @@ func runSingleModel(cmd *cobra.Command, spec *models.BenchmarkSpec, specPath str
 	default:
 		return nil, fmt.Errorf("unknown engine type: %s", spec.Config.EngineType)
 	}
+	if err := engine.Initialize(context.Background()); err != nil {
+		return nil, fmt.Errorf("failed to initialize agent: %w", err)
+	}
 	defer func() {
 		if err := engine.Shutdown(context.Background()); err != nil {
 			fmt.Fprintf(os.Stderr, "WARN: engine shutdown: %v\n", err)
@@ -715,7 +718,7 @@ func runSingleModel(cmd *cobra.Command, spec *models.BenchmarkSpec, specPath str
 	}
 
 	if suggestFlag {
-		report, err := generateEvalAnalysis(cmd.Context(), spec, specPath, outcome, triggerResults)
+		report, err := generateEvalAnalysis(cmd.Context(), engine, spec, specPath, outcome, triggerResults)
 		if err != nil {
 			fmt.Fprintf(cmd.ErrOrStderr(), "error generating suggestions: %v\n", err) //nolint:errcheck
 		} else if report != "" {
