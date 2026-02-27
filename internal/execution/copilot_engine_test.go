@@ -40,12 +40,12 @@ func TestJoinStrings(t *testing.T) {
 }
 
 // TestCopilotEngine_Execute_StartRespectsTimeout verifies that a Start() call
-// that blocks indefinitely is cancelled by req.Timeout, preventing a deadlock.
+// that blocks indefinitely is canceled by req.Timeout, preventing a deadlock.
 func TestCopilotEngine_Execute_StartRespectsTimeout(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	clientMock := NewMockcopilotClient(ctrl)
 
-	// Simulate a Start() that blocks until its context is cancelled (mimicking
+	// Simulate a Start() that blocks until its context is canceled (mimicking
 	// the copilot SDK hanging on the JSON-RPC Ping during protocol negotiation).
 	clientMock.EXPECT().Start(gomock.Any()).DoAndReturn(func(ctx context.Context) error {
 		<-ctx.Done()
