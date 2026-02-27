@@ -286,6 +286,7 @@ func buildRunAnalysisPrompt(
 	p.WriteString(evalAnalysisPrompt)
 	p.WriteString(buildGraderDocsSection(spec, failingTests))
 	p.WriteString(buildFailingTestEvidence(spec, failingTests, testDefinitions))
+	p.WriteString("\n\n")
 	p.WriteString(buildFailedTriggerEvidence(failedTriggers))
 	return p.String()
 }
