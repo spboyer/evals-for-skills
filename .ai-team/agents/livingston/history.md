@@ -56,36 +56,3 @@
 ## 📌 Team update (2026-02-20): Model policy overhaul
 
 All code roles now use `claude-opus-4.6`. Docs/Scribe/diversity use `gemini-3-pro-preview`. Heavy code gen uses `gpt-5.2-codex`. Decided by Scott Boyer. See decisions.md for full details.
-
-## Learnings — Azure Storage Feature Documentation (2026-02-26)
-
-### What was documented
-- **Feature:** Azure Blob Storage integration for eval results (auto-upload, `waza results list`, `waza results compare`)
-- **Scope:** 
-  - README.md — Added Cloud Storage section with configuration example and workflow
-  - site/src/content/docs/reference/cli.mdx — Added `waza results list` and `waza results compare` command reference
-  - site/src/content/docs/guides/azure-storage.mdx — Created comprehensive guide with prerequisites, setup, troubleshooting
-  - site/src/content/docs/reference/schema.mdx — Added `storage:` section to .waza.yaml schema
-
-### Key documentation patterns observed
-1. **Configuration-first approach** — Always show actual YAML examples readers can copy-paste
-2. **Audience context** — Never assume reader knows Azure Storage or terminology (e.g., "blob container" explained briefly)
-3. **Troubleshooting as essential** — Every guide ends with ❌ error patterns + fixes
-4. **Prerequisites first** — Setup guides list required tools/accounts before any steps
-5. **Mermaid for diagrams** — No ASCII art; Astro/Starlight renders Mermaid inline
-6. **Frontmatter convention** — All guides use `---title/description---` header format
-7. **Cross-linking** — Guides reference CLI docs and schema, schema references guides
-8. **Code examples are actionable** — Every bash/yaml example can run exactly as shown
-
-### Site build process
-- Astro/Starlight auto-discovers guides in `site/src/content/docs/guides/*.mdx`
-- Build succeeds if all markdown frontmatter is valid YAML
-- Search index rebuilt automatically (Pagefind)
-- Test with `npm run build` — takes ~250ms
-- Verify new guide appears in static route list during build
-
-### Future: When adding new cloud storage providers
-- Add new `provider:` option to storage section in schema.mdx
-- Create new guide in guides/ (e.g., s3-storage.mdx) with identical structure: Why / Prerequisites / Configuration / Getting Started / Using Results / Troubleshooting / Advanced
-- Update README.md "Cloud Storage" section with provider matrix
-- CLI commands (`waza results list/compare`) remain provider-agnostic — auth is handled by provider-specific adapters
