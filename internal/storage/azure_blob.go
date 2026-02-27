@@ -56,17 +56,36 @@ func NewAzureBlobStore(ctx context.Context, accountName, containerName string) (
 	}, nil
 }
 
+// ciEnvVars lists environment variables that indicate a CI/CD environment.
+var ciEnvVars = []string{"CI", "GITHUB_ACTIONS", "TF_BUILD", "JENKINS_URL", "CODEBUILD_BUILD_ID"}
+
+// isCI returns true if any common CI environment variable is set.
+func isCI() bool {
+	for _, v := range ciEnvVars {
+		if os.Getenv(v) != "" {
+			return true
+		}
+	}
+	return false
+}
+
 // getCredentialWithAutoLogin attempts to create DefaultAzureCredential.
-// If it fails, it runs 'az login' and retries once.
+// If it fails and the environment is not CI, it runs 'az login' and retries once.
+// In CI environments, auto-login is skipped to avoid hanging on interactive prompts.
 func getCredentialWithAutoLogin(ctx context.Context) (azcore.TokenCredential, error) {
 	cred, err := azidentity.NewDefaultAzureCredential(nil)
 	if err == nil {
 		return cred, nil
 	}
 
+	// In CI environments, skip interactive az login and return a clear message.
+	if isCI() {
+		return nil, fmt.Errorf("Azure credentials not available. In CI environments, set AZURE_CLIENT_ID/AZURE_CLIENT_SECRET/AZURE_TENANT_ID environment variables. (original error: %v)", err)
+	}
+
 	// If credential creation failed, attempt auto-login.
-	// This handles cases where no auth is configured (no env vars, no managed identity, etc.)
-	fmt.Fprintln(os.Stderr, "Azure credentials not available, attempting 'az login'...")
+	// This handles interactive cases where no auth is configured (no env vars, no managed identity, etc.)
+	_, _ = fmt.Fprintln(os.Stderr, "Azure credentials not available, attempting 'az login'...")
 	cmd := exec.CommandContext(ctx, "az", "login")
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
@@ -182,33 +201,25 @@ func (abs *AzureBlobStore) List(ctx context.Context, opts ListOptions) ([]Result
 }
 
 // Download retrieves a single evaluation outcome by run ID.
-// It attempts to download {skill}/{run-id}.json. If not found and skill is
-// not known, it lists all blobs to find a match by run ID.
+// Optimization: we first attempt a prefix-scoped list using the runID suffix
+// pattern (*/{runID}.json) to avoid scanning all blobs. If no match is found,
+// we fall back to a full blob scan matching on metadata. The prefix approach is
+// O(1) when the blob naming convention is followed; the fallback is O(N) but
+// handles legacy or misnamed blobs.
 func (abs *AzureBlobStore) Download(ctx context.Context, runID string) (*models.EvaluationOutcome, error) {
-	// First, try listing all blobs to find the one matching the run ID.
-	// This is necessary because we don't know the skill name from just the run ID.
-	pager := abs.client.NewListBlobsFlatPager(abs.containerName, nil)
+	// Fast path: try a direct download using the known blob naming pattern.
+	// Blobs are stored as {skill}/{runID}.json, so we can list with suffix match.
+	blobSuffix := sanitizePathSegment(runID) + ".json"
+	blobPath, err := abs.findBlobBySuffix(ctx, blobSuffix)
+	if err != nil {
+		return nil, fmt.Errorf("azure blob download: %w", err)
+	}
 
-	var blobPath string
-	for pager.More() {
-		page, err := pager.NextPage(ctx)
+	// Slow path: fall back to full scan matching on metadata if suffix match failed.
+	if blobPath == "" {
+		blobPath, err = abs.findBlobByMetadata(ctx, runID)
 		if err != nil {
-			return nil, fmt.Errorf("azure blob download: listing blobs: %w", err)
-		}
-
-		for _, blob := range page.Segment.BlobItems {
-			if blob.Name == nil || blob.Metadata == nil {
-				continue
-			}
-
-			if metaRunID, ok := blob.Metadata["runid"]; ok && metaRunID != nil && *metaRunID == runID {
-				blobPath = *blob.Name
-				break
-			}
-		}
-
-		if blobPath != "" {
-			break
+			return nil, fmt.Errorf("azure blob download: %w", err)
 		}
 	}
 
@@ -234,6 +245,49 @@ func (abs *AzureBlobStore) Download(ctx context.Context, runID string) (*models.
 	}
 
 	return &outcome, nil
+}
+
+// findBlobBySuffix lists blobs and returns the first whose name ends with suffix.
+// This is faster than a full metadata scan when the blob naming convention is followed.
+func (abs *AzureBlobStore) findBlobBySuffix(ctx context.Context, suffix string) (string, error) {
+	pager := abs.client.NewListBlobsFlatPager(abs.containerName, nil)
+
+	for pager.More() {
+		page, err := pager.NextPage(ctx)
+		if err != nil {
+			return "", fmt.Errorf("listing blobs by suffix: %w", err)
+		}
+
+		for _, blob := range page.Segment.BlobItems {
+			if blob.Name != nil && strings.HasSuffix(*blob.Name, "/"+suffix) {
+				return *blob.Name, nil
+			}
+		}
+	}
+	return "", nil
+}
+
+// findBlobByMetadata lists all blobs and returns the first whose "runid" metadata matches.
+// This is the O(N) fallback for blobs that don't follow the naming convention.
+func (abs *AzureBlobStore) findBlobByMetadata(ctx context.Context, runID string) (string, error) {
+	pager := abs.client.NewListBlobsFlatPager(abs.containerName, nil)
+
+	for pager.More() {
+		page, err := pager.NextPage(ctx)
+		if err != nil {
+			return "", fmt.Errorf("listing blobs by metadata: %w", err)
+		}
+
+		for _, blob := range page.Segment.BlobItems {
+			if blob.Name == nil || blob.Metadata == nil {
+				continue
+			}
+			if metaRunID, ok := blob.Metadata["runid"]; ok && metaRunID != nil && *metaRunID == runID {
+				return *blob.Name, nil
+			}
+		}
+	}
+	return "", nil
 }
 
 // Compare downloads two runs and produces a comparison report with deltas.

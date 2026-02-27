@@ -6,6 +6,7 @@ package storage
 import (
 	"context"
 	"errors"
+	"math"
 	"time"
 
 	"github.com/spboyer/waza/internal/models"
@@ -74,4 +75,32 @@ func NewStore(cfg *projectconfig.StorageConfig, localDir string) (ResultStore, e
 		return NewAzureBlobStore(context.Background(), cfg.AccountName, cfg.ContainerName)
 	}
 	return NewLocalStore(localDir), nil
+}
+
+// buildMetricDeltas computes per-metric deltas between two outcomes.
+// Used by both LocalStore and AzureBlobStore in their Compare methods.
+func buildMetricDeltas(o1, o2 *models.EvaluationOutcome) map[string]MetricDelta {
+	deltas := make(map[string]MetricDelta)
+
+	// Collect all metric names from both runs.
+	names := make(map[string]struct{})
+	for k := range o1.Measures {
+		names[k] = struct{}{}
+	}
+	for k := range o2.Measures {
+		names[k] = struct{}{}
+	}
+
+	for name := range names {
+		v1 := o1.Measures[name].Value
+		v2 := o2.Measures[name].Value
+		deltas[name] = MetricDelta{
+			Name:   name,
+			Value1: v1,
+			Value2: v2,
+			Delta:  math.Round((v2-v1)*1000) / 1000,
+		}
+	}
+
+	return deltas
 }

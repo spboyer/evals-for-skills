@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"math"
 	"os"
 	"path/filepath"
 	"sort"
@@ -237,33 +236,6 @@ func matchesFilter(o *models.EvaluationOutcome, opts ListOptions) bool {
 		return false
 	}
 	return true
-}
-
-// buildMetricDeltas computes per-metric deltas between two outcomes.
-func buildMetricDeltas(o1, o2 *models.EvaluationOutcome) map[string]MetricDelta {
-	deltas := make(map[string]MetricDelta)
-
-	// Collect all metric names from both runs.
-	names := make(map[string]struct{})
-	for k := range o1.Measures {
-		names[k] = struct{}{}
-	}
-	for k := range o2.Measures {
-		names[k] = struct{}{}
-	}
-
-	for name := range names {
-		v1 := o1.Measures[name].Value
-		v2 := o2.Measures[name].Value
-		deltas[name] = MetricDelta{
-			Name:   name,
-			Value1: v1,
-			Value2: v2,
-			Delta:  math.Round((v2-v1)*1000) / 1000,
-		}
-	}
-
-	return deltas
 }
 
 // sanitizeFilename replaces path separators and other unsafe characters
