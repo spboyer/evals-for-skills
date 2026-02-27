@@ -306,9 +306,7 @@ func mergeConfig(dst, src *ProjectConfig) {
 	if src.Storage.ContainerName != "" {
 		dst.Storage.ContainerName = src.Storage.ContainerName
 	}
-	if src.Storage.Enabled {
-		dst.Storage.Enabled = true
-	}
+	dst.Storage.Enabled = src.Storage.Enabled
 }
 
 func boolPtr(b bool) *bool {

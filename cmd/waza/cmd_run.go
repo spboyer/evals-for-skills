@@ -1037,7 +1037,11 @@ func autoUploadOutcomes(cmd *cobra.Command, cfg *projectconfig.ProjectConfig, re
 
 	store, err := storage.NewStore(&cfg.Storage, outputDir)
 	if err != nil {
-		_, _ = fmt.Fprintf(cmd.ErrOrStderr(), "⚠️  Azure Storage setup failed: %v. Results saved locally.\n", err)
+		provider := cfg.Storage.Provider
+		if provider == "" {
+			provider = "cloud storage"
+		}
+		_, _ = fmt.Fprintf(cmd.ErrOrStderr(), "⚠️  %s setup failed: %v. Results saved locally.\n", provider, err)
 		return
 	}
 
@@ -1050,10 +1054,14 @@ func autoUploadOutcomes(cmd *cobra.Command, cfg *projectconfig.ProjectConfig, re
 		if mr.outcome == nil {
 			continue
 		}
+		provider := cfg.Storage.Provider
+		if provider == "" {
+			provider = "cloud storage"
+		}
 		if err := store.Upload(ctx, mr.outcome); err != nil {
-			_, _ = fmt.Fprintf(cmd.ErrOrStderr(), "⚠️  Failed to upload results to Azure Storage: %v. Results saved locally.\n", err)
+			_, _ = fmt.Fprintf(cmd.ErrOrStderr(), "⚠️  Failed to upload results to %s: %v. Results saved locally.\n", provider, err)
 		} else {
-			_, _ = fmt.Fprintf(cmd.OutOrStdout(), "☁️  Results uploaded to Azure Storage\n")
+			_, _ = fmt.Fprintf(cmd.OutOrStdout(), "☁️  Results uploaded to %s\n", provider)
 		}
 	}
 }

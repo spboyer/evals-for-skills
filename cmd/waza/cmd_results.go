@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"strings"
 	"time"
@@ -38,6 +39,7 @@ func newResultsListCommand() *cobra.Command {
 		modelFilter string
 		sinceStr    string
 		limit       int
+		format      string
 	)
 
 	cmd := &cobra.Command{
@@ -48,8 +50,12 @@ func newResultsListCommand() *cobra.Command {
 Examples:
   waza results list
   waza results list --skill my-skill --model gpt-4o
-  waza results list --since 2026-01-01 --limit 10`,
+  waza results list --since 2026-01-01 --limit 10
+  waza results list --format json`,
 		RunE: func(cmd *cobra.Command, args []string) error {
+			if format != "table" && format != "json" {
+				return fmt.Errorf("invalid format %q: expected table or json", format)
+			}
 			cfg, err := projectconfig.Load(".")
 			if err != nil || cfg == nil {
 				cfg = projectconfig.New()
@@ -93,6 +99,15 @@ Examples:
 				return nil
 			}
 
+			if format == "json" {
+				data, err := json.MarshalIndent(results, "", "  ")
+				if err != nil {
+					return fmt.Errorf("marshalling results: %w", err)
+				}
+				_, _ = fmt.Fprintln(cmd.OutOrStdout(), string(data))
+				return nil
+			}
+
 			// Print table header
 			_, _ = fmt.Fprintf(cmd.OutOrStdout(), "%-36s  %-20s  %-24s  %9s  %s\n",
 				"Run ID", "Skill", "Model", "Pass Rate", "Timestamp")
@@ -124,11 +139,14 @@ Examples:
 	cmd.Flags().StringVar(&modelFilter, "model", "", "Filter by model ID")
 	cmd.Flags().StringVar(&sinceStr, "since", "", "Filter by date (YYYY-MM-DD)")
 	cmd.Flags().IntVar(&limit, "limit", 20, "Maximum number of results to show")
+	cmd.Flags().StringVar(&format, "format", "table", "Output format: table | json")
 
 	return cmd
 }
 
 func newResultsCompareCommand() *cobra.Command {
+	var format string
+
 	cmd := &cobra.Command{
 		Use:   "compare <run-id-1> <run-id-2>",
 		Short: "Compare two evaluation runs",
@@ -138,9 +156,13 @@ Shows pass rate delta, score delta, and per-metric differences.
 Green indicates improvements, red indicates regressions.
 
 Examples:
-  waza results compare abc123 def456`,
+  waza results compare abc123 def456
+  waza results compare abc123 def456 --format json`,
 		Args: cobra.ExactArgs(2),
 		RunE: func(cmd *cobra.Command, args []string) error {
+			if format != "table" && format != "json" {
+				return fmt.Errorf("invalid format %q: expected table or json", format)
+			}
 			cfg, err := projectconfig.Load(".")
 			if err != nil || cfg == nil {
 				cfg = projectconfig.New()
@@ -163,6 +185,15 @@ Examples:
 			report, err := store.Compare(ctx, args[0], args[1])
 			if err != nil {
 				return fmt.Errorf("comparing runs: %w", err)
+			}
+
+			if format == "json" {
+				data, err := json.MarshalIndent(report, "", "  ")
+				if err != nil {
+					return fmt.Errorf("marshalling comparison: %w", err)
+				}
+				_, _ = fmt.Fprintln(cmd.OutOrStdout(), string(data))
+				return nil
 			}
 
 			out := cmd.OutOrStdout()
@@ -201,6 +232,8 @@ Examples:
 			return nil
 		},
 	}
+
+	cmd.Flags().StringVar(&format, "format", "table", "Output format: table | json")
 
 	return cmd
 }
