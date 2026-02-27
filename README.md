@@ -490,7 +490,7 @@ List all evaluation runs from configured cloud storage or local results director
 
 | Flag | Description |
 |------|-------------|
-| `--limit <n>` | Maximum results to display (default: 10) |
+| `--limit <n>` | Maximum results to display (default: 20) |
 | `--format <fmt>` | Output format: `table` or `json` (default: `table`) |
 
 ```bash
@@ -563,7 +563,7 @@ waza run eval.yaml  # Results auto-upload to Azure Storage
 ### How It Works
 
 1. **Auto-upload on run:** When `storage:` is configured, `waza run` automatically uploads results to Azure Blob Storage
-2. **Organized by timestamp:** Results are stored as `{year}/{month}/{day}/{timestamp}-{result-id}.json`
+2. **Organized by skill:** Results are stored as `{skill-name}/{run-id}.json`
 3. **Local copy kept:** Results are also saved locally (via `-o` flag)
 4. **List remote results:** Use `waza results list` to browse uploaded runs
 5. **Compare runs:** Use `waza results compare` to diff two remote results

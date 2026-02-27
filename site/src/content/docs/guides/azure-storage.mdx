@@ -148,7 +148,7 @@ waza run evals/my-skill/eval.yaml -v
 During the run, you'll see:
 ```
 📤 Uploading results to Azure Blob Storage...
-✅ Results uploaded: waza-results/2025/02/26/20250226-143025-abc123.json
+✅ Results uploaded: waza-results/code-explainer/20250226-143025-abc123.json
 ```
 
 ## Using Results from Storage
@@ -311,7 +311,7 @@ az storage blob list -c waza-results -a myteamwaza
 # Download a specific result
 az storage blob download \
   -c waza-results \
-  -n 2025/02/26/20250226-143025-abc123.json \
+  -n code-explainer/20250226-143025-abc123.json \
   -a myteamwaza \
   -f result.json
 ```
