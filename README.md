@@ -1,5 +1,7 @@
 # Waza
 
+> **🏢 Microsoft Internal Devs:** This project has moved to [microsoft/waza](https://github.com/microsoft/waza). Please use the new repo for issues, PRs, and development.
+
 A Go CLI for evaluating AI agent skills — scaffold eval suites, run benchmarks, and compare results across models.
 
 ## Installation
